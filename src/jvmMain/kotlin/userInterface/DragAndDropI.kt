@@ -1,9 +1,6 @@
 package com.example.draganddrop
 
-import GraphNodeDisplayData
-import MyConstants
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -23,8 +20,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import graphNodeDisplayDataMap
-import textColor
+import userInterface.GraphNodeDisplayData
+import userInterface.MyConstants
+import userInterface.graphNodeDisplayDataMap
+import userInterface.textColor
 import kotlin.math.*
 
 
