@@ -7,26 +7,24 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.application
+import bondgraph.BondGraph
+import bondgraph.GraphElementDisplayData
 import com.example.draganddrop.*
 
-val bondGraphMap = linkedMapOf<String,Color>("0" to Color.Blue, "1" to Color.Magenta, "C" to Color.Yellow, "I" to Color.Cyan)
-val graphNodenames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
-val graphNodeDisplayDataMap    = linkedMapOf<Int, GraphNodeDisplayData>()
+val graphElementTypeNames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
+val bondGraph = BondGraph("test graph")
+
+//val graphElementDisplayDataMap    = linkedMapOf<Int, GraphElementDisplayData>()
 var textColor by mutableStateOf(Color.Black)
 object MyConstants {
-    val nodeFontsize: TextUnit =20.sp
-    val nodeBoxSize: Dp = 45.dp
-
+    val elementNameFontsize: TextUnit =20.sp
 }
 
-class GraphNodeDisplayData (val id: Int, var text: String, val x: Float, val y: Float)
+
 fun Modifier.conditional(
     condition: Boolean,
     ifTrue: Modifier.() -> Modifier,
@@ -65,21 +63,22 @@ fun textColumn() {
                     .padding(bottom =20.dp)
                     .pointerInput(Unit){detectTapGestures (
                         onTap ={
-                            if (currentState.mode == Mode.NODE_MODE) {
+                            if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getGraphElementsDisplayDataMap().size >= 2) {
                                 textColor = Color.Blue
                                 currentState.mode = Mode.BOND_MODE
                             } else{
                                 textColor = Color.Black
-                                currentState.mode = Mode.NODE_MODE
+                                currentState.mode = Mode.ELEMENT_MODE
                             }
 
                         }
                     )
                     }
             )
+
             var id = 1000
-            for (entry in graphNodenames) {
-                displayNode(GraphNodeDisplayData(id++, entry, 0f, 0f))
+            for (entry in graphElementTypeNames) {
+                displayElement(GraphElementDisplayData(id++, entry, 0f, 0f, 0f,0f, Offset(0f, 0f)))
             }
         }
     }
