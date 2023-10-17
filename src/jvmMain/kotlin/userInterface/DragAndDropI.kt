@@ -251,30 +251,17 @@ fun  DropTarget(
 
     fun findElement(x: Float, y: Float): Int {
         val epsilon = 50
-        println("$x  $y")
-        bondGraph.getGraphElementsDisplayDataMap().forEach{(id,v) -> println("$id  ${v.x}, ${v.y}  ${v.centerLocation}")}
-        val r1 = bondGraph.getGraphElementsDisplayDataMap().mapValues { (_,v) -> sqrt((v.centerLocation.x - x).pow(2) + (v.centerLocation.y - y).pow(2))}
-           val r2 = r1.filter { (_, v) -> -epsilon < v && v < epsilon }
-          val r3 = r2.minByOrNull { (_, value) -> value }
-        r1.forEach{(id,v) -> println("$id, $v")}
-        r2.forEach{(id,v) -> println("$id, $v")}
-        println(if (r3 == null)"nul" else "${r3.key}  ${r3.value}")
-        /*if (r3 != null) {
-            return bondGraph.getGraphElementsDisplayDataMap()[r3.key]?.centerLocation ?: Offset(-1f, -1f)
-        } else {
-            return Offset(-1f, -1f)
-        }*/
+        val result = bondGraph.getGraphElementsDisplayDataMap().mapValues { (_,v) -> sqrt((v.centerLocation.x - x).pow(2) + (v.centerLocation.y - y).pow(2))}
+            .filter { (_, v) -> -epsilon < v && v < epsilon }
+            .minByOrNull { (_, value) -> value }
 
-        return if (r3 == null) -1 else r3.key
-
-
+        return if (result == null) -1 else result.key
     }
 
     fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
         val l = (width + height)/2f + 5f
         val d = sqrt((offset1.x - offset2.x ).pow(2) + (offset1.y - offset2.y).pow(2))
         Offset(11f, 1f)
-       // return if (d <= l) offset1 else Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
         return Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
 
     }
@@ -355,39 +342,17 @@ fun  DropTarget(
             detectDragGestures(
                 onDragStart = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        println("line on drag start")
                         val x = it.x
                         val y = it.y
                         elementId = findElement(it.x, it.y)
-                        println("elementId = $elementId")
-                       /* if (bond >= 0){
-                            val of = offsetMap[bond]?.offsets?.first!!
-                            val ol = offsetMap[bond]?.offsets?.second!!
-                            val xf = of.x
-                            val yf = of.y
-                            val xl = ol.x
-                            val yl = ol.y
-                            val df = sqrt((xf-x).pow(2) + (yf-y).pow(2))
-                            val dl = sqrt((xl-x).pow(2) + (yl-y).pow(2))
-                            pointerOrigin = if (df < dl) ol else of
-                            offsetMap.remove(bond)
-                            needsUpdate = true
-                        } else{
-                            pointerOrigin = offsetFromCenter(elementCenter, it)
-                        }*/
-                        println("choice = $bond")
                         if (elementId >= 0) {
                             val displayData = bondGraph.getGraphElementsDisplayDataMap()[elementId]
-                            println("displayData = $displayData")
                             bondGraph.getGraphElementsDisplayDataMap().forEach{(k,v) -> println("id= ${k}  centerLocation= ${v.centerLocation}")}
                             pointerOrigin = bondGraph.getGraphElementsDisplayDataMap()[elementId]?.centerLocation!!
-                            println("pointerOrigin = $pointerOrigin")
                             pointerOffset = it
                             isDragging = true
                         }
                         println("Drag Start")
-
-                        //println("pointerOrgin = $pointerOrigin  pointerOffset = $pointerOffset")
                     }
                 }
                 , onDrag = { change, dragAmount ->
