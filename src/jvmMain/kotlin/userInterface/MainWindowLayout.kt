@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.*
 import bondgraph.BondGraph
-import bondgraph.Elements
+import bondgraph.ElementTypes
 import bondgraph.GraphElementDisplayData
 import com.example.draganddrop.*
 
@@ -78,7 +78,7 @@ fun textColumn() {
             )
 
             var id = 1000
-            enumValues<Elements>().forEach {
+            enumValues<ElementTypes>().forEach {
                 displayElement(GraphElementDisplayData(id++, it.displayString(), 0f, 0f, 0f,0f, Offset(0f, 0f)))
             }
         }

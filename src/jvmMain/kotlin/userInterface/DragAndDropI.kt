@@ -21,8 +21,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.Element
-import bondgraph.Elements
-import bondgraph.Elements.*
+import bondgraph.ElementTypes
+import bondgraph.ElementTypes.*
 import bondgraph.GraphElementDisplayData
 import userInterface.*
 import kotlin.math.*
@@ -106,7 +106,7 @@ fun Draggable(
 @Composable
 fun  DragTarget(
     modifier: Modifier,
-    dataToDrop: Elements,
+    dataToDrop: ElementTypes,
     id: Int,
     content: @Composable (() -> Unit)
 ) {
@@ -486,7 +486,7 @@ fun displayElement(displayData: GraphElementDisplayData) {
             //.size(MyConstants.nodeBoxSize)
             .wrapContentSize()
             .offset { IntOffset(displayData.x.toInt(), displayData.y.toInt())}
-        ,Elements.toEnum(displayData.text)
+        ,ElementTypes.toEnum(displayData.text)
         ,displayData.id
     ) {
 

@@ -1,10 +1,8 @@
 package bondgraph
 
 import androidx.compose.ui.geometry.Offset
-import bondgraph.Elements.*
-import javax.swing.plaf.metal.MetalTextFieldUI
 
-enum class Elements {
+enum class ElementTypes {
     ZERO_PORT{
          override fun displayString () = "0"
          },
@@ -36,7 +34,7 @@ enum class Elements {
     abstract fun displayString(): String
 
     companion object {
-        fun toEnum(value: String): Elements {
+        fun toEnum(value: String): ElementTypes {
             return when (value) {
                 "0" -> ZERO_PORT
                 "1" -> ONE_PORT
@@ -63,7 +61,7 @@ class Bond(val id: Int, val element1: Element, val element2: Element, var powerT
 class BondGraph(var name: String) {
     //private val graphElementsDisplayDataMap = linkedMapOf<Int, GraphElementDisplayData>()
     val elementsMap = linkedMapOf<Int, Element>()
-    fun add(id: Int, element: Elements, x: Float, y: Float, centerOffset: Offset): Unit {
+    fun add(id: Int, element: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
         elementsMap[id] = Element(id, element, GraphElementDisplayData(id, element.displayString(), x, y, centerOffset.x * 2f, centerOffset.y * 2f, Offset(x + centerOffset.x, y + centerOffset.y)))
     }
 
