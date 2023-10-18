@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.Element
+import bondgraph.Elements
+import bondgraph.Elements.*
 import bondgraph.GraphElementDisplayData
 import userInterface.*
 import kotlin.math.*
@@ -104,7 +106,7 @@ fun Draggable(
 @Composable
 fun  DragTarget(
     modifier: Modifier,
-    dataToDrop: String,
+    dataToDrop: Elements,
     id: Int,
     content: @Composable (() -> Unit)
 ) {
@@ -131,11 +133,11 @@ fun  DragTarget(
                         println("id= $id,  dataToDrop = $dataToDrop ")
                         println("DragTarget id = $id")
                         globalId = id
-                        bondGraph.getGraphElementsDisplayDataMap()[id]?.text = ""
+                        bondGraph.getElementsMap()[id]?.displayData?.text  = ""
                         currentState.dataToDrop = dataToDrop
                         currentState.isDragging = true
                         currentState.dragPosition = currentPosition + it
-                        currentState.draggableComposable = { elementContent((dataToDrop)) }
+                        currentState.draggableComposable = { elementContent((dataToDrop.displayString())) }
                         currentState.centerOffsetx = charOffsetx
                         currentState.centerOffsety = charOffsety
                     }
@@ -249,13 +251,13 @@ fun  DropTarget(
         return result?.key ?: -1
     }
 
-    fun findElement(x: Float, y: Float): Int {
+    fun findElement(x: Float, y: Float, originElement: Element?): Int {
         val epsilon = 50
-        val result = bondGraph.getGraphElementsDisplayDataMap().mapValues { (_,v) -> sqrt((v.centerLocation.x - x).pow(2) + (v.centerLocation.y - y).pow(2))}
+        val result = bondGraph.getElementsMap().mapValues { (_,v) -> sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
 
-        return if (result == null) -1 else result.key
+        return if (result == null || result == originElement) -1 else result.key
     }
 
     fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
@@ -344,11 +346,11 @@ fun  DropTarget(
                     if (dragInfo.mode == Mode.BOND_MODE) {
                         val x = it.x
                         val y = it.y
-                        elementId = findElement(it.x, it.y)
+                        elementId = findElement(it.x, it.y, null)
                         if (elementId >= 0) {
-                            val displayData = bondGraph.getGraphElementsDisplayDataMap()[elementId]
-                            bondGraph.getGraphElementsDisplayDataMap().forEach{(k,v) -> println("id= ${k}  centerLocation= ${v.centerLocation}")}
-                            pointerOrigin = bondGraph.getGraphElementsDisplayDataMap()[elementId]?.centerLocation!!
+                           //val displayData = bondGraph.getElementsMap()[elementId]?.displayData
+                            //bondGraph.getGraphElementsDisplayDataMap().forEach{(k,v) -> println("id= ${k}  centerLocation= ${v.centerLocation}")}
+                            pointerOrigin = bondGraph.getElementsMap()[elementId]?.displayData?.centerLocation!!
                             pointerOffset = it
                             isDragging = true
                         }
@@ -358,7 +360,7 @@ fun  DropTarget(
                 , onDrag = { change, dragAmount ->
                     if (dragInfo.mode == Mode.BOND_MODE && elementId >= 0) {
                         pointerOffset += dragAmount
-                        val displayData = bondGraph.getGraphElementsDisplayDataMap()[elementId]
+                        val displayData = bondGraph.getElementsMap()[elementId]?.displayData
                         if (displayData != null)
                         pointerOrigin = offsetFromCenter(displayData.centerLocation, pointerOffset, displayData!!.width, displayData!!.height)
                     }
@@ -448,13 +450,13 @@ fun  DropTarget(
             currentState.finalOffset = Offset.Zero
         }
 
-        println("display ${bondGraph.getGraphElementsDisplayDataMap().size} elements")
+        //println("display ${bondGraph.getGraphElementsDisplayDataMap().size} elements")
 
         if (dragInfo.needsUpdate) {
-            bondGraph.getGraphElementsDisplayDataMap().forEach { (K, V) -> key(K) {displayElement(V)}}
+            bondGraph.getElementsMap().forEach { (K, V) -> key(K) {displayElement(V.displayData)}}
             dragInfo.needsUpdate = false
         }
-        bondGraph.getGraphElementsDisplayDataMap().forEach { (K, V) -> key(K) {displayElement(V)}}
+        bondGraph.getElementsMap().forEach { (K, V) -> key(K) {displayElement(V.displayData)}}
 
     }
 }
@@ -477,18 +479,18 @@ fun elementContent(text:String){
 }
 
 @Composable
-fun displayElement(graphElementDisplayData: GraphElementDisplayData) {
-    println("id = ${graphElementDisplayData.id}  text= ${graphElementDisplayData.text}  x= ${graphElementDisplayData.x}  y= ${graphElementDisplayData.y}")
+fun displayElement(displayData: GraphElementDisplayData) {
+    //println("id = ${graphElementDisplayData.id}  text= ${graphElementDisplayData.text}  x= ${graphElementDisplayData.x}  y= ${graphElementDisplayData.y}")
     DragTarget(
         modifier = Modifier
             //.size(MyConstants.nodeBoxSize)
             .wrapContentSize()
-            .offset { IntOffset(graphElementDisplayData.x.toInt(), graphElementDisplayData.y.toInt())}
-        ,graphElementDisplayData.text
-        ,graphElementDisplayData.id
+            .offset { IntOffset(displayData.x.toInt(), displayData.y.toInt())}
+        ,Elements.toEnum(displayData.text)
+        ,displayData.id
     ) {
 
-        elementContent(graphElementDisplayData.text)
+        elementContent(displayData.text)
     }
 }
 internal class DragTargetInfo {
@@ -503,7 +505,7 @@ internal class DragTargetInfo {
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
-    var dataToDrop: String = ""
+    var dataToDrop = INVALID
     //var trigger by mutableStateOf(0)
 
 }

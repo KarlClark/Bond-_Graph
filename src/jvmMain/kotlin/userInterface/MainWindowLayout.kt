@@ -12,10 +12,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.*
 import bondgraph.BondGraph
+import bondgraph.Elements
 import bondgraph.GraphElementDisplayData
 import com.example.draganddrop.*
 
-val graphElementTypeNames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
+//val graphElementTypeNames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
 val bondGraph = BondGraph("test graph")
 
 //val graphElementDisplayDataMap    = linkedMapOf<Int, GraphElementDisplayData>()
@@ -63,7 +64,7 @@ fun textColumn() {
                     .padding(bottom =20.dp)
                     .pointerInput(Unit){detectTapGestures (
                         onTap ={
-                            if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getGraphElementsDisplayDataMap().size >= 2) {
+                            if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getElementsMap().size >= 2) {
                                 textColor = Color.Blue
                                 currentState.mode = Mode.BOND_MODE
                             } else{
@@ -77,8 +78,8 @@ fun textColumn() {
             )
 
             var id = 1000
-            for (entry in graphElementTypeNames) {
-                displayElement(GraphElementDisplayData(id++, entry, 0f, 0f, 0f,0f, Offset(0f, 0f)))
+            enumValues<Elements>().forEach {
+                displayElement(GraphElementDisplayData(id++, it.displayString(), 0f, 0f, 0f,0f, Offset(0f, 0f)))
             }
         }
     }
