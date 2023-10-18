@@ -67,6 +67,10 @@ class BondGraph(var name: String) {
 
     fun getElementsMap():Map<Int, Element> = elementsMap
 
+    fun getElement(id: Int): Element? {
+        return elementsMap[id]
+    }
+
     fun remove (id: Int) {
         elementsMap.remove(id)
     }

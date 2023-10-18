@@ -20,7 +20,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import bondgraph.Element
 import bondgraph.ElementTypes
 import bondgraph.ElementTypes.*
 import bondgraph.GraphElementDisplayData
@@ -236,7 +235,8 @@ fun  DropTarget(
     var haveDragged by remember { mutableStateOf(false) }
     var bond by remember { mutableStateOf(0) }
     var needsUpdate by remember { mutableStateOf(false) }
-    var elementId by remember { mutableStateOf(-1) }
+    var originId by remember { mutableStateOf(-1) }
+    var destinationId by remember { mutableStateOf(-1) }
     //var displayData: GraphElementDisplayData? by remember(GraphElementDisplayData(-1,"", 0f, 0f, 0f, 0f, Offset(0f, 0f)))
     var elementCenter by remember { mutableStateOf(Offset(0f, 0f)) }
 
@@ -251,13 +251,13 @@ fun  DropTarget(
         return result?.key ?: -1
     }
 
-    fun findElement(x: Float, y: Float, originElement: Element?): Int {
+    fun findElement(x: Float, y: Float, originId: Int ): Int {
         val epsilon = 50
         val result = bondGraph.getElementsMap().mapValues { (_,v) -> sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
 
-        return if (result == null || result == originElement) -1 else result.key
+        return if (result == null || result.key == originId) -1 else result.key
     }
 
     fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
@@ -346,11 +346,11 @@ fun  DropTarget(
                     if (dragInfo.mode == Mode.BOND_MODE) {
                         val x = it.x
                         val y = it.y
-                        elementId = findElement(it.x, it.y, null)
-                        if (elementId >= 0) {
+                        originId = findElement(it.x, it.y, -1)
+                        if (originId >= 0) {
                            //val displayData = bondGraph.getElementsMap()[elementId]?.displayData
                             //bondGraph.getGraphElementsDisplayDataMap().forEach{(k,v) -> println("id= ${k}  centerLocation= ${v.centerLocation}")}
-                            pointerOrigin = bondGraph.getElementsMap()[elementId]?.displayData?.centerLocation!!
+                            pointerOrigin = bondGraph.getElementsMap()[originId]?.displayData?.centerLocation!!
                             pointerOffset = it
                             isDragging = true
                         }
@@ -358,9 +358,18 @@ fun  DropTarget(
                     }
                 }
                 , onDrag = { change, dragAmount ->
-                    if (dragInfo.mode == Mode.BOND_MODE && elementId >= 0) {
-                        pointerOffset += dragAmount
-                        val displayData = bondGraph.getElementsMap()[elementId]?.displayData
+                    if (dragInfo.mode == Mode.BOND_MODE && originId >= 0) {
+                        destinationId = findElement(pointerOffset.x, pointerOffset.y, originId)
+
+                        if ( destinationId >= 0) {
+                            val disData = bondGraph.getElement(destinationId)?.displayData
+                            if (disData != null) {
+                                pointerOffset = offsetFromCenter(disData.centerLocation, pointerOrigin, disData.width, disData.height )
+                            }
+                        } else {
+                            pointerOffset += dragAmount
+                        }
+                        val displayData = bondGraph.getElementsMap()[originId]?.displayData
                         if (displayData != null)
                         pointerOrigin = offsetFromCenter(displayData.centerLocation, pointerOffset, displayData!!.width, displayData!!.height)
                     }
