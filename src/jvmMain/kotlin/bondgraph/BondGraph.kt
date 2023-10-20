@@ -109,10 +109,8 @@ class BondGraph(var name: String) {
         bondsMap.remove(id)
     }
 
-    fun removeBond(bond: Bond?){
+    fun elementRemoveBond(bond: Bond?){
         if (bond != null) {
-            elementsMap[bond.element1?.id]?.removeBond(bond.id)
-            elementsMap[bond.element2?.id]?.removeBond(bond.id)
             bondsMap.remove(bond.id)
         }
     }

@@ -21,7 +21,7 @@ open class Element(val bondGraph: BondGraph, val id: Int, val element: ElementTy
 open class OnePort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
     override fun addBond(bond: Bond){
         if (bondsMap.size > 0){
-            bondGraph.removeBond(bondsMap[bond.id])
+            bondsMap.forEach { (_,v) -> bondGraph.elementRemoveBond(v) }
             bondsMap.clear()
         }
         bondsMap[bond.id] = bond
@@ -31,7 +31,7 @@ open class TwoPort (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
 
     override fun addBond(bond: Bond) {
         if (bondsMap.size == 2){
-            bondsMap.forEach{(_,v) -> bondGraph.removeBond(v)}
+            bondsMap.forEach{(_,v) -> bondGraph.elementRemoveBond(v)}
             bondsMap.clear()
         }
         bondsMap[bond.id] = bond
