@@ -1,12 +1,13 @@
 package bondgraph
 
 import androidx.compose.ui.geometry.Offset
+import bondgraph.ElementTypes.*
 
 enum class ElementTypes {
-    ZERO_PORT{
+    ZERO_JUNCTION{
          override fun displayString () = "0"
          },
-    ONE_PORT{
+    ONE_JUNCTION{
         override fun displayString() = "1"
         },
     CAPACITOR{
@@ -36,8 +37,8 @@ enum class ElementTypes {
     companion object {
         fun toEnum(value: String): ElementTypes {
             return when (value) {
-                "0" -> ZERO_PORT
-                "1" -> ONE_PORT
+                "0" -> ZERO_JUNCTION
+                "1" -> ONE_JUNCTION
                 "C" -> CAPACITOR
                 "R" -> RESISTOR
                 "I" -> INERTIA
@@ -63,8 +64,21 @@ class BondGraph(var name: String) {
     //private val graphElementsDisplayDataMap = linkedMapOf<Int, GraphElementDisplayData>()
     val elementsMap = linkedMapOf<Int, Element>()
     val bondsMap = linkedMapOf<Int, Bond>()
-    fun addElement(id: Int, element: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
-        elementsMap[id] = Element(id, element, GraphElementDisplayData(id, element.displayString(), x, y, centerOffset.x * 2f, centerOffset.y * 2f, Offset(x + centerOffset.x, y + centerOffset.y)))
+    fun addElement(id: Int, elementType: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
+        val elementClass = when(elementType){
+            ZERO_JUNCTION -> ::ZeroJunction
+            ONE_JUNCTION -> ::OneJunction
+            CAPACITOR -> ::Capacitor
+            RESISTOR -> ::Resistor
+            INERTIA -> ::Inertia
+            TRANSFORMER -> ::Transformer
+            GYRATOR -> ::Gyrator
+            MODULATED_TRANSFORMER -> ::ModulatedTransformer
+            INVALID -> null
+        }
+        if (elementClass != null){
+            elementsMap[id] = elementClass.invoke(this, id, elementType, GraphElementDisplayData(id, elementType.displayString(), x, y, centerOffset.x * 2f, centerOffset.y * 2f, Offset(x + centerOffset.x, y + centerOffset.y)))
+        }
     }
 
     fun getElementsMap():Map<Int, Element> = elementsMap
@@ -74,11 +88,15 @@ class BondGraph(var name: String) {
     }
 
     fun removeElement (id: Int) {
+        elementsMap[id]?.getBondList()?.forEach{bondsMap.remove(it.id) }
         elementsMap.remove(id)
     }
 
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
-        bondsMap[id] = Bond(id, elementsMap[elementId1], offset1, elementsMap[elementId2], offset2, elementsMap[powerToElementId])
+        val bond = Bond(id, elementsMap[elementId1], offset1, elementsMap[elementId2], offset2, elementsMap[powerToElementId])
+        bondsMap[id] = bond
+        elementsMap[elementId1]?.addBond(bond)
+        elementsMap[elementId2]?.addBond(bond)
     }
 
     fun getBond(id: Int): Bond? {
@@ -86,7 +104,17 @@ class BondGraph(var name: String) {
     }
 
     fun removeBond(id: Int){
+        elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)
+        elementsMap[bondsMap[id]?.element2?.id]?.removeBond(id)
         bondsMap.remove(id)
+    }
+
+    fun removeBond(bond: Bond?){
+        if (bond != null) {
+            elementsMap[bond.element1?.id]?.removeBond(bond.id)
+            elementsMap[bond.element2?.id]?.removeBond(bond.id)
+            bondsMap.remove(bond.id)
+        }
     }
     fun setPowerElement(id: Int, element: Element?){
         if (bondsMap[id] != null){

@@ -511,6 +511,7 @@ fun displayElement(displayData: GraphElementDisplayData) {
         elementContent(displayData.text)
     }
 }
+
 internal class DragTargetInfo {
     var isDragging: Boolean by mutableStateOf(false)
     var isCurrentDropTarget: Boolean by mutableStateOf(false)
@@ -523,6 +524,8 @@ internal class DragTargetInfo {
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
+    var bondList = {mutableStateListOf<String>()}
+
     var dataToDrop = INVALID
     //var trigger by mutableStateOf(0)
 
