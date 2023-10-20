@@ -26,6 +26,9 @@ import bondgraph.GraphElementDisplayData
 import bondgraph.Bond
 import userInterface.*
 import kotlin.math.*
+import bondgraph.BondGraph.Companion.getArrowOffsets
+import bondgraph.BondGraph.Companion.getCausalOffsets
+import bondgraph.BondGraph.Companion.offsetFromCenter
 
 
 internal val LocalDragTargetInfo = compositionLocalOf { DragTargetInfo() }
@@ -40,27 +43,6 @@ enum class StrokeLocation{START, END, NO_STROKE}
 
 class LineData(var color:Color, var offsets: Pair<Offset, Offset>, var strokeLocation: StrokeLocation)
 class ArrowOffsets(val oArrow: Offset, val oCausal1: Offset, val oCausal2: Offset)
-fun getArrowOffsets(startOffset: Offset, endOffset: Offset): Offset{
-    val arrowAngle = .7f
-    val arrowLength = 15f
-    val xLength = endOffset.x - startOffset.x
-    val yLength = endOffset.y - startOffset.y
-    val angle = atan(yLength/xLength)
-    val sign = if (xLength < 0) 1f else -1f
-    return Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * arrowAngle).toFloat())) , endOffset.y + sign*(arrowLength * sin(angle - sign * arrowAngle).toFloat()))
-}
-
-fun getCausalOffsets(startOffset: Offset, endOffset: Offset): Pair<Offset, Offset> {
-    val arrowAngle = .7f
-    val arrowLength = 15f
-    val xLength = endOffset.x - startOffset.x
-    val yLength = endOffset.y - startOffset.y
-    val angle = atan(yLength/xLength)
-    val sign = if (xLength < 0) 1f else -1f
-    val off1 = Offset((endOffset.x + sign*(arrowLength * cos(angle + sign * 3.14/2f).toFloat())) , endOffset.y + sign*(arrowLength * sin(angle + sign * 3.14/2f).toFloat()))
-    val off2= Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * 3.14/2f).toFloat())) , endOffset.y + sign*(arrowLength * sin(angle - sign * 3.14/2f).toFloat()))
-    return Pair(off1, off2)
-}
 
 @Composable
 fun Draggable(
@@ -138,6 +120,10 @@ fun  DragTarget(
                         currentState.draggableComposable = { elementContent((dataToDrop.displayString())) }
                         currentState.centerOffsetx = charOffsetx
                         currentState.centerOffsety = charOffsety
+                        val cp =bondGraph.getElement(id)?.displayData?.centerLocation
+                          if (cp != null){
+                              currentState.centerPosition = cp
+                          }
                     }
                     //
                 }, onDrag = { change, dragAmount ->
@@ -145,6 +131,8 @@ fun  DragTarget(
                         change.consumeAllChanges()
 
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
+                        currentState.centerPosition += Offset(dragAmount.x, dragAmount.y)
+                        bondGraph.updateBondsForElement(id, currentState.centerPosition)
                         //currentState.finalOffset += Offset(dragAmount.x, dragAmount.y)
                     }
 
@@ -259,13 +247,6 @@ fun  DropTarget(
         return if (result == null || result.key == originId) -1 else result.key
     }
 
-    fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
-        val l = (width + height)/2f + 5f
-        val d = sqrt((offset1.x - offset2.x ).pow(2) + (offset1.y - offset2.y).pow(2))
-        Offset(11f, 1f)
-        return Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
-
-    }
 
     Box(modifier = modifier
         //.offset{IntOffset(-50,0)}
@@ -521,6 +502,7 @@ internal class DragTargetInfo {
     var finalPosition  by mutableStateOf (Offset.Zero)
     var draggableComposable by mutableStateOf< (@Composable () -> Unit)?>(null)
     var needsUpdate by mutableStateOf(false)
+    var centerPosition by mutableStateOf(Offset.Zero)
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
