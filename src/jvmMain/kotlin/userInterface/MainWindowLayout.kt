@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.BondGraph
 import bondgraph.ElementTypes
@@ -46,13 +47,14 @@ fun Modifier.conditional(
 fun textColumn() {
 
     val currentState = LocalDragTargetInfo.current
-
+    var bondModeColor by remember { mutableStateOf (Color.LightGray)}
+    var nodeModeColor by remember { mutableStateOf( MyConstants.myGreen)}
     Box(Modifier.fillMaxHeight()
         .background(Color.LightGray)
     ) {
         Column(
             Modifier
-                .padding(5.dp)
+                .padding(2.dp)
                 .fillMaxHeight().width(60.dp).fillMaxWidth()
 
             ,horizontalAlignment = Alignment.CenterHorizontally
@@ -61,23 +63,47 @@ fun textColumn() {
         )
         {
 
-            Text ("Bond\nMode", color = textColor,
-                modifier=Modifier
-                    .padding(bottom =20.dp)
-                    .pointerInput(Unit){detectTapGestures (
-                        onTap ={
-                            if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getElementsMap().size >= 2) {
-                                textColor = MyConstants.myGreen
-                                currentState.mode = Mode.BOND_MODE
-                            } else{
-                                textColor = Color.Black
-                                currentState.mode = Mode.ELEMENT_MODE
-                            }
+            Column (Modifier
+                .background(Color.White)
+                .fillMaxWidth()
+                ,horizontalAlignment = Alignment.CenterHorizontally
+                ,verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.CenterVertically)
+
+            ){
+
+                Text("Bond\nMode", color = bondModeColor, textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(top= 10.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getElementsMap().size >= 2) {
+                                        bondModeColor = MyConstants.myGreen
+                                        nodeModeColor = Color.LightGray
+                                        currentState.mode = Mode.BOND_MODE
+                                    }
+                                }
+                            )
 
                         }
-                    )
-                    }
-            )
+                )
+
+                Text("Node\nMode", color = nodeModeColor, textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(bottom = 10.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    if (currentState.mode == Mode.BOND_MODE) {
+                                        nodeModeColor = MyConstants.myGreen
+                                        bondModeColor = Color.LightGray
+                                        currentState.mode = Mode.ELEMENT_MODE
+                                    }
+                                }
+                            )
+                        }
+                )
+            }
 
             var id = 1000
             enumValues<ElementTypes>().forEach {
