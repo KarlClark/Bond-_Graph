@@ -23,6 +23,8 @@ val bondGraph = BondGraph("test graph")
 var textColor by mutableStateOf(Color.Black)
 object MyConstants {
     val elementNameFontsize: TextUnit =20.sp
+    val labelFontsize: TextUnit = 15.sp
+    val myGreen = Color(10, 140, 10)
 }
 
 
@@ -65,7 +67,7 @@ fun textColumn() {
                     .pointerInput(Unit){detectTapGestures (
                         onTap ={
                             if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getElementsMap().size >= 2) {
-                                textColor = Color.Blue
+                                textColor = MyConstants.myGreen
                                 currentState.mode = Mode.BOND_MODE
                             } else{
                                 textColor = Color.Black

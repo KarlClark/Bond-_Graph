@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.ElementTypes
@@ -29,6 +30,7 @@ import kotlin.math.*
 import bondgraph.BondGraph.Companion.getArrowOffsets
 import bondgraph.BondGraph.Companion.getCausalOffsets
 import bondgraph.BondGraph.Companion.offsetFromCenter
+import bondgraph.BondGraph.Companion.getLabelOffset
 
 
 internal val LocalDragTargetInfo = compositionLocalOf { DragTargetInfo() }
@@ -201,7 +203,7 @@ fun  DragTarget(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalTextApi::class)
 @Composable
 fun  DropTarget(
     modifier: Modifier
@@ -214,6 +216,9 @@ fun  DropTarget(
     val finalPosition = dragInfo.finalPosition
     val finalOffset = dragInfo.finalOffset
     var xOffset by remember{ mutableStateOf(0f) }
+    val textMeasurer = rememberTextMeasurer(50)
+    val style = TextStyle(fontSize = MyConstants.labelFontsize)
+
 
     var pointerOffset by remember {mutableStateOf(Offset(0f, 0f))}
     var pointerOrigin by remember { mutableStateOf(Offset(0f,0f))}
@@ -379,15 +384,19 @@ fun  DropTarget(
                         }
                         StrokeLocation.NO_STROKE -> {}
                     }
+
                 }
+
                 val drawArrowWithBond ={bond: Bond->
                     val color = Color.Black
                     drawLine(color = color, bond.offset1, bond.offset2, 1f)
+
                     if (bond.powerToElement == bond.element1) {
                         drawLine(color = color, bond.offset1, getArrowOffsets(bond.offset2, bond.offset1) )
                     } else {
                         drawLine(color = color, bond.offset2, getArrowOffsets(bond.offset1, bond.offset2) )
                     }
+                    
                     if (bond.casualToElement != null){
                         if (bond.casualToElement == bond.element1) {
                             val offsets = getCausalOffsets(bond.offset1, bond.offset2)
@@ -397,6 +406,10 @@ fun  DropTarget(
                             drawLine(color = color, offsets.first, offsets.second)
                         }
                     }
+
+                    val textLayoutResult = textMeasurer.measure(AnnotatedString(bond.displayId ))
+                    val myLabelOffset = getLabelOffset(bond.offset1, bond.offset2, textLayoutResult.size.width, textLayoutResult.size.height)
+                    drawText(text = bond.displayId, style = TextStyle(fontSize=MyConstants.labelFontsize), textMeasurer = textMeasurer, topLeft = myLabelOffset)
                 }
                 println("draw")
                 if (needsUpdate) {

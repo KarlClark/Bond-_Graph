@@ -1,37 +1,46 @@
 package bondgraph
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import bondgraph.ElementTypes.*
 import kotlin.math.*
 
 enum class ElementTypes {
     ZERO_JUNCTION{
          override fun displayString () = "0"
-         },
+     },
     ONE_JUNCTION{
         override fun displayString() = "1"
-        },
+    },
     CAPACITOR{
         override fun displayString() = "C"
-        },
+    },
     RESISTOR{
         override fun displayString() = "R"
-        },
+    },
     INERTIA{
         override fun displayString() = "I"
-        },
+    },
     TRANSFORMER{
         override fun displayString() = "TF"
-        },
+    },
     GYRATOR{
         override fun displayString() = "GY"
-        },
+    },
     MODULATED_TRANSFORMER{
         override fun displayString()  = "MTF"
-        },
+    },
+    SOURCE_OF_EFFORT{
+        override fun displayString() = "Se"
+    },
+    SOURCE_OF_FLOW{
+        override fun displayString() = "Sf"
+    },
+
     INVALID {
         override fun displayString() = ""
-        };
+    };
 
     abstract fun displayString(): String
 
@@ -46,7 +55,8 @@ enum class ElementTypes {
                 "TF" -> TRANSFORMER
                 "GY" -> GYRATOR
                 "MTF" -> MODULATED_TRANSFORMER
-
+                "Se" -> SOURCE_OF_EFFORT
+                "Sf" -> SOURCE_OF_FLOW
                 else -> INVALID
             }
         }
@@ -74,15 +84,30 @@ class BondGraph(var name: String) {
         }
 
         fun getCausalOffsets(startOffset: Offset, endOffset: Offset): Pair<Offset, Offset> {
-            val arrowAngle = .7f
-            val arrowLength = 15f
+            val strokeLength = 15f
             val xLength = endOffset.x - startOffset.x
             val yLength = endOffset.y - startOffset.y
             val angle = atan(yLength/xLength)
             val sign = if (xLength < 0) 1f else -1f
-            val off1 = Offset((endOffset.x + sign*(arrowLength * cos(angle + sign * 3.14/2f).toFloat())) , endOffset.y + sign*(arrowLength * sin(angle + sign * 3.14/2f).toFloat()))
-            val off2= Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * 3.14/2f).toFloat())) , endOffset.y + sign*(arrowLength * sin(angle - sign * 3.14/2f).toFloat()))
+            val off1 = Offset((endOffset.x + sign*(strokeLength * cos(angle + sign * 3.14/2f).toFloat())) , endOffset.y + sign*(strokeLength * sin(angle + sign * 3.14/2f).toFloat()))
+            val off2= Offset((endOffset.x + sign*(strokeLength * cos(angle - sign * 3.14/2f).toFloat())) , endOffset.y + sign*(strokeLength * sin(angle - sign * 3.14/2f).toFloat()))
             return Pair(off1, off2)
+        }
+
+        fun getLabelOffset (startOffset: Offset, endOffset: Offset, width: Int, height: Int): Offset{
+
+            //val length = sqrt((endOffset.x - startOffset.x).pow(2) + (endOffset.y - startOffset.y).pow(2))
+            val length = 15f
+            val xLength = endOffset.x - startOffset.x
+            val yLength = endOffset.y - startOffset.y
+            val angle = atan(yLength/xLength)
+            val middleX = startOffset.x + xLength/2f
+            val middleY = startOffset.y + yLength/2f
+            val sign = if (xLength < 0) 1f else -1f
+            println("$xLength  $yLength  $angle")
+            val off1 = Offset((middleX + sign*(length * cos(angle + sign * 3.14/2f).toFloat())) , middleY + sign*(length * sin(angle + sign * 3.14/2f).toFloat()))
+            val off2 = Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())) , middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
+            return off2
         }
 
 
@@ -112,6 +137,8 @@ class BondGraph(var name: String) {
                 TRANSFORMER -> ::Transformer
                 GYRATOR -> ::Gyrator
                 MODULATED_TRANSFORMER -> ::ModulatedTransformer
+                SOURCE_OF_EFFORT -> ::SourceOfEffort
+                SOURCE_OF_FLOW -> :: SourceOfFlow
                 INVALID -> null
             }
             if (elementClass != null) {
@@ -145,6 +172,7 @@ class BondGraph(var name: String) {
     }
 
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
+        //val labelOffset = getLabelOffset(offset1, offse
         val bond = Bond(id, elementsMap[elementId1], offset1, elementsMap[elementId2], offset2, elementsMap[powerToElementId])
         bondsMap[id] = bond
         elementsMap[elementId1]?.addBond(bond)
