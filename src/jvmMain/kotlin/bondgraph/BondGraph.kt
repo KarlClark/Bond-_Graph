@@ -1,9 +1,13 @@
 package bondgraph
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.sp
 import bondgraph.ElementTypes.*
+import com.example.draganddrop.DragTargetInfo
+import com.example.draganddrop.LocalDragTargetInfo
 import kotlin.math.*
 
 enum class ElementTypes {
@@ -66,7 +70,7 @@ enum class ElementTypes {
 class GraphElementDisplayData (val id: Int, var text: String, var x: Float, var y: Float, val width: Float, val height: Float, var centerLocation: Offset)
 
 class Bond(val id: Int, val element1: Element?, var offset1: Offset, val element2: Element?, var offset2: Offset, var powerToElement: Element?){
-    var displayId: String = id.toString()
+    var displayId: String = ""
     var casualToElement: Element? = null
 
 
@@ -104,7 +108,7 @@ class BondGraph(var name: String) {
             val middleX = startOffset.x + xLength/2f
             val middleY = startOffset.y + yLength/2f
             val sign = if (xLength < 0) 1f else -1f
-            println("$xLength  $yLength  $angle")
+            //println("$xLength  $yLength  $angle")
             val off1 = Offset((middleX + sign*(length * cos(angle + sign * 3.14/2f).toFloat())) , middleY + sign*(length * sin(angle + sign * 3.14/2f).toFloat()))
             val off2 = Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())) , middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
             return off2
@@ -118,9 +122,10 @@ class BondGraph(var name: String) {
             return Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
         }
     }
-    //private val graphElementsDisplayDataMap = linkedMapOf<Int, GraphElementDisplayData>()
+
     val elementsMap = linkedMapOf<Int, Element>()
-    val bondsMap = linkedMapOf<Int, Bond>()
+    val bondsMap = mutableStateMapOf<Int, Bond>()
+    
     fun addElement(id: Int, elementType: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
         if (elementsMap.contains(id)){
             elementsMap[id]?.displayData?.text = elementType.displayString()
@@ -235,4 +240,13 @@ class BondGraph(var name: String) {
             }
         }
     }
+
+   //@Composable
+    fun augment() {
+        println("augment called")
+       var cnt = 1;
+       bondsMap.values.forEach { val bond= it; it.displayId=cnt++.toString(); bondsMap[bond.id] = bond }
+
+       }
+   //}
 }

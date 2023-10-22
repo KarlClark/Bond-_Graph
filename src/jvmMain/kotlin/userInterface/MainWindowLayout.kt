@@ -3,6 +3,7 @@ package userInterface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,15 +51,17 @@ fun textColumn() {
     var bondModeColor by remember { mutableStateOf (Color.LightGray)}
     var nodeModeColor by remember { mutableStateOf( MyConstants.myGreen)}
     Box(Modifier.fillMaxHeight()
-        .background(Color.LightGray)
+        .background(Color.Blue)
     ) {
         Column(
             Modifier
                 .padding(2.dp)
-                .fillMaxHeight().width(60.dp).fillMaxWidth()
+                //.fillMaxHeight().width(80.dp).fillMaxWidth()
+                .width(IntrinsicSize.Max)
+                .fillMaxHeight()
 
             ,horizontalAlignment = Alignment.CenterHorizontally
-            ,verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.CenterVertically)
+            ,verticalArrangement = Arrangement.spacedBy(2.dp, alignment = Alignment.Top)
             //,verticalArrangement = Arrangement.Center
         )
         {
@@ -105,10 +108,48 @@ fun textColumn() {
                 )
             }
 
-            var id = 1000
-            enumValues<ElementTypes>().forEach {
-                displayElement(GraphElementDisplayData(id++, it.displayString(), 0f, 0f, 0f,0f, Offset(0f, 0f)))
+            Column (
+                 horizontalAlignment = Alignment.CenterHorizontally
+                ,verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.CenterVertically)
+                ,modifier= Modifier
+                    .background(Color.LightGray)
+                    .padding(2.dp)
+                    .fillMaxWidth()
+                    //.fillMaxHeight().width(60.dp).fillMaxWidth()
+                    .wrapContentHeight()
+
+
+                //, verticalArrangement = Arrangement.Bottom
+
+            ){
+                var id = 1000
+                enumValues<ElementTypes>().forEach {
+                    displayElement(GraphElementDisplayData(id++, it.displayString(), 0f, 0f, 0f, 0f, Offset(0f, 0f)))
+                }
             }
+
+            Column (
+                Modifier
+                    .background(Color.White)
+                    .padding(2.dp)
+                    //.fillMaxHeight().width(60.dp).fillMaxWidth()
+                    .wrapContentWidth()
+
+                ,horizontalAlignment = Alignment.CenterHorizontally
+                ,verticalArrangement = Arrangement.spacedBy(5.dp, alignment = Alignment.CenterVertically)
+            ){
+
+                Button (onClick = {
+                    println ("Button click")
+                    bondGraph.augment()
+                }){
+                    Text("Augment")
+                }
+                Button (onClick = {println ("Button click")}){
+                    Text("Derive")
+                }
+            }
+
         }
     }
 }
