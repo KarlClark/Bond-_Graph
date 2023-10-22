@@ -5,69 +5,99 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import bondgraph.ElementTypes.*
 import com.example.draganddrop.DragTargetInfo
 import com.example.draganddrop.LocalDragTargetInfo
+import userInterface.MyConstants
 import kotlin.math.*
 
 enum class ElementTypes {
     ZERO_JUNCTION{
-         override fun displayString () = "0"
+         override fun displayString () = _0
      },
     ONE_JUNCTION{
-        override fun displayString() = "1"
+        override fun displayString() = _1
     },
     CAPACITOR{
-        override fun displayString() = "C"
+        override fun displayString() = C
     },
     RESISTOR{
-        override fun displayString() = "R"
+        override fun displayString() = R
     },
     INERTIA{
-        override fun displayString() = "I"
+        override fun displayString() = I
     },
     TRANSFORMER{
-        override fun displayString() = "TF"
+        override fun displayString() = TF
     },
     GYRATOR{
-        override fun displayString() = "GY"
+        override fun displayString() = GY
     },
     MODULATED_TRANSFORMER{
-        override fun displayString()  = "MTF"
+        override fun displayString()  = MTF
     },
     SOURCE_OF_EFFORT{
-        override fun displayString() = "Se"
+        override fun displayString() = Se
     },
     SOURCE_OF_FLOW{
-        override fun displayString() = "Sf"
+        override fun displayString() = Sf
     },
 
     INVALID {
-        override fun displayString() = ""
+        override fun displayString() = AnnotatedString("")
     };
 
-    abstract fun displayString(): String
+    abstract fun displayString(): AnnotatedString
 
     companion object {
-        fun toEnum(value: String): ElementTypes {
+
+        val style = SpanStyle(fontSize = MyConstants.elementNameFontsize)
+        val subStyle = SpanStyle(fontSize = MyConstants.subTextFontsize)
+        val _0 = AnnotatedString("0", style)
+        val _1 = AnnotatedString("1", style)
+        val C = AnnotatedString("C", style)
+        val R = AnnotatedString("R", style)
+        val I = AnnotatedString("I", style)
+        val TF = AnnotatedString("TF", style)
+        val GY = AnnotatedString("GY", style)
+        val MTF = AnnotatedString("MTF", style)
+        val Se = buildAnnotatedString {
+            pushStyle(style)
+            append ("S")
+            pushStyle(subStyle)
+            append("e")
+            toAnnotatedString()
+        }
+
+        val Sf = buildAnnotatedString {
+            pushStyle(style)
+            append ("S")
+            pushStyle(subStyle)
+            append("f")
+            toAnnotatedString()
+        }
+        fun toEnum(value: AnnotatedString): ElementTypes {
             return when (value) {
-                "0" -> ZERO_JUNCTION
-                "1" -> ONE_JUNCTION
-                "C" -> CAPACITOR
-                "R" -> RESISTOR
-                "I" -> INERTIA
-                "TF" -> TRANSFORMER
-                "GY" -> GYRATOR
-                "MTF" -> MODULATED_TRANSFORMER
-                "Se" -> SOURCE_OF_EFFORT
-                "Sf" -> SOURCE_OF_FLOW
+                _0 -> ZERO_JUNCTION
+                _1 -> ONE_JUNCTION
+                C -> CAPACITOR
+                R -> RESISTOR
+                I -> INERTIA
+                TF -> TRANSFORMER
+                GY -> GYRATOR
+                MTF -> MODULATED_TRANSFORMER
+                Se -> SOURCE_OF_EFFORT
+                Sf -> SOURCE_OF_FLOW
                 else -> INVALID
             }
         }
     }
 }
 
-class GraphElementDisplayData (val id: Int, var text: String, var x: Float, var y: Float, val width: Float, val height: Float, var centerLocation: Offset)
+class GraphElementDisplayData (val id: Int, var text: AnnotatedString, var x: Float, var y: Float, val width: Float, val height: Float, var centerLocation: Offset)
 
 class Bond(val id: Int, val element1: Element?, var offset1: Offset, val element2: Element?, var offset2: Offset, var powerToElement: Element?){
     var displayId: String = ""
@@ -125,7 +155,7 @@ class BondGraph(var name: String) {
 
     val elementsMap = linkedMapOf<Int, Element>()
     val bondsMap = mutableStateMapOf<Int, Bond>()
-    
+
     fun addElement(id: Int, elementType: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
         if (elementsMap.contains(id)){
             elementsMap[id]?.displayData?.text = elementType.displayString()

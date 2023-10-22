@@ -115,7 +115,7 @@ fun  DragTarget(
                         //println("id= $id,  dataToDrop = $dataToDrop ")
                         //println("DragTarget id = $id")
                         globalId = id
-                        bondGraph.getElementsMap()[id]?.displayData?.text  = ""
+                        bondGraph.getElementsMap()[id]?.displayData?.text  = AnnotatedString("")
                         currentState.dataToDrop = dataToDrop
                         currentState.isDragging = true
                         currentState.dragPosition = currentPosition + it
@@ -478,7 +478,7 @@ fun  DropTarget(
 }
 
 @Composable
-fun elementContent(text:String){
+fun elementContent(text:AnnotatedString){
     Box(
         modifier = Modifier
             //.size(MyConstants.nodeBoxSize)

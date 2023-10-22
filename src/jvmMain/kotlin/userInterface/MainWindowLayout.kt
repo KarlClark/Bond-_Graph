@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.BondGraph
@@ -25,6 +27,7 @@ val bondGraph = BondGraph("test graph")
 var textColor by mutableStateOf(Color.Black)
 object MyConstants {
     val elementNameFontsize: TextUnit =20.sp
+    val subTextFontsize: TextUnit = 15.sp
     val labelFontsize: TextUnit = 15.sp
     val myGreen = Color(10, 140, 10)
 }
