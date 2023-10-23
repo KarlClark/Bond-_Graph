@@ -525,6 +525,7 @@ internal class DragTargetInfo {
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
+    var showResults by mutableStateOf(false)
     //var bondList: () -> SnapshotStateList<String> = {mutableStateListOf<String>()}
 
     var dataToDrop = INVALID

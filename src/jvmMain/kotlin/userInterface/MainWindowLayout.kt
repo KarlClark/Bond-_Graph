@@ -7,10 +7,12 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.Bottom
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +31,8 @@ object MyConstants {
     val elementNameFontsize: TextUnit =20.sp
     val subTextFontsize: TextUnit = 15.sp
     val labelFontsize: TextUnit = 15.sp
+    val bottomBarFontSize = 15.sp
+    val resultsFontSize = 15.sp
     val myGreen = Color(10, 140, 10)
 }
 
@@ -53,6 +57,7 @@ fun textColumn() {
     val currentState = LocalDragTargetInfo.current
     var bondModeColor by remember { mutableStateOf (Color.LightGray)}
     var nodeModeColor by remember { mutableStateOf( MyConstants.myGreen)}
+
     Box(Modifier.fillMaxHeight()
         .background(Color.Blue)
     ) {
@@ -157,23 +162,124 @@ fun textColumn() {
     }
 }
 
+/*@Composable
+fun textBox(text: String) {
+    Box (modifier = Modifier
+        //.fillMaxHeight()
+        .background(Color.Cyan)
+        .wrapContentSize()
+    ) {
+        Text(text = text
+            //,textAlign = TextAlign.Center
+            ,fontSize = MyConstants.bottomBarFontSize
+            ,color = Color.Black
+            , modifier = Modifier
+                //.fillMaxHeight()
+                //.wrapContentHeight(align = Alignment.CenterVertically)
+                //.align(Alignment.Center)
+        )
+    }
+}*/
+@Composable
+fun bottomBar() {
 
+    val currentState = LocalDragTargetInfo.current
+
+    Row(Modifier
+        .height(60.dp)
+        //.heightIn(60.dp, 60.dp)
+        .requiredHeightIn(60.dp, 60.dp)
+        .fillMaxWidth()
+        .background(Color.DarkGray)
+    ){
+
+        Text("Results"
+            , fontSize = MyConstants.bottomBarFontSize
+            , color = Color.White
+            , modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 5.dp )
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            println("Results tap")
+                            currentState.showResults = !currentState.showResults
+                        }
+                    )
+                 }
+        )
+    }
+}
 
 @Composable
 fun windowBox() {
-    Draggable (Modifier
-        //.background(color = Color.Blue)
-        .fillMaxSize()){
-        Row(Modifier
+
+    val currentState = LocalDragTargetInfo.current
+
+    Column(
+        modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Red)
+            .background(Color.Magenta)
+    ) {
+
+        Draggable(
+            Modifier
+                .background(color = Color.Blue)
+                .fillMaxWidth()
         ) {
-            textColumn()
-            DropTarget(modifier=Modifier.background(color = Color.Yellow)
-                .fillMaxSize()
-            )
+            Row(
+                Modifier
+                    //.fillMaxSize()
+                    .background(color = Color.Red)
+            ) {
+                textColumn()
+                DropTarget(
+                    modifier = Modifier.background(color = Color.Yellow)
+                        .fillMaxSize()
+                )
+            }
         }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.5F)
+                .background(Color.Cyan)
+                //.align(All)
+
+        ) {
+            Text(text = "jgfkj")
+        }
+        if (currentState.showResults) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .requiredHeight(800.dp)
+                    .background(Color.Cyan)
+            ) {
+
+                Row(
+                    modifier = Modifier
+                        .background(Color.Gray)
+                        .requiredHeight(30.dp)
+                        .fillMaxWidth()
+                        .weight(.1f, true)
+                ){}
+                Column(modifier = Modifier
+                    .weight(3f, true)
+
+                ) {
+                    bondGraph.resultsList.forEach {
+                        Text(it
+                            ,fontSize = MyConstants.resultsFontSize
+                            , modifier = Modifier
+                                .padding(start = 10.dp, top = 5.dp)
+                        )
+                    }
+                }
+            }
+        }
+        bottomBar()
     }
+
 }
 
 @Composable

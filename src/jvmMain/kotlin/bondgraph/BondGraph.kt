@@ -1,9 +1,6 @@
 package bondgraph
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -14,6 +11,8 @@ import com.example.draganddrop.LocalDragTargetInfo
 import userInterface.MyConstants
 import kotlin.math.*
 
+
+class BadGraphException(message: String) : Exception(message)
 enum class ElementTypes {
     ZERO_JUNCTION{
          override fun displayString () = _0
@@ -155,6 +154,7 @@ class BondGraph(var name: String) {
 
     val elementsMap = linkedMapOf<Int, Element>()
     val bondsMap = mutableStateMapOf<Int, Bond>()
+    val resultsList = mutableStateListOf<String>()
 
     fun addElement(id: Int, elementType: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
         if (elementsMap.contains(id)){
@@ -276,7 +276,8 @@ class BondGraph(var name: String) {
         println("augment called")
        var cnt = 1;
        bondsMap.values.forEach { val bond= it; it.displayId=cnt++.toString(); bondsMap[bond.id] = bond }
-
+       resultsList.add("message 1")
+       resultsList.add("message 2")
        }
    //}
 }

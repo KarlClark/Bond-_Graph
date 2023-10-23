@@ -16,6 +16,8 @@ open class Element(val bondGraph: BondGraph, val id: Int, val element: ElementTy
     fun removeBond(id: Int) {
         bondsMap.remove(id)
     }
+
+    open fun implement(){}
 }
 
 open class OnePort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
