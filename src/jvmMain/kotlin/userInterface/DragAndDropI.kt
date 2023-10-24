@@ -52,11 +52,12 @@ fun Draggable(
     content: @Composable BoxScope.() -> Unit
 ) {
 
-    val state = remember { DragTargetInfo() }
+    //val state = remember { DragTargetInfo() }
+    val state = LocalDragTargetInfo.current
 
-    CompositionLocalProvider(
+   /* CompositionLocalProvider(
         LocalDragTargetInfo provides state
-    ) {
+    ) {*/
         Box(modifier = modifier.fillMaxSize())
         {
             content()
@@ -82,7 +83,7 @@ fun Draggable(
                 }
             }
         }
-    }
+    //}
 }
 
 @Composable
@@ -414,7 +415,7 @@ fun  DropTarget(
                     val myLabelOffset = getLabelOffset(bond.offset1, bond.offset2, textLayoutResult.size.width, textLayoutResult.size.height)
                     drawText(text = bond.displayId, style = TextStyle(fontSize=MyConstants.labelFontsize), textMeasurer = textMeasurer, topLeft = myLabelOffset)
                 }
-                println("draw, needBondUpdate = ${dragInfo.needsBondUpdate}")
+                println("draw, needBondUpdate = ${dragInfo.needsBondUpdate}  showResults = ${dragInfo.showResults}")
                 if (dragInfo.needsBondUpdate) {
                     println("Updateing")
                     bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
@@ -526,6 +527,7 @@ internal class DragTargetInfo {
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
     var showResults by mutableStateOf(false)
+    var augment by mutableStateOf(false)
     //var bondList: () -> SnapshotStateList<String> = {mutableStateListOf<String>()}
 
     var dataToDrop = INVALID

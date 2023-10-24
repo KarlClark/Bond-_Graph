@@ -271,13 +271,28 @@ class BondGraph(var name: String) {
         }
     }
 
-   //@Composable
+   @Composable
     fun augment() {
         println("augment called")
+
+       val state = LocalDragTargetInfo.current
        var cnt = 1;
-       bondsMap.values.forEach { val bond= it; it.displayId=cnt++.toString(); bondsMap[bond.id] = bond }
-       resultsList.add("message 1")
-       resultsList.add("message 2")
+       bondsMap.values.forEach { val bond= it; it.displayId = cnt++.toString(); bondsMap[bond.id] = bond }
+
+       elementsMap.forEach { (_, V) -> println("${V.id}, ${V.element} ") }
+       try{
+           val sources = elementsMap.filter { it.value.element == SOURCE_OF_FLOW || it.value.element == SOURCE_OF_EFFORT }
+           if (sources.isEmpty()) {
+               throw BadGraphException("Error: graph has no sources.")
+           }
+
+       }catch(e: BadGraphException ) {
+           println("caught error")
+           resultsList.clear()
+           resultsList.add(e.message.toString())
+           state.showResults = true
+       }
+
        }
    //}
 }

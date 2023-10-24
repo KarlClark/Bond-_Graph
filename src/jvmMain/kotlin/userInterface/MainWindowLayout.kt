@@ -1,18 +1,26 @@
 package userInterface
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Bottom
+import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.Key.Companion.R
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -58,6 +66,7 @@ fun textColumn() {
     var bondModeColor by remember { mutableStateOf (Color.LightGray)}
     var nodeModeColor by remember { mutableStateOf( MyConstants.myGreen)}
 
+
     Box(Modifier.fillMaxHeight()
         .background(Color.Blue)
     ) {
@@ -73,6 +82,7 @@ fun textColumn() {
             //,verticalArrangement = Arrangement.Center
         )
         {
+
 
             Column (Modifier
                 .background(Color.White)
@@ -92,6 +102,7 @@ fun textColumn() {
                                         bondModeColor = MyConstants.myGreen
                                         nodeModeColor = Color.LightGray
                                         currentState.mode = Mode.BOND_MODE
+
                                     }
                                 }
                             )
@@ -147,39 +158,28 @@ fun textColumn() {
                 ,verticalArrangement = Arrangement.spacedBy(5.dp, alignment = Alignment.CenterVertically)
             ){
 
-                Button (onClick = {
+                Button (
+                    onClick = {
                     println ("Button click")
-                    bondGraph.augment()
-                }){
+                    currentState.augment = true
+                }
+
+
+                ){
                     Text("Augment")
                 }
                 Button (onClick = {println ("Button click")}){
                     Text("Derive")
                 }
+                if (currentState.augment){
+                    currentState.augment = false
+                    bondGraph.augment()
+                }
             }
-
         }
     }
 }
 
-/*@Composable
-fun textBox(text: String) {
-    Box (modifier = Modifier
-        //.fillMaxHeight()
-        .background(Color.Cyan)
-        .wrapContentSize()
-    ) {
-        Text(text = text
-            //,textAlign = TextAlign.Center
-            ,fontSize = MyConstants.bottomBarFontSize
-            ,color = Color.Black
-            , modifier = Modifier
-                //.fillMaxHeight()
-                //.wrapContentHeight(align = Alignment.CenterVertically)
-                //.align(Alignment.Center)
-        )
-    }
-}*/
 @Composable
 fun bottomBar() {
 
@@ -213,72 +213,84 @@ fun bottomBar() {
 @Composable
 fun windowBox() {
 
-    val currentState = LocalDragTargetInfo.current
+    //val currentState = LocalDragTargetInfo.current
+    val state = remember { DragTargetInfo() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Magenta)
-    ) {
+     CompositionLocalProvider(
+         LocalDragTargetInfo provides state
+     ) {
 
-        Draggable(
-            Modifier
-                .background(color = Color.Blue)
-                .fillMaxWidth()
-        ) {
-            Row(
-                Modifier
-                    //.fillMaxSize()
-                    .background(color = Color.Red)
-            ) {
-                textColumn()
-                DropTarget(
-                    modifier = Modifier.background(color = Color.Yellow)
-                        .fillMaxSize()
-                )
-            }
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.5F)
-                .background(Color.Cyan)
-                //.align(All)
+         Column(
+             modifier = Modifier
+                 .fillMaxSize()
+                 .background(Color.Magenta)
+         ) {
 
-        ) {
-            Text(text = "jgfkj")
-        }
-        if (currentState.showResults) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .requiredHeight(800.dp)
-                    .background(Color.Cyan)
-            ) {
+             Draggable(
+                 Modifier
+                     .background(color = Color.Blue)
+                     .fillMaxWidth()
+             ) {
+                 Row(
+                     Modifier
+                         //.fillMaxSize()
+                         .background(color = Color.Red)
+                 ) {
+                     textColumn()
+                     DropTarget(
+                         modifier = Modifier.background(color = Color.Yellow)
+                             .fillMaxSize()
+                     )
+                 }
+             }
+             println("showResults = ${state.showResults}")
+             if (state.showResults) {
+                 Column(
+                     modifier = Modifier
+                         .fillMaxWidth()
+                         .requiredHeight(800.dp)
+                         .background(Color.Cyan)
+                 ) {
 
-                Row(
-                    modifier = Modifier
-                        .background(Color.Gray)
-                        .requiredHeight(30.dp)
-                        .fillMaxWidth()
-                        .weight(.1f, true)
-                ){}
-                Column(modifier = Modifier
-                    .weight(3f, true)
+                     Row(
+                         modifier = Modifier
+                             .background(Color.Gray)
+                             .requiredHeight(30.dp)
+                             .fillMaxWidth()
+                             .weight(.1f, true)
+                     ) {
+                         Image(
+                             painter = painterResource("baseline_minimize_white_48.png"),
+                             contentDescription = "",
+                             contentScale = ContentScale.Inside,
+                             alignment = CenterEnd,
+                             modifier = Modifier
+                                 .fillMaxSize()
+                                 .offset { IntOffset(0, -10) }
+                                 .padding(horizontal = 10.dp)
+                                 .clickable { println("minimize called");state.showResults = false }
 
-                ) {
-                    bondGraph.resultsList.forEach {
-                        Text(it
-                            ,fontSize = MyConstants.resultsFontSize
-                            , modifier = Modifier
-                                .padding(start = 10.dp, top = 5.dp)
-                        )
-                    }
-                }
-            }
-        }
-        bottomBar()
-    }
+                         )
+                     }
+                     Column(
+                         modifier = Modifier
+                             .weight(3.5f, true)
+
+                     ) {
+                         bondGraph.resultsList.forEach {
+                             Text(
+                                 it, fontSize = MyConstants.resultsFontSize, modifier = Modifier
+                                     .padding(start = 10.dp, top = 5.dp)
+                             )
+                         }
+                     }
+                 }
+             }
+             bottomBar()
+
+
+         }
+     }
 
 }
 
