@@ -1,16 +1,31 @@
 package bondgraph
 
 
-open class Element(val bondGraph: BondGraph, val id: Int, val element: ElementTypes, var displayData: GraphElementDisplayData){
+open class Element(val bondGraph: BondGraph, val id: Int, val elementType: ElementTypes, var displayData: GraphElementDisplayData){
     var displayId: String = id.toString()
     
     val bondsMap = linkedMapOf<Int, Bond>()
-    fun getBondList():List<Bond> {
+    fun getBondList(): List<Bond> {
         return ArrayList(bondsMap.values)
+    }
+
+    fun getOtherElements(element: Element): List<Element>{
+        return bondsMap.filter{(_,v) -> v.element1 != element && v.element2 != element}
+            .map{(k,v) -> if (v.element1 == this) v.element2 else v.element1}
     }
 
     open fun addBond(bond: Bond) {
         bondsMap[bond.id] = bond
+    }
+
+
+    open fun countElements(element: Element, count: Int): Int{
+        val elementList = getOtherElements(element)
+
+        var cnt = 1
+        elementList.forEach{cnt = it.countElements(this, cnt)}
+
+        return count + cnt
     }
 
     fun removeBond(id: Int) {
@@ -23,17 +38,18 @@ open class Element(val bondGraph: BondGraph, val id: Int, val element: ElementTy
 open class OnePort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
     override fun addBond(bond: Bond){
         if (bondsMap.size > 0){
-            bondsMap.forEach { (_,v) -> bondGraph.elementRemoveBond(v) }
+            getBondList().forEach { bondGraph.removeBond(it.id) }
             bondsMap.clear()
         }
         bondsMap[bond.id] = bond
+        println("oneport add bond  ${bond.id}  ${bond.element1.id}  ${bond.element2.id}")
     }
 }
 open class TwoPort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
 
     override fun addBond(bond: Bond) {
         if (bondsMap.size == 2){
-            bondsMap.forEach{(_,v) -> bondGraph.elementRemoveBond(v)}
+            getBondList().forEach{ bondGraph.removeBond(it.id)}
             bondsMap.clear()
         }
         bondsMap[bond.id] = bond

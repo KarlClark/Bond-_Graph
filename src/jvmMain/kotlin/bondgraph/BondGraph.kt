@@ -6,7 +6,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import bondgraph.ElementTypes.*
-import com.example.draganddrop.DragTargetInfo
 import com.example.draganddrop.LocalDragTargetInfo
 import userInterface.MyConstants
 import kotlin.math.*
@@ -98,7 +97,7 @@ enum class ElementTypes {
 
 class GraphElementDisplayData (val id: Int, var text: AnnotatedString, var x: Float, var y: Float, val width: Float, val height: Float, var centerLocation: Offset)
 
-class Bond(val id: Int, val element1: Element?, var offset1: Offset, val element2: Element?, var offset2: Offset, var powerToElement: Element?){
+class Bond(val id: Int, val element1: Element, var offset1: Offset, val element2: Element, var offset2: Offset, var powerToElement: Element?){
     var displayId: String = ""
     var casualToElement: Element? = null
 
@@ -208,10 +207,16 @@ class BondGraph(var name: String) {
 
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
         //val labelOffset = getLabelOffset(offset1, offse
-        val bond = Bond(id, elementsMap[elementId1], offset1, elementsMap[elementId2], offset2, elementsMap[powerToElementId])
-        bondsMap[id] = bond
-        elementsMap[elementId1]?.addBond(bond)
-        elementsMap[elementId2]?.addBond(bond)
+        println("Bondgraph.addBond called")
+        val element1 = elementsMap[elementId1]
+        val element2 = elementsMap[elementId2]
+        if (element1 != null && element2 != null) {
+            println("elements not null, adding bond")
+            val bond = Bond(id, element1, offset1, element2, offset2, elementsMap[powerToElementId])
+            bondsMap[id] = bond
+            elementsMap[elementId1]?.addBond(bond)
+            elementsMap[elementId2]?.addBond(bond)
+        }
     }
 
     fun getBond(id: Int): Bond? {
@@ -224,11 +229,6 @@ class BondGraph(var name: String) {
         bondsMap.remove(id)
     }
 
-    fun elementRemoveBond(bond: Bond?){
-        if (bond != null) {
-            bondsMap.remove(bond.id)
-        }
-    }
     fun setPowerElement(id: Int, element: Element?){
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
@@ -276,15 +276,38 @@ class BondGraph(var name: String) {
         println("augment called")
 
        val state = LocalDragTargetInfo.current
-       var cnt = 1;
-       bondsMap.values.forEach { val bond= it; it.displayId = cnt++.toString(); bondsMap[bond.id] = bond }
 
-       elementsMap.forEach { (_, V) -> println("${V.id}, ${V.element} ") }
+
+
        try{
-           val sources = elementsMap.filter { it.value.element == SOURCE_OF_FLOW || it.value.element == SOURCE_OF_EFFORT }
+
+           if(bondsMap.isEmpty()){
+               throw BadGraphException("Error: graph has no bonds")
+           }
+
+           var cnt = 1;
+           bondsMap.values.forEach { val bond= it; it.displayId = cnt++.toString(); bondsMap[bond.id] = bond }
+
+           val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
+           val sources = ArrayList(sourcesMap.values)
            if (sources.isEmpty()) {
                throw BadGraphException("Error: graph has no sources.")
            }
+
+           val element1 = sources[0]?.getBondList()?.get(0)?.element1
+           val element2 = sources[0]?.getBondList()?.get(0)?.element2
+           if (element1 != null && element2 != null) {
+               val count = if (element1 == sources[0]) element2.countElements(element1, 1) else element1.countElements(element2, 1)
+               println("node count = $count")
+               if (count < elementsMap.size){
+                   throw BadGraphException("Error: graph has disconnected parts.")
+               }
+           }
+
+          /* val multiPorts = elementsMap.filter{it.value.elementType == ONE_JUNCTION || it. value.elementType == ZERO_JUNCTION}
+           if (multiPorts.isEmpty()){
+               throw BadGraphException("Error: graph has no 0 or 1 junctions.")
+           }*/
 
        }catch(e: BadGraphException ) {
            println("caught error")
