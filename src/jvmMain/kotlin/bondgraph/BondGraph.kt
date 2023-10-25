@@ -29,13 +29,13 @@ enum class ElementTypes {
         override fun displayString() = I
     },
     TRANSFORMER{
-        override fun displayString() = TF
+        override fun displayString() = T
     },
     GYRATOR{
-        override fun displayString() = GY
+        override fun displayString() = G
     },
     MODULATED_TRANSFORMER{
-        override fun displayString()  = MTF
+        override fun displayString()  = MT
     },
     SOURCE_OF_EFFORT{
         override fun displayString() = Se
@@ -59,9 +59,9 @@ enum class ElementTypes {
         val C = AnnotatedString("C", style)
         val R = AnnotatedString("R", style)
         val I = AnnotatedString("I", style)
-        val TF = AnnotatedString("TF", style)
-        val GY = AnnotatedString("GY", style)
-        val MTF = AnnotatedString("MTF", style)
+        val T = AnnotatedString("T", style)
+        val G = AnnotatedString("G", style)
+        val MT = AnnotatedString("MT", style)
         val Se = buildAnnotatedString {
             pushStyle(style)
             append ("S")
@@ -84,9 +84,9 @@ enum class ElementTypes {
                 C -> CAPACITOR
                 R -> RESISTOR
                 I -> INERTIA
-                TF -> TRANSFORMER
-                GY -> GYRATOR
-                MTF -> MODULATED_TRANSFORMER
+                T -> TRANSFORMER
+                G -> GYRATOR
+                MT -> MODULATED_TRANSFORMER
                 Se -> SOURCE_OF_EFFORT
                 Sf -> SOURCE_OF_FLOW
                 else -> INVALID
@@ -99,7 +99,7 @@ class GraphElementDisplayData (val id: Int, var text: AnnotatedString, var x: Fl
 
 class Bond(val id: Int, val element1: Element, var offset1: Offset, val element2: Element, var offset2: Offset, var powerToElement: Element?){
     var displayId: String = ""
-    var casualToElement: Element? = null
+    var effortElement: Element? = null
 
 
 }
@@ -116,7 +116,7 @@ class BondGraph(var name: String) {
         }
 
         fun getCausalOffsets(startOffset: Offset, endOffset: Offset): Pair<Offset, Offset> {
-            val strokeLength = 15f
+            val strokeLength = 10f
             val xLength = endOffset.x - startOffset.x
             val yLength = endOffset.y - startOffset.y
             val angle = atan(yLength/xLength)
@@ -239,7 +239,7 @@ class BondGraph(var name: String) {
     fun setCasualElement(id: Int, element: Element?) {
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
-                bondsMap[id]?.casualToElement = element
+                bondsMap[id]?.effortElement = element
             }
         }
     }
@@ -286,7 +286,16 @@ class BondGraph(var name: String) {
            }
 
            var cnt = 1;
-           bondsMap.values.forEach { val bond= it; it.displayId = cnt++.toString(); bondsMap[bond.id] = bond }
+          /* bondsMap.values.forEach {
+               val bond = it
+               it.displayId = cnt++.toString()
+               bondsMap[bond.id] = bond
+           }*/
+
+           bondsMap.values.forEach {
+               it.displayId = cnt++.toString()
+               it.effortElement = null
+           }
 
            val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
            val sources = ArrayList(sourcesMap.values)
@@ -310,6 +319,8 @@ class BondGraph(var name: String) {
            }*/
 
            elementsMap.forEach { it.value.creatDisplayId() }
+
+            sources.forEach{it.assignCausality()}
 
        }catch(e: BadGraphException ) {
            println("caught error")

@@ -14,8 +14,14 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
 
     fun getOtherElements(element: Element): List<Element>{
         return bondsMap.filter{(_,v) -> v.element1 != element && v.element2 != element}
-            .map{(k,v) -> if (v.element1 == this) v.element2 else v.element1}
+            .map{(k,v) -> if (v.element1 === this) v.element2 else v.element1}
     }
+
+    fun getAssignedBonds(): List<Bond> = getBondList().filter{it.effortElement != null}
+
+    fun getUnassignedBonds(): List<Bond> = getBondList().filter{it.effortElement == null}
+    fun getOtherElement(element: Element, bond: Bond) = if (element === bond.element1) bond.element2 else bond.element1
+
 
     open fun creatDisplayId(id: String = ""){
         if (id != "") {
@@ -23,9 +29,9 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
         } else {
             val bondDisplayIds = bondsMap.flatMap {listOf(it.value.displayId)}
             val s = StringBuilder("")
-            for ((indx,id) in bondDisplayIds.withIndex()){
+            for ((indx,did) in bondDisplayIds.withIndex()){
                 if (indx > 0) s.append(",")
-                s.append(id)
+                s.append(did)
             }
 
             displayId =buildAnnotatedString {
@@ -42,6 +48,8 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
     open fun addBond(bond: Bond) {
         bondsMap[bond.id] = bond
     }
+
+    open fun assignCausality(){}
 
 
     open fun countElements(element: Element, count: Int): Int{
@@ -109,38 +117,172 @@ open class TwoPort (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
 
 class OneJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
 
+    override fun assignCausality() {
+        val assignedBonds = getAssignedBonds()
+        val settingFlow = assignedBonds.filter{ ! (it.effortElement === this)}
+        if (settingFlow.size > 1) throw BadGraphException("Error: Multiple bonds an 1 junction are setting flow. ${this.displayId}")
+        if (settingFlow.size == 1) {
+            val unassignedBonds = getUnassignedBonds()
+            println("there are ${unassignedBonds.size} unassigned bonds")
+            for (bond in unassignedBonds){
+                //bond.effortElement = this
+                if (this === bond.element1){
+                    bond.effortElement = bond.element2
+                    bond.element2.assignCausality()
+                } else {
+                    bond.effortElement = bond.element1
+                    bond.element1.assignCausality()
+                }
+            }
+        }
+
+    }
+
 }
 class ZeroJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
+
+    override fun assignCausality() {
+        val assignedBonds = getAssignedBonds()
+        val settingEffort = assignedBonds.filter{ it.effortElement === this}
+        if (settingEffort.size > 1) throw BadGraphException("Error: Multiple bonds on 0 junction are setting effort.  ${this.displayId}")
+        if (settingEffort.size == 1) {
+            val unassignedBonds = getUnassignedBonds()
+            for (bond in unassignedBonds) {
+                if (this === bond.element1) {
+                    bond.effortElement = bond.element2
+                    bond.element2.assignCausality()
+                } else {
+                    bond.effortElement = bond.element1
+                    bond.element1.assignCausality()
+                }
+            }
+        }
+    }
 
 }
 
 class Capacitor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
 
+    override fun assignCausality() {
+
+        val bond = getBondList()[0]
+        if (bond.effortElement == null) {
+            val otherElement = getOtherElement(this, bond)
+            bond.effortElement = otherElement
+            otherElement.assignCausality()
+        }
+
+    }
+
+
+
 }
 
 class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
 
+    override fun assignCausality() {
+
+
+        val bond = getBondList()[0]
+        if (bond.effortElement == null) {
+            val otherElement = getOtherElement(this, bond)
+            bond.effortElement = this
+            otherElement.assignCausality()
+        }
+    }
 }
 
 class Resistor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
 
+    override fun assignCausality() {
+
+        val bond = getBondList()[0]
+        if (bond.effortElement === null) {
+            bond.effortElement = bond.element2
+            bond.element2.assignCausality()
+            }
+        }
 }
 
 class SourceOfEffort(bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
 
+    override fun assignCausality() {
+        val bond = getBondList()[0]
+        if (bond.effortElement === null) {
+            val otherElement = getOtherElement(this, bond)
+            bond.effortElement = otherElement
+            otherElement.assignCausality()
+
+        } else {
+            if (this === bond.effortElement) throw BadGraphException("Error: A source of effort has been forced into flow causality. ${this.displayId}")
+        }
+    }
+
 }
 
 class SourceOfFlow (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+    override fun assignCausality() {
+        val bond = getBondList()[0]
+        val otherElement = getOtherElement(this, bond)
+
+        if (bond.effortElement === null) {
+            val otherElement = getOtherElement(this, bond)
+            bond.effortElement = this
+            otherElement.assignCausality()
+        } else {
+            if ( ! (this === bond.effortElement)) throw BadGraphException("Error: A source of flow has been forced into effort causality. ${this.displayId}")
+        }
+    }
 
 }
 
-class Transformer (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, element, displayData) {
+open class Transformer (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, element, displayData) {
+
+    override fun assignCausality() {
+        if (bondsMap.size == 1) throw BadGraphException("Error transformer ${displayId} has only one bond.")
+        val assignedBonds = getAssignedBonds()
+        if (assignedBonds.size == 2){
+            if ( (assignedBonds[0].effortElement === this &&  assignedBonds[1].effortElement === this)
+                ||
+                ( assignedBonds[1].effortElement !== this && assignedBonds[0].effortElement !== this)
+            ) throw BadGraphException("Error: transformer $displayId is being forces into conflicting causality.")
+        } else {
+            val assignedBond = assignedBonds[0]
+            val unassignedBond =  getUnassignedBonds()[0]
+            val unassignedOther = getOtherElement(this, unassignedBond)
+            if (this === assignedBond.effortElement){
+                unassignedBond.effortElement = unassignedOther
+            } else {
+                unassignedBond.effortElement = this
+            }
+            unassignedOther.assignCausality()
+        }
+    }
 
 }
 
 class Gyrator (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, element, displayData) {
-
+    override fun assignCausality() {
+        if (bondsMap.size == 1) throw BadGraphException("Error gyrator ${displayId} has only one bond.")
+        val assignedBonds = getAssignedBonds()
+        if (assignedBonds.size == 2){
+            if ( (assignedBonds[0].effortElement === this &&  assignedBonds[1].effortElement !== this)
+                ||
+                ( assignedBonds[0].effortElement !== this && assignedBonds[1].effortElement === this)
+            ) throw BadGraphException("Error: gyrator $displayId is being forces into conflicting causality.")
+        } else {
+            val assignedBond = assignedBonds[0]
+            val unassignedBond =  getUnassignedBonds()[0]
+            val unassignedOther = getOtherElement(this, unassignedBond)
+            if (this === assignedBond.effortElement){
+                unassignedBond.effortElement = this
+            } else {
+                unassignedBond.effortElement = unassignedOther
+            }
+            unassignedOther.assignCausality()
+        }
+    }
 }
-class ModulatedTransformer (bondGraph: BondGraph, id: Int,  element: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, element, displayData) {
+class ModulatedTransformer (bondGraph: BondGraph, id: Int,  element: ElementTypes, displayData: GraphElementDisplayData): Transformer(bondGraph, id, element, displayData) {
 
 }

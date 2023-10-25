@@ -276,10 +276,10 @@ fun  DropTarget(
                                 //println("Flip stroke")
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
-                                    if (bond.casualToElement == null){
+                                    if (bond.effortElement == null){
                                     bondGraph.setCasualElement(bondId, bond.element2)
                                     } else {
-                                        bondGraph.setCasualElement(bondId, if (bond.casualToElement == bond.element1) bond.element2 else bond.element1)
+                                        bondGraph.setCasualElement(bondId, if (bond.effortElement == bond.element1) bond.element2 else bond.element1)
                                     }
                                 }
                             }else {
@@ -401,8 +401,8 @@ fun  DropTarget(
                         drawLine(color = color, bond.offset2, getArrowOffsets(bond.offset1, bond.offset2) )
                     }
 
-                    if (bond.casualToElement != null){
-                        if (bond.casualToElement == bond.element1) {
+                    if (bond.effortElement != null){
+                        if (bond.effortElement == bond.element2) {
                             val offsets = getCausalOffsets(bond.offset1, bond.offset2)
                             drawLine(color = color, offsets.first, offsets.second)
                         } else {
