@@ -137,9 +137,7 @@ class BondGraph(var name: String) {
             val middleY = startOffset.y + yLength/2f
             val sign = if (xLength < 0) 1f else -1f
             //println("$xLength  $yLength  $angle")
-            val off1 = Offset((middleX + sign*(length * cos(angle + sign * 3.14/2f).toFloat())) , middleY + sign*(length * sin(angle + sign * 3.14/2f).toFloat()))
-            val off2 = Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())) , middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
-            return off2
+            return Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())) , middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
         }
 
 
@@ -201,8 +199,13 @@ class BondGraph(var name: String) {
     }
 
     fun removeElement (id: Int) {
-        elementsMap[id]?.getBondList()?.forEach{bondsMap.remove(it.id) }
+        elementsMap[id]?.getBondList()?.forEach{
+            it.element1.removeBond(it.id)
+            it.element2.removeBond(it.id)
+            bondsMap.remove(it.id)
+        }
         elementsMap.remove(id)
+        removeBondAugmentation()
     }
 
     @Composable
@@ -224,6 +227,7 @@ class BondGraph(var name: String) {
             bondsMap[id] = bond
             elementsMap[elementId1]?.addBond(bond)
             elementsMap[elementId2]?.addBond(bond)
+            removeBondAugmentation()
         }
     }
 
@@ -235,6 +239,7 @@ class BondGraph(var name: String) {
         elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)
         elementsMap[bondsMap[id]?.element2?.id]?.removeBond(id)
         bondsMap.remove(id)
+        removeBondAugmentation()
     }
 
     fun setPowerElement(id: Int, element: Element?){
@@ -258,59 +263,60 @@ class BondGraph(var name: String) {
         val bondsList = elementsMap[elementId]?.getBondList()
         if (width != null && height != null &&  ! bondsList.isNullOrEmpty()) {
             for (bond in bondsList){
-                if (bond.element1?.id == elementId) {
-                    val stableCenter = bond.element2?.displayData?.centerLocation
-                    val stableWidth = bond.element2?.displayData?.width
-                    val stableHeight = bond.element2?.displayData?.height
-                    if (stableCenter != null && stableWidth != null && stableHeight != null) {
-                        bond.offset2 = offsetFromCenter(stableCenter, newCenter, width, height)
-                        bond.offset1 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)
-                    }
+                if (bond.element1.id == elementId) {
+                    val stableCenter = bond.element2.displayData.centerLocation
+                    val stableWidth = bond.element2.displayData.width
+                    val stableHeight = bond.element2.displayData.height
+                    bond.offset2 = offsetFromCenter(stableCenter, newCenter, width, height)
+                    bond.offset1 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)
                 } else {
-                    val stableCenter = bond.element1?.displayData?.centerLocation
-                    val stableWidth = bond.element1?.displayData?.width
-                    val stableHeight = bond.element1?.displayData?.height
-                    if (stableCenter != null && stableWidth != null && stableHeight != null) {
-                        bond.offset1 = offsetFromCenter(stableCenter, newCenter, width, height)
-                        bond.offset2 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)
-                    }
+                    val stableCenter = bond.element1.displayData.centerLocation
+                    val stableWidth = bond.element1.displayData.width
+                    val stableHeight = bond.element1.displayData.height
+                    bond.offset1 = offsetFromCenter(stableCenter, newCenter, width, height)
+                    bond.offset2 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)
                 }
             }
         }
     }
 
+    fun causalityComplete () = bondsMap.all{it.value.effortElement != null}
+
+    fun getUnassignedStorageElements() = elementsMap.values.filter{ v  -> (v.elementType == CAPACITOR || v.elementType == INERTIA) && v.getBondList()[0].effortElement == null}
+
+    fun getUnassignedResistors() = elementsMap.values.filter{ v -> v.elementType == RESISTOR  && v.getBondList()[0].effortElement == null}
+
+    fun removeBondAugmentation() {
+        bondsMap.values.forEach { it.effortElement = null
+        it.displayId = ""
+        }
+    }
    @Composable
     fun augment() {
         println("augment called")
 
        val state = LocalDragTargetInfo.current
 
-
+       removeBondAugmentation()
 
        try{
 
            if(bondsMap.isEmpty()){
                throw BadGraphException("Error: graph has no bonds")
            }
+           // Remove any previous augmentation
 
+           // Assign number labels to the bonds
            var cnt = 1;
-          /* bondsMap.values.forEach {
-               val bond = it
-               it.displayId = cnt++.toString()
-               bondsMap[bond.id] = bond
-           }*/
-
-           bondsMap.values.forEach {
-               it.displayId = cnt++.toString()
-               it.effortElement = null
-           }
-
+           bondsMap.values.forEach {it.displayId = cnt++.toString() }
+           // Get a list of all sources
            val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
            val sources = ArrayList(sourcesMap.values)
            if (sources.isEmpty()) {
                throw BadGraphException("Error: graph has no sources.")
            }
-
+           // Starting with one of the sources, count all the elements reachable from that point. If this count doesn't
+           // equal the number of elements in the whole graph, then there are elements that are not connected to the graph.
            val element1 = sources[0]?.getBondList()?.get(0)?.element1
            val element2 = sources[0]?.getBondList()?.get(0)?.element2
            if (element1 != null && element2 != null) {
@@ -321,14 +327,49 @@ class BondGraph(var name: String) {
                }
            }
 
-          /* val multiPorts = elementsMap.filter{it.value.elementType == ONE_JUNCTION || it. value.elementType == ZERO_JUNCTION}
-           if (multiPorts.isEmpty()){
-               throw BadGraphException("Error: graph has no 0 or 1 junctions.")
-           }*/
-
+           // Create a name for each element based on its type
+           //and the bond number or numbers its attached to.
            elementsMap.forEach { it.value.creatDisplayId() }
 
-            sources.forEach{it.assignCausality()}
+           // Assign causality starting from the sources
+           println("sources ")
+           sources.forEach{println("${it.displayId}")}
+           sources.forEach{it.assignCausality()}
+
+           // While causality is incomplete and there are still
+           // I and C elements with unassigned causality, use
+           // them to continue assigning causality.
+           var done = causalityComplete()
+           println("done = $done")
+           while ( ! done ){
+
+               if (! done){
+                   val elementList = getUnassignedStorageElements()
+                   elementList.forEach{println("${it.displayId}")}
+                   if (elementList.isNotEmpty()){
+                       println("assigning ${elementList[0].displayId}")
+                       elementList[0].assignCausality()
+                       done = causalityComplete()
+                   } else {
+                       done = true
+                   }
+               }
+           }
+
+           // If causality is stile incomplete then continue
+           // using R elements.
+           done = causalityComplete()
+           while ( ! done ){
+               if (! done){
+                   val elementList = getUnassignedResistors()
+                   if (elementList.isNotEmpty()){
+                       elementList[0].assignCausality()
+                       done = causalityComplete()
+                   } else {
+                       done = true
+                   }
+               }
+           }
 
        }catch(e: BadGraphException ) {
            println("caught error")

@@ -415,7 +415,7 @@ fun  DropTarget(
                     val myLabelOffset = getLabelOffset(bond.offset1, bond.offset2, textLayoutResult.size.width, textLayoutResult.size.height)
                     drawText(text = bond.displayId, style = TextStyle(fontSize=MyConstants.labelFontsize), textMeasurer = textMeasurer, topLeft = myLabelOffset)
                 }
-                println("draw, needBondUpdate = ${dragInfo.needsBondUpdate}  showResults = ${dragInfo.showResults}")
+                //println("draw, needBondUpdate = ${dragInfo.needsBondUpdate}  showResults = ${dragInfo.showResults}")
                 if (dragInfo.needsBondUpdate) {
                     println("Updateing")
                     bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
@@ -468,7 +468,7 @@ fun  DropTarget(
         }
 
         //println("display ${bondGraph.getGraphElementsDisplayDataMap().size} elements")
-
+        println("needsElementUpdate = ${dragInfo.needsElementUpdate}")
         if (dragInfo.needsElementUpdate) {
             bondGraph.getElementsMap().forEach { (K, V) -> key(K) {displayElement(V.displayData)}}
             dragInfo.needsElementUpdate = false

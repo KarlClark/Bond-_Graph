@@ -1,5 +1,6 @@
 package bondgraph
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 
@@ -119,20 +120,25 @@ class OneJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, display
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
+        val unassignedBonds = getUnassignedBonds()
         val settingFlow = assignedBonds.filter{ ! (it.effortElement === this)}
         if (settingFlow.size > 1) throw BadGraphException("Error: Multiple bonds an 1 junction are setting flow. ${this.displayId}")
         if (settingFlow.size == 1) {
-            val unassignedBonds = getUnassignedBonds()
+
             println("there are ${unassignedBonds.size} unassigned bonds")
             for (bond in unassignedBonds){
                 //bond.effortElement = this
-                if (this === bond.element1){
-                    bond.effortElement = bond.element2
-                    bond.element2.assignCausality()
-                } else {
-                    bond.effortElement = bond.element1
-                    bond.element1.assignCausality()
-                }
+                val otherElement = getOtherElement(this, bond)
+                bond.effortElement = this
+                otherElement.assignCausality()
+
+            }
+        } else {
+            if (unassignedBonds.size == 1) {  // Last bond so it has to be the one to set the flow
+                val bond = unassignedBonds[0]
+                val otherElement = getOtherElement(this , bond)
+                bond.effortElement = otherElement
+                otherElement.assignCausality()
             }
         }
 
@@ -143,18 +149,26 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
+        println("ZeroJunction  assigned bonds")
+        assignedBonds.forEach{println("${it.displayId}")}
+        val unassignedBonds = getUnassignedBonds()
         val settingEffort = assignedBonds.filter{ it.effortElement === this}
+        println("bonds setting effort")
+        settingEffort.forEach{println("${it.displayId}")}
         if (settingEffort.size > 1) throw BadGraphException("Error: Multiple bonds on 0 junction are setting effort.  ${this.displayId}")
         if (settingEffort.size == 1) {
-            val unassignedBonds = getUnassignedBonds()
+
             for (bond in unassignedBonds) {
-                if (this === bond.element1) {
-                    bond.effortElement = bond.element2
-                    bond.element2.assignCausality()
-                } else {
-                    bond.effortElement = bond.element1
-                    bond.element1.assignCausality()
-                }
+                val otherElement = getOtherElement(this, bond)
+                bond.effortElement = otherElement
+                otherElement.assignCausality()
+            }
+        } else {
+            if (unassignedBonds.size == 1) {  // Last bond so it has to be the one to set the effort
+                val bond = unassignedBonds[0]
+                val otherElement = getOtherElement(this , bond)
+                bond.effortElement = this
+                otherElement.assignCausality()
             }
         }
     }
@@ -182,7 +196,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
 
     override fun assignCausality() {
 
-
+        println("Inertia augment")
         val bond = getBondList()[0]
         if (bond.effortElement == null) {
             val otherElement = getOtherElement(this, bond)
@@ -198,8 +212,9 @@ class Resistor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayDat
 
         val bond = getBondList()[0]
         if (bond.effortElement === null) {
-            bond.effortElement = bond.element2
-            bond.element2.assignCausality()
+            val otherElement = getOtherElement(this, bond)
+            bond.effortElement = bond.element1
+            otherElement.assignCausality()
             }
         }
 }
