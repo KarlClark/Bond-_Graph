@@ -205,6 +205,14 @@ class BondGraph(var name: String) {
         elementsMap.remove(id)
     }
 
+    @Composable
+    fun clear(){
+        val state = LocalDragTargetInfo.current
+        elementsMap.clear()
+        bondsMap.clear()
+        state.needsElementUpdate = true
+    }
+
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
         //val labelOffset = getLabelOffset(offset1, offse
         println("Bondgraph.addBond called")

@@ -528,6 +528,7 @@ internal class DragTargetInfo {
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
     var showResults by mutableStateOf(false)
     var augment by mutableStateOf(false)
+    var clearGraph by mutableStateOf(false)
     //var bondList: () -> SnapshotStateList<String> = {mutableStateListOf<String>()}
 
     var dataToDrop = INVALID

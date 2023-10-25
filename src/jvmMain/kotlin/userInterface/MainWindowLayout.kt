@@ -198,6 +198,7 @@ fun bottomBar() {
             , color = Color.White
             , modifier = Modifier
                 .padding(horizontal = 10.dp, vertical = 5.dp )
+                .weight(1f)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
@@ -207,6 +208,24 @@ fun bottomBar() {
                     )
                  }
         )
+        Text("Clear"
+            , fontSize = MyConstants.bottomBarFontSize
+            , color = Color.White
+            , modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 5.dp )
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            println("Clear tap")
+                            currentState.clearGraph = true
+                        }
+                    )
+                }
+        )
+        if (currentState.clearGraph) {
+            currentState.clearGraph = false
+            bondGraph.clear()
+        }
     }
 }
 
