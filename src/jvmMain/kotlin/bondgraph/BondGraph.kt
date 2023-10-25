@@ -309,6 +309,8 @@ class BondGraph(var name: String) {
                throw BadGraphException("Error: graph has no 0 or 1 junctions.")
            }*/
 
+           elementsMap.forEach { it.value.creatDisplayId() }
+
        }catch(e: BadGraphException ) {
            println("caught error")
            resultsList.clear()
