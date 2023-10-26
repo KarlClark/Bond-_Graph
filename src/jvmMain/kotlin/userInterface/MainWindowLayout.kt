@@ -173,12 +173,21 @@ fun textColumn() {
                     Text("Augment")
                 }
                 Button (colors = ButtonDefaults.buttonColors(backgroundColor = MyConstants.myGreen, contentColor = Color.White)
-                    ,onClick = {println ("Button click")}){
+                    ,onClick = {
+                        println ("Button click")
+                        currentState.derive = true
+                    }){
                     Text("Derive")
+
                 }
                 if (currentState.augment){
                     currentState.augment = false
                     bondGraph.augment()
+                }
+
+                if (currentState.derive){
+                    currentState.derive = false
+                    bondGraph.derive()
                 }
             }
         }

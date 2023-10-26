@@ -287,6 +287,9 @@ class BondGraph(var name: String) {
 
     fun getUnassignedResistors() = elementsMap.values.filter{ v -> v.elementType == RESISTOR  && v.getBondList()[0].effortElement == null}
 
+    fun getIndepdentStorageelements()  = elementsMap.values.filter { v -> (v.elementType == CAPACITOR && v.getBondList()[0].effortElement != v) ||
+            (v.elementType == INERTIA && v.getBondList()[0].effortElement == v)}
+
     fun removeBondAugmentation() {
         bondsMap.values.forEach { it.effortElement = null
         it.displayId = ""
@@ -380,5 +383,27 @@ class BondGraph(var name: String) {
        }
 
        }
-   //}
+
+    @Composable
+    fun derive(){
+
+        val state = LocalDragTargetInfo.current
+        println("derive function called")
+
+        try {
+
+            if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
+
+            val elementsList = getIndepdentStorageelements()
+
+            print("Storage elements  "); elementsList.forEach{print(" ${it.displayId}, " )}; println()
+
+        }catch(e: BadGraphException ) {
+            println("caught error")
+            resultsList.clear()
+            resultsList.add(e.message.toString())
+            state.showResults = true
+        }
+    }
 }
+
