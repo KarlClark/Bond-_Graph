@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.Key.Companion.M
 import androidx.compose.ui.input.key.Key.Companion.R
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.AlignmentLine
@@ -42,6 +44,8 @@ object MyConstants {
     val bottomBarFontSize = 15.sp
     val resultsFontSize = 15.sp
     val myGreen = Color(10, 140, 10)
+    val graphBackground = Color(242, 215, 140)
+    val resultsBackground = Color(206, 232, 246)
 }
 
 
@@ -68,7 +72,7 @@ fun textColumn() {
 
 
     Box(Modifier.fillMaxHeight()
-        .background(Color.Blue)
+        .background(Color.Gray)
     ) {
         Column(
             Modifier
@@ -158,8 +162,8 @@ fun textColumn() {
                 ,verticalArrangement = Arrangement.spacedBy(5.dp, alignment = Alignment.CenterVertically)
             ){
 
-                Button (
-                    onClick = {
+                Button (colors = ButtonDefaults.buttonColors(backgroundColor = MyConstants.myGreen, contentColor = Color.White)
+                    ,onClick = {
                     println ("Button click")
                     currentState.augment = true
                 }
@@ -168,7 +172,8 @@ fun textColumn() {
                 ){
                     Text("Augment")
                 }
-                Button (onClick = {println ("Button click")}){
+                Button (colors = ButtonDefaults.buttonColors(backgroundColor = MyConstants.myGreen, contentColor = Color.White)
+                    ,onClick = {println ("Button click")}){
                     Text("Derive")
                 }
                 if (currentState.augment){
@@ -242,12 +247,12 @@ fun windowBox() {
          Column(
              modifier = Modifier
                  .fillMaxSize()
-                 .background(Color.Magenta)
+                 .background(Color.Yellow)
          ) {
 
              Draggable(
                  Modifier
-                     .background(color = Color.Blue)
+                     .background(color = Color.Gray)
                      .fillMaxWidth()
              ) {
                  Row(
@@ -257,7 +262,7 @@ fun windowBox() {
                  ) {
                      textColumn()
                      DropTarget(
-                         modifier = Modifier.background(color = Color.Yellow)
+                         modifier = Modifier.background(color = MyConstants.graphBackground)
                              .fillMaxSize()
                      )
                  }
@@ -268,7 +273,7 @@ fun windowBox() {
                      modifier = Modifier
                          .fillMaxWidth()
                          .requiredHeight(800.dp)
-                         .background(Color.Cyan)
+                         .background(MyConstants.resultsBackground)
                  ) {
 
                      Row(

@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import bondgraph.ElementTypes.*
 import com.example.draganddrop.LocalDragTargetInfo
 import userInterface.MyConstants
@@ -29,13 +30,13 @@ enum class ElementTypes {
         override fun displayString() = I
     },
     TRANSFORMER{
-        override fun displayString() = T
+        override fun displayString() = TF
     },
     GYRATOR{
-        override fun displayString() = G
+        override fun displayString() = GY
     },
     MODULATED_TRANSFORMER{
-        override fun displayString()  = MT
+        override fun displayString()  = MTF
     },
     SOURCE_OF_EFFORT{
         override fun displayString() = Se
@@ -52,16 +53,16 @@ enum class ElementTypes {
 
     companion object {
 
-        val style = SpanStyle(fontSize = MyConstants.elementNameFontsize)
+        val style = SpanStyle(fontSize = MyConstants.elementNameFontsize, fontFamily = FontFamily.Serif)
         val subStyle = SpanStyle(fontSize = MyConstants.subTextFontsize)
         val _0 = AnnotatedString("0", style)
         val _1 = AnnotatedString("1", style)
         val C = AnnotatedString("C", style)
         val R = AnnotatedString("R", style)
         val I = AnnotatedString("I", style)
-        val T = AnnotatedString("T", style)
-        val G = AnnotatedString("G", style)
-        val MT = AnnotatedString("MT", style)
+        val TF = AnnotatedString("TF", style)
+        val GY = AnnotatedString("GY", style)
+        val MTF = AnnotatedString("MTF", style)
         val Se = buildAnnotatedString {
             pushStyle(style)
             append ("S")
@@ -84,9 +85,9 @@ enum class ElementTypes {
                 C -> CAPACITOR
                 R -> RESISTOR
                 I -> INERTIA
-                T -> TRANSFORMER
-                G -> GYRATOR
-                MT -> MODULATED_TRANSFORMER
+                TF -> TRANSFORMER
+                GY-> GYRATOR
+                MTF-> MODULATED_TRANSFORMER
                 Se -> SOURCE_OF_EFFORT
                 Sf -> SOURCE_OF_FLOW
                 else -> INVALID
