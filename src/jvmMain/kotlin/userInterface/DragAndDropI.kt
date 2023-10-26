@@ -342,9 +342,11 @@ fun  DropTarget(
                             val disData = bondGraph.getElement(destinationId)?.displayData
                             if (disData != null) {
                                 pointerOffset = offsetFromCenter(disData.centerLocation, pointerOrigin, disData.width, disData.height )
+                                dragInfo.arrowColor = Color.Red
                             }
                         } else {
                             pointerOffset += dragAmount
+                            dragInfo.arrowColor = Color.Black
                         }
                         val displayData = bondGraph.getElementsMap()[originId]?.displayData
                         if (displayData != null)
@@ -424,7 +426,7 @@ fun  DropTarget(
                 //bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
                 if (isDragging) {
                     //println("dragging")
-                    drawArrowWithOffsets(Color.Red, pointerOrigin, pointerOffset, StrokeLocation.NO_STROKE)
+                    drawArrowWithOffsets(dragInfo.arrowColor, pointerOrigin, pointerOffset, StrokeLocation.NO_STROKE)
                 }
                 if (isDragEnded){
                     //println("bondId = $bondId  arrowId = $arrowId")
@@ -529,6 +531,7 @@ internal class DragTargetInfo {
     var showResults by mutableStateOf(false)
     var augment by mutableStateOf(false)
     var clearGraph by mutableStateOf(false)
+    var arrowColor by mutableStateOf(Color.Black)
     //var bondList: () -> SnapshotStateList<String> = {mutableStateListOf<String>()}
 
     var dataToDrop = INVALID
