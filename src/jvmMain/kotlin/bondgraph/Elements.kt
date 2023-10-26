@@ -23,6 +23,12 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
     fun getUnassignedBonds(): List<Bond> = getBondList().filter{it.effortElement == null}
     fun getOtherElement(element: Element, bond: Bond) = if (element === bond.element1) bond.element2 else bond.element1
 
+    fun getOtherBonds(bond: Bond): List<Bond> = getBondList().filter{ it !==  bond}
+
+    fun sameDirection(element: Element, bond1: Bond, bond2: Bond): Boolean =
+        ((bond1.powerToElement === element &&  bond2.powerToElement === element) ||
+        (bond1.powerToElement !== element &&  bond2.powerToElement !== element) )
+
 
     open fun creatDisplayId(id: String = ""){
         if (id != "") {
@@ -67,6 +73,13 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
     }
 
     open fun implement(){}
+
+    open fun deriveEquation(): String = ""
+
+    open fun getFlow(bond: Bond): String = ""
+
+    open fun getEffort(bond: Bond): String = ""
+
 }
 
 open class OnePort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
@@ -141,7 +154,34 @@ class OneJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, display
                 otherElement.assignCausality()
             }
         }
+    }
 
+    override fun getFlow(bond: Bond): String {
+        val bondsList = getBondList()
+        println("${this.displayId}")
+        bondsList.forEach{println ("${it.displayId}  ${it.effortElement?.displayId}")}
+        val flowBond = bondsList.filter{it.effortElement !== this}[0]
+        return getOtherElement(this, flowBond).getFlow(flowBond)
+
+    }
+
+    override fun getEffort(bond: Bond): String {
+        println ("element1 = ${bond.element1.displayId}  element2 = ${bond.element2.displayId}  powerToElement = ${bond.powerToElement?.displayId}  effortElement = ${bond.effortElement?.displayId}")
+
+        val otherBonds = getOtherBonds(bond)
+        val thisElement = this
+        val sb = buildString {
+            append("(")
+            for (otherBond in otherBonds){
+                println ("${bond.powerToElement?.displayId}  ${otherBond.powerToElement?.displayId}")
+
+                append (if (sameDirection(thisElement, bond, otherBond)) " - " else " + " )
+
+                append (getOtherElement(thisElement, otherBond).getEffort(otherBond))
+            }
+            append (")")
+        }
+        return sb.toString()
     }
 
 }
@@ -173,6 +213,31 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
         }
     }
 
+    override fun getEffort(bond: Bond): String {
+        val bondsList = getBondList()
+        val effortBond = bondsList.filter{it.effortElement === this}[0]
+        return getOtherElement(this, effortBond).getEffort(effortBond)
+
+    }
+
+    override fun getFlow(bond: Bond): String {
+        println ("element1 = ${bond.element1.displayId}  element2 = ${bond.element2.displayId}  powerToElement = ${bond.powerToElement?.displayId}  effortElement = ${bond.effortElement?.displayId}")
+
+        val otherBonds = getOtherBonds(bond)
+        val thisElement = this
+        val sb = buildString {
+            append("(")
+            for (otherBond in otherBonds){
+                println ("${bond.powerToElement?.displayId}  ${otherBond.powerToElement?.displayId}")
+
+                append (if (sameDirection(thisElement, bond, otherBond)) " - " else " + " )
+
+                append (getOtherElement(thisElement, otherBond).getFlow(otherBond))
+            }
+            append (")")
+        }
+        return sb.toString()
+    }
 }
 
 class Capacitor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
@@ -188,6 +253,14 @@ class Capacitor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayDa
 
     }
 
+    override fun getEffort(bond: Bond): String {
+        return "q" + getBondList()[0].displayId + "/" + displayId.toString()
+    }
+
+    override fun deriveEquation(): String {
+        val bond = getBondList()[0]
+        return "dq" + bond.displayId + "/dt = " + getOtherElement(this,bond).getFlow(bond)
+    }
 
 
 }
@@ -204,6 +277,15 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
             otherElement.assignCausality()
         }
     }
+
+    override fun getFlow(bond: Bond): String {
+        return "p" + getBondList()[0].displayId +"/" + displayId
+    }
+
+    override fun deriveEquation(): String {
+        val bond = getBondList()[0]
+        return "dp" + bond.displayId + "/dt = " + getOtherElement(this,bond).getEffort(bond)
+    }
 }
 
 class Resistor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
@@ -215,8 +297,20 @@ class Resistor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayDat
             val otherElement = getOtherElement(this, bond)
             bond.effortElement = bond.element1
             otherElement.assignCausality()
-            }
         }
+    }
+
+    override fun getEffort(bond: Bond): String {
+        val thisBond = getBondList()[0]
+        val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
+        return  sFlow + "*" + displayId.toString()
+    }
+
+    override fun getFlow(bond: Bond): String {
+        val thisBond = getBondList()[0]
+        val sEffort=  getOtherElement(this, thisBond).getEffort(thisBond)
+        return sEffort + "/" + displayId.toString()
+    }
 }
 
 class SourceOfEffort(bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
@@ -233,12 +327,15 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, element: ElementTypes, displ
         }
     }
 
+    override fun getEffort(bond: Bond): String {
+        return "e" + getBondList()[0].displayId + "(t)"
+    }
+
 }
 
 class SourceOfFlow (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
     override fun assignCausality() {
         val bond = getBondList()[0]
-        val otherElement = getOtherElement(this, bond)
 
         if (bond.effortElement === null) {
             val otherElement = getOtherElement(this, bond)
@@ -247,6 +344,10 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
         } else {
             if ( ! (this === bond.effortElement)) throw BadGraphException("Error: A source of flow has been forced into effort causality. ${this.displayId}")
         }
+    }
+
+    override fun getFlow(bond: Bond): String {
+        return "f" + getBondList()[0].displayId + "(t)"
     }
 
 }

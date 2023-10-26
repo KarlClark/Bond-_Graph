@@ -398,6 +398,12 @@ class BondGraph(var name: String) {
 
             print("Storage elements  "); elementsList.forEach{print(" ${it.displayId}, " )}; println()
 
+            for (element in elementsList ) {
+                //println(element.deriveEquation())
+                resultsList.add(element.deriveEquation())
+            }
+            state.showResults = true
+
         }catch(e: BadGraphException ) {
             println("caught error")
             resultsList.clear()
