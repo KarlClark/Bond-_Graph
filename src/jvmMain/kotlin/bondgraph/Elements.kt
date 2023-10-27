@@ -82,7 +82,7 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
 
 }
 
-open class OnePort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
+open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
     override fun addBond(bond: Bond){
         if (bondsMap.size > 0){
             getBondList().forEach { bondGraph.removeBond(it.id) }
@@ -104,7 +104,7 @@ open class OnePort (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
         println("displayId = $displayId")
     }
 }
-open class TwoPort (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
+open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
     override fun addBond(bond: Bond) {
         if (bondsMap.size == 2){
@@ -129,7 +129,7 @@ open class TwoPort (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
 
 }
 
-class OneJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
+class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
@@ -185,7 +185,7 @@ class OneJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, display
     }
 
 }
-class ZeroJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, element, displayData) {
+class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
@@ -240,7 +240,7 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
     }
 }
 
-class Capacitor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
 
@@ -288,7 +288,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     }
 }
 
-class Resistor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
 
@@ -309,11 +309,11 @@ class Resistor (bondGraph: BondGraph, id: Int, element: ElementTypes, displayDat
     override fun getFlow(bond: Bond): String {
         val thisBond = getBondList()[0]
         val sEffort=  getOtherElement(this, thisBond).getEffort(thisBond)
-        return sEffort + "/" + displayId.toString()
+        return sEffort  + "*1/" + displayId.toString()
     }
 }
 
-class SourceOfEffort(bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
         val bond = getBondList()[0]
@@ -333,7 +333,7 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, element: ElementTypes, displ
 
 }
 
-class SourceOfFlow (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
     override fun assignCausality() {
         val bond = getBondList()[0]
 
@@ -352,10 +352,19 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, element: ElementTypes, displa
 
 }
 
-open class Transformer (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, element, displayData) {
+open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
+    class Modulator(val element1: Element, val id: String){
+        fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
+
+        fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) "1/M$id" else "M$id"
+
+    }
+
+    lateinit  var modulator: Modulator
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error transformer ${displayId} has only one bond.")
+        modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val assignedBonds = getAssignedBonds()
         if (assignedBonds.size == 2){
             if ( (assignedBonds[0].effortElement === this &&  assignedBonds[1].effortElement === this)
@@ -375,9 +384,22 @@ open class Transformer (bondGraph: BondGraph, id: Int, element: ElementTypes, di
         }
     }
 
+    override fun getEffort(bond: Bond): String {
+        val mod = modulator.getEffortModulator(getOtherElement(this, bond))
+        val otherBond = getOtherBonds(bond)[0]
+        val otherElement = getOtherElement(this, otherBond)
+        return mod + otherElement.getEffort(otherBond)
+    }
+
+    override fun getFlow(bond: Bond): String {
+        val mod = modulator.getFlowModulator(getOtherElement(this, bond))
+        val otherBond = getOtherBonds(bond)[0]
+        val otherElement = getOtherElement(this, otherBond)
+        return mod + otherElement.getFlow(otherBond)
+    }
 }
 
-class Gyrator (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, element, displayData) {
+class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error gyrator ${displayId} has only one bond.")
         val assignedBonds = getAssignedBonds()
@@ -399,6 +421,6 @@ class Gyrator (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
         }
     }
 }
-class ModulatedTransformer (bondGraph: BondGraph, id: Int,  element: ElementTypes, displayData: GraphElementDisplayData): Transformer(bondGraph, id, element, displayData) {
+class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: GraphElementDisplayData): Transformer(bondGraph, id, elementType, displayData) {
 
 }
