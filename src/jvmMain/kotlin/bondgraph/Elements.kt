@@ -116,6 +116,7 @@ open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
     override fun creatDisplayId(id: String) {
         val bondList = getBondList()
+        if (bondList.size == 1) throw BadGraphException("Error: The 2-port on bond ${bondList[0].displayId} is missing a bond")
         if (bondList.isNotEmpty()){
             displayId = buildAnnotatedString {
                 append(bondList[0].displayId)
@@ -400,7 +401,18 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 }
 
 class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
+
+    class Modulator(val element1: Element, val id: String){
+        fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
+
+        fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) "1/M$id" else "M$id"
+
+    }
+
+    lateinit  var modulator: Modulator
+
     override fun assignCausality() {
+        if (bondsMap.size == 1) throw BadGraphException("Error gyrator ${displayId} has only one bond.")
         if (bondsMap.size == 1) throw BadGraphException("Error gyrator ${displayId} has only one bond.")
         val assignedBonds = getAssignedBonds()
         if (assignedBonds.size == 2){
@@ -420,6 +432,21 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
             unassignedOther.assignCausality()
         }
     }
+
+    override fun getEffort(bond: Bond): String {
+        val mod = modulator.getEffortModulator(getOtherElement(this, bond))
+        val otherBond = getOtherBonds(bond)[0]
+        val otherElement = getOtherElement(this, otherBond)
+        return mod + otherElement.getFlow(otherBond)
+    }
+
+    override fun getFlow(bond: Bond): String {
+        val mod = modulator.getFlowModulator(getOtherElement(this, bond))
+        val otherBond = getOtherBonds(bond)[0]
+        val otherElement = getOtherElement(this, otherBond)
+        return mod + otherElement.getEffort(otherBond)
+    }
+
 }
 class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: GraphElementDisplayData): Transformer(bondGraph, id, elementType, displayData) {
 
