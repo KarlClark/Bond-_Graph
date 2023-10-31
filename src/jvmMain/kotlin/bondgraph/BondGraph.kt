@@ -7,7 +7,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import bondgraph.ElementTypes.*
-import com.example.draganddrop.LocalDragTargetInfo
+import userInterface.LocalDragTargetInfo
 import userInterface.MyConstants
 import kotlin.math.*
 
@@ -117,7 +117,7 @@ class BondGraph(var name: String) {
         }
 
         fun getCausalOffsets(startOffset: Offset, endOffset: Offset): Pair<Offset, Offset> {
-            val strokeLength = 10f
+            val strokeLength = 7f
             val xLength = endOffset.x - startOffset.x
             val yLength = endOffset.y - startOffset.y
             val angle = atan(yLength/xLength)
@@ -137,15 +137,17 @@ class BondGraph(var name: String) {
             val middleX = startOffset.x + xLength/2f
             val middleY = startOffset.y + yLength/2f
             val sign = if (xLength < 0) 1f else -1f
-            //println("$xLength  $yLength  $angle")
             return Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())) , middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
         }
 
 
         fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
-            val l = (width + height)/2f + 5f
+            //val l = (width + height)/2f + 3f
+            val l = max(width, height)/2 + 5f
+            //val l = width/2f
+            //val l= 0
             val d = sqrt((offset1.x - offset2.x ).pow(2) + (offset1.y - offset2.y).pow(2))
-            Offset(11f, 1f)
+            //Offset(11f, 1f)
             return Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
         }
     }
@@ -219,11 +221,9 @@ class BondGraph(var name: String) {
 
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
         //val labelOffset = getLabelOffset(offset1, offse
-        println("Bondgraph.addBond called")
         val element1 = elementsMap[elementId1]
         val element2 = elementsMap[elementId2]
         if (element1 != null && element2 != null) {
-            println("elements not null, adding bond")
             val bond = Bond(id, element1, offset1, element2, offset2, elementsMap[powerToElementId])
             bondsMap[id] = bond
             elementsMap[elementId1]?.addBond(bond)
@@ -268,14 +268,18 @@ class BondGraph(var name: String) {
                     val stableCenter = bond.element2.displayData.centerLocation
                     val stableWidth = bond.element2.displayData.width
                     val stableHeight = bond.element2.displayData.height
-                    bond.offset2 = offsetFromCenter(stableCenter, newCenter, width, height)
-                    bond.offset1 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)
+                   /* bond.offset2 = offsetFromCenter(stableCenter, newCenter, width, height)
+                    bond.offset1 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)*/
+                    bond.offset2 = offsetFromCenter(stableCenter, newCenter, stableWidth, stableHeight)
+                    bond.offset1 = offsetFromCenter(newCenter, stableCenter, width, height)
                 } else {
                     val stableCenter = bond.element1.displayData.centerLocation
                     val stableWidth = bond.element1.displayData.width
                     val stableHeight = bond.element1.displayData.height
-                    bond.offset1 = offsetFromCenter(stableCenter, newCenter, width, height)
-                    bond.offset2 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)
+                   /* bond.offset1 = offsetFromCenter(stableCenter, newCenter, width, height)
+                    bond.offset2 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)*/
+                    bond.offset1 = offsetFromCenter(stableCenter, newCenter, stableWidth, stableHeight)
+                    bond.offset2 = offsetFromCenter(newCenter, stableCenter, width, height)
                 }
             }
         }
@@ -297,7 +301,6 @@ class BondGraph(var name: String) {
     }
    @Composable
     fun augment() {
-        println("augment called")
 
        val state = LocalDragTargetInfo.current
 
@@ -325,7 +328,6 @@ class BondGraph(var name: String) {
            val element2 = sources[0]?.getBondList()?.get(0)?.element2
            if (element1 != null && element2 != null) {
                val count = if (element1 == sources[0]) element2.countElements(element1, 1) else element1.countElements(element2, 1)
-               println("node count = $count")
                if (count < elementsMap.size){
                    throw BadGraphException("Error: graph has disconnected parts.")
                }
@@ -336,22 +338,17 @@ class BondGraph(var name: String) {
            elementsMap.forEach { it.value.creatDisplayId() }
 
            // Assign causality starting from the sources
-           println("sources ")
-           sources.forEach{println("${it.displayId}")}
            sources.forEach{it.assignCausality()}
 
            // While causality is incomplete and there are still
            // I and C elements with unassigned causality, use
            // them to continue assigning causality.
            var done = causalityComplete()
-           println("done = $done")
            while ( ! done ){
 
                if (! done){
                    val elementList = getUnassignedStorageElements()
-                   elementList.forEach{println("${it.displayId}")}
                    if (elementList.isNotEmpty()){
-                       println("assigning ${elementList[0].displayId}")
                        elementList[0].assignCausality()
                        done = causalityComplete()
                    } else {
@@ -376,7 +373,6 @@ class BondGraph(var name: String) {
            }
 
        }catch(e: BadGraphException ) {
-           println("caught error")
            resultsList.clear()
            resultsList.add(e.message.toString())
            state.showResults = true
@@ -388,24 +384,22 @@ class BondGraph(var name: String) {
     fun derive(){
 
         val state = LocalDragTargetInfo.current
-        println("derive function called")
 
         try {
+
+            resultsList.clear()
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
             val elementsList = getIndepdentStorageelements()
-
-            print("Storage elements  "); elementsList.forEach{print(" ${it.displayId}, " )}; println()
+            if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
 
             for (element in elementsList ) {
-                //println(element.deriveEquation())
                 resultsList.add(element.deriveEquation())
             }
             state.showResults = true
 
         }catch(e: BadGraphException ) {
-            println("caught error")
             resultsList.clear()
             resultsList.add(e.message.toString())
             state.showResults = true

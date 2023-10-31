@@ -1,4 +1,4 @@
-package com.example.draganddrop
+package userInterface
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -25,7 +25,6 @@ import bondgraph.ElementTypes
 import bondgraph.ElementTypes.*
 import bondgraph.GraphElementDisplayData
 import bondgraph.Bond
-import userInterface.*
 import kotlin.math.*
 import bondgraph.BondGraph.Companion.getArrowOffsets
 import bondgraph.BondGraph.Companion.getCausalOffsets
@@ -34,60 +33,62 @@ import bondgraph.BondGraph.Companion.getLabelOffset
 
 
 internal val LocalDragTargetInfo = compositionLocalOf { DragTargetInfo() }
-internal var globalId = 0
-internal var count = 0
+private var globalId = 0
+private var count = 0
 
-var arrowId = 0
-var isShifted = false
+private var arrowId = 0
+internal var isShifted = false
 enum class Mode {BOND_MODE, ELEMENT_MODE }
 enum class StrokeLocation{START, END, NO_STROKE}
 
 
-class LineData(var color:Color, var offsets: Pair<Offset, Offset>, var strokeLocation: StrokeLocation)
+/*
+Data for drawing a bond, a line with a half arrow on one end and optional causal stroke,
+a short line drawn at one end perpendicular to the arrow. The line is defined by starting
+and ending Offsets.  THe arrow is drawn at the second offset.  THe causal stroke
+might be at either end so we need to store that info.
+*/
+class ArrowData(var color:Color, var offsets: Pair<Offset, Offset>, var strokeLocation: StrokeLocation)
+
+/*
+Data for drawing the half arrow and causal stroke on a bond. Use these offsets to
+draw a line form the end of the arrow to the offset.
+ */
 class ArrowOffsets(val oArrow: Offset, val oCausal1: Offset, val oCausal2: Offset)
 
 @Composable
-fun Draggable(
+fun draggable(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-
-    //val state = remember { DragTargetInfo() }
     val state = LocalDragTargetInfo.current
 
-   /* CompositionLocalProvider(
-        LocalDragTargetInfo provides state
-    ) {*/
-        Box(modifier = modifier.fillMaxSize())
-        {
-            content()
-            if (state.isDragging) {
-                var targetSize by remember {
-                    mutableStateOf(IntSize.Zero)
+    Box(modifier = modifier.fillMaxSize())
+    {
+        content()
+        if (state.isDragging) {
+            var targetSize by remember {
+                mutableStateOf(IntSize.Zero)
+            }
+            Box(modifier = Modifier
+                .graphicsLayer {
+                    val offset = (state.dragPosition + state.dragOffset)
+                    translationX = offset.x.minus(targetSize.width / 2)
+                    translationY = offset.y.minus(targetSize.height / 2)
                 }
-                Box(modifier = Modifier
-                    .graphicsLayer {
-                        val offset = (state.dragPosition + state.dragOffset)
-                        scaleX = 1.0f
-                        scaleY = 1.0f
-                        alpha = if (targetSize == IntSize.Zero) 0f else .9f
-                        translationX = offset.x.minus(targetSize.width / 2)
-                        translationY = offset.y.minus(targetSize.height / 2)
-                    }
-                    .onGloballyPositioned {
-                        targetSize = it.size
-                    }
-                ) {
+                .onGloballyPositioned {
+                    targetSize = it.size
+                }
+            ) {
 
-                    state.draggableComposable?.invoke()
-                }
+                state.draggableComposable?.invoke()
             }
         }
-    //}
+    }
 }
 
 @Composable
-fun  DragTarget(
+fun  dragTarget(
     modifier: Modifier,
     dataToDrop: ElementTypes,
     id: Int,
@@ -102,36 +103,30 @@ fun  DragTarget(
     val elementModeModifier = Modifier
         .onGloballyPositioned {
             it.boundsInWindow().let { rect ->
-                //println("width=  ${rect.width}, height=  ${rect.height}")
                 charOffsetx = rect.width/2f
                 charOffsety = rect.height/2f
             }
         }
         .pointerInput(Unit) {
             detectDragGestures(
+
                 onDragStart = {
                     if (currentState.mode == Mode.ELEMENT_MODE) {
-                        //println("mode = ${currentState.mode}")
-
-                        //println("id= $id,  dataToDrop = $dataToDrop ")
-                        //println("DragTarget id = $id")
                         globalId = id
-                        bondGraph.getElementsMap()[id]?.displayData?.text  = AnnotatedString("")
+                        bondGraph.getElement(id)?.displayData?.text  = AnnotatedString("")
                         currentState.dataToDrop = dataToDrop
                         currentState.isDragging = true
                         currentState.dragPosition = currentPosition + it
                         currentState.draggableComposable = { elementContent((dataToDrop.displayString())) }
                         currentState.centerOffsetx = charOffsetx
                         currentState.centerOffsety = charOffsety
-                        val cp =bondGraph.getElement(id)?.displayData?.centerLocation
-                          if (cp != null){
-                              currentState.centerPosition = cp
-                          }
+                        //currentState.centerPosition = Offset(currentPosition.x + charOffsetx - currentState.xOffset, currentPosition.y + charOffsety)
+                        currentState.centerPosition = Offset(currentState.dragPosition.x - currentState.xOffset, currentState.dragPosition.y)
                     }
                     //
                 }, onDrag = { change, dragAmount ->
                     if (currentState.mode == Mode.ELEMENT_MODE) {
-                        change.consumeAllChanges()
+                        change.consume()
 
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
                         currentState.centerPosition += Offset(dragAmount.x, dragAmount.y)
@@ -142,9 +137,9 @@ fun  DragTarget(
 
                 }, onDragEnd = {
                     if (currentState.mode == Mode.ELEMENT_MODE) {
-                        //println("onDragEnd")
                         currentState.finalOffset = currentState.dragOffset
                         currentState.finalPosition = currentState.dragPosition
+                        currentState.needsBondUpdate = true
                         currentState.isDragging = false
                     }
                 }, onDragCancel = {
@@ -166,24 +161,9 @@ fun  DragTarget(
                 onDoubleTap = {
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         if (currentState.mode == Mode.ELEMENT_MODE) {
-                            //println("onDoubleTap,  id = $id, dataToDrop = $dataToDrop")
                             bondGraph.removeElement(id)
                             currentState.needsElementUpdate = true
                         }
-                    }
-                }
-            )
-        }
-
-    val bondModeModifier = Modifier
-        .pointerInput(Unit){
-
-            detectTapGestures(
-                onPress = {
-                   //println("BOND_MODE id= $id")
-                    if (id >= 1000) {
-                        textColor = Color.Black
-                        currentState.mode = Mode.ELEMENT_MODE
                     }
                 }
             )
@@ -206,7 +186,7 @@ fun  DragTarget(
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTextApi::class)
 @Composable
-fun  DropTarget(
+fun  dropTarget(
     modifier: Modifier
 ) {
 
@@ -216,22 +196,18 @@ fun  DropTarget(
     val dragOffset = dragInfo.dragOffset
     val finalPosition = dragInfo.finalPosition
     val finalOffset = dragInfo.finalOffset
-    var xOffset by remember{ mutableStateOf(0f) }
+    //var xOffset by remember{ mutableStateOf(0f) }
     val textMeasurer = rememberTextMeasurer(50)
-    val style = TextStyle(fontSize = MyConstants.labelFontsize)
-
-
     var pointerOffset by remember {mutableStateOf(Offset(0f, 0f))}
     var pointerOrigin by remember { mutableStateOf(Offset(0f,0f))}
-    var isDragging by remember {mutableStateOf(false)}
-    var isDragEnded by remember { mutableStateOf(false) }
-    var haveDragged by remember { mutableStateOf(false) }
+    var isBondDragging by remember {mutableStateOf(false)}
+    var isBondDragEnded by remember { mutableStateOf(false) }
+    var haveBondDragged by remember { mutableStateOf(false) }
     var bondId by remember { mutableStateOf(0) }
     //var needsUpdate by remember { mutableStateOf(false) }
     var originId by remember { mutableStateOf(-1) }
     var destinationId by remember { mutableStateOf(-1) }
     //var displayData: GraphElementDisplayData? by remember(GraphElementDisplayData(-1,"", 0f, 0f, 0f, 0f, Offset(0f, 0f)))
-    var elementCenter by remember { mutableStateOf(Offset(0f, 0f)) }
 
     fun updateBonds(){
         dragInfo.needsBondUpdate =true
@@ -262,18 +238,16 @@ fun  DropTarget(
         .onGloballyPositioned {
             it.boundsInWindow().let { rect ->
                 dragInfo.isCurrentDropTarget = rect.contains(dragPosition + dragOffset)
-                xOffset = rect.left
+                dragInfo.xOffset = rect.left
             }
         }
         .pointerInput(Unit) {
             detectTapGestures (
                 onTap ={
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        //println("Tap at $it  isShifted = $isShifted")
 
                         if (bondId >= 0) {
                             if (isShifted){
-                                //println("Flip stroke")
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
                                     if (bond.effortElement == null){
@@ -283,7 +257,6 @@ fun  DropTarget(
                                     }
                                 }
                             }else {
-                                //("flip arrow")
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
                                     bondGraph.setPowerElement(bondId, if (bond.powerToElement == bond.element1) bond.element2 else bond.element1)
@@ -297,7 +270,6 @@ fun  DropTarget(
                 }
                 , onDoubleTap = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        //println("doubleTap at $it")
                         if (bondId >= 0) {
                             bondGraph.removeBond(bondId)
                             dragInfo.needsBondUpdate = true
@@ -306,12 +278,8 @@ fun  DropTarget(
                 }
                 , onPress = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        //println("onPress")
                         dragInfo.needsBondUpdate = true
-                        val x = it.x
-                        val y = it.y
                         bondId = findBond(it.x, it.y)
-                        //println("choice = $bondId")
                     }
                 }
             )
@@ -321,20 +289,15 @@ fun  DropTarget(
             detectDragGestures(
                 onDragStart = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        val x = it.x
-                        val y = it.y
                         originId = findElement(it.x, it.y, -1)
                         if (originId >= 0) {
-                           //val displayData = bondGraph.getElementsMap()[elementId]?.displayData
-                            //bondGraph.getGraphElementsDisplayDataMap().forEach{(k,v) -> println("id= ${k}  centerLocation= ${v.centerLocation}")}
                             pointerOrigin = bondGraph.getElementsMap()[originId]?.displayData?.centerLocation!!
                             pointerOffset = it
-                            isDragging = true
+                            isBondDragging = true
                         }
-                        //println("Drag Start")
                     }
                 }
-                , onDrag = { change, dragAmount ->
+                , onDrag = { _, dragAmount ->
                     if (dragInfo.mode == Mode.BOND_MODE && originId >= 0) {
                         destinationId = findElement(pointerOffset.x, pointerOffset.y, originId)
 
@@ -350,18 +313,18 @@ fun  DropTarget(
                         }
                         val displayData = bondGraph.getElementsMap()[originId]?.displayData
                         if (displayData != null)
-                        pointerOrigin = offsetFromCenter(displayData.centerLocation, pointerOffset, displayData!!.width, displayData!!.height)
+                        pointerOrigin = offsetFromCenter(displayData.centerLocation, pointerOffset, displayData.width, displayData.height)
                     }
                 }
                 , onDragEnd = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        isDragging = false
-                        isDragEnded = true
+                        isBondDragging = false
+                        isBondDragEnded = true
                     }
                 }
                 , onDragCancel = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        isDragging = false
+                        isBondDragging = false
                     }
                 }
 
@@ -370,13 +333,13 @@ fun  DropTarget(
         }
 
         .onSizeChanged {
-            pointerOffset = Offset(it.width / 2f, it.height / 2f)
+           //pointerOffset = Offset(it.width / 2f, it.height / 2f)
         }
 
         .drawWithCache {
             onDrawBehind {
                 // draw behind the content
-                val drawArrowWithOffsets ={color: Color, start:  Offset, end: Offset, strokeLoc: StrokeLocation->
+                val drawArrowWithOffsets ={color: Color, start:  Offset, end: Offset, strokeLoc: StrokeLocation ->
                     drawLine(color = color, start, end, 1f)
                     drawLine(color = color, end, getArrowOffsets(start, end), 1f)
                     when (strokeLoc) {
@@ -386,7 +349,7 @@ fun  DropTarget(
                         }
                         StrokeLocation.END -> {
                             val offsets = getCausalOffsets(end, start)
-                            drawLine(color = color, offsets.first, offsets.second)
+                            drawLine(color = color ,offsets.first, offsets.second)
                         }
                         StrokeLocation.NO_STROKE -> {}
                     }
@@ -417,27 +380,21 @@ fun  DropTarget(
                     val myLabelOffset = getLabelOffset(bond.offset1, bond.offset2, textLayoutResult.size.width, textLayoutResult.size.height)
                     drawText(text = bond.displayId, style = TextStyle(fontSize=MyConstants.labelFontsize), textMeasurer = textMeasurer, topLeft = myLabelOffset)
                 }
-                //println("draw, needBondUpdate = ${dragInfo.needsBondUpdate}  showResults = ${dragInfo.showResults}")
                 if (dragInfo.needsBondUpdate) {
-                    println("Updateing")
                     bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
                     dragInfo.needsBondUpdate = false
                 }
                 //bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
-                if (isDragging) {
-                    //println("dragging")
+                if (isBondDragging) {
                     drawArrowWithOffsets(dragInfo.arrowColor, pointerOrigin, pointerOffset, StrokeLocation.NO_STROKE)
                 }
-                if (isDragEnded){
-                    //println("bondId = $bondId  arrowId = $arrowId")
+                if (isBondDragEnded){
                     val index = if (bondId >= 0) bondId else arrowId++
-                    //println("bondId= $bondId arrowId = $arrowId")
-                    //println("originId = $originId  destinationId = $destinationId")
                     if (destinationId >= 0) {
                         bondGraph.addBond(index, originId, pointerOrigin, destinationId, pointerOffset, destinationId)
                     }
-                    isDragEnded = false
-                    haveDragged = true
+                    isBondDragEnded = false
+                    haveBondDragged = true
                 }
 
                 bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
@@ -445,37 +402,26 @@ fun  DropTarget(
         }
     ) {
 
-        if (!dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
+        if ( ! dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
 
-            //println("Here 3 isCurrentDropTarget = ${dragInfo.isCurrentDropTarget}")
-            //println("offset x = ${dragOffset.x}  offset y = ${dragOffset.y}")
-            //println("position x = ${dragPosition.x}  position y = ${dragPosition.y}")
-            //println("final offset x = ${finalOffset.x}   final offset y = ${finalOffset.y}")
-            //println("final position x = ${finalPosition.x}  finalPosition y = ${finalPosition.y}")
-            //println("xOffset = $xOffset ")
-            //println("charOffsetx = ${dragInfo.centerOffsetx}  charOffsety = ${dragInfo.centerOffsety}")
-
-            val x = with(LocalDensity.current) { (finalOffset + finalPosition).x - xOffset - dragInfo.centerOffsetx  }
+            val x = with(LocalDensity.current) { (finalOffset + finalPosition).x - dragInfo.xOffset - dragInfo.centerOffsetx  }
             val y = with(LocalDensity.current) { (finalPosition + finalOffset).y - dragInfo.centerOffsety}
             val id = if (globalId >= 1000) count++ else globalId
 
             bondGraph.addElement(id, dragInfo.dataToDrop, x, y, Offset(dragInfo.centerOffsetx, dragInfo.centerOffsety))
-            //println("globalId = $globalId,  id = $id")
         }
 
-        if (!dragInfo.isDragging) {
+        if ( ! dragInfo.isDragging) {
             val currentState = LocalDragTargetInfo.current
             currentState.dragOffset = Offset.Zero
             currentState.finalOffset = Offset.Zero
         }
 
-        //println("display ${bondGraph.getGraphElementsDisplayDataMap().size} elements")
-        println("needsElementUpdate = ${dragInfo.needsElementUpdate}")
         if (dragInfo.needsElementUpdate) {
-            bondGraph.getElementsMap().forEach { (K, V) -> key(K) {displayElement(V.displayData)}}
+            bondGraph.getElementsMap().forEach { (k, v) -> key(k) { displayElement(v.displayData) }}
             dragInfo.needsElementUpdate = false
         }
-        bondGraph.getElementsMap().forEach { (K, V) -> key(K) {displayElement(V.displayData)}}
+        bondGraph.getElementsMap().forEach { (k, v) -> key(k) { displayElement(v.displayData) }}
 
     }
 }
@@ -484,9 +430,7 @@ fun  DropTarget(
 fun elementContent(text:AnnotatedString){
     Box(
         modifier = Modifier
-            //.size(MyConstants.nodeBoxSize)
             .wrapContentSize()
-        //choice.background(Color.LightGray)
     ) {
         Text(
             text = text,
@@ -498,13 +442,13 @@ fun elementContent(text:AnnotatedString){
 }
 
 @Composable
-fun displayElement(displayData: GraphElementDisplayData) {
-    //println("id = ${graphElementDisplayData.id}  text= ${graphElementDisplayData.text}  x= ${graphElementDisplayData.x}  y= ${graphElementDisplayData.y}")
-    DragTarget(
+fun displayElement(displayData: GraphElementDisplayData, size: Dp = 0.dp) {
+    dragTarget(
         modifier = Modifier
             //.size(MyConstants.nodeBoxSize)
-            .wrapContentSize()
+            //.wrapContentSize()
             .offset { IntOffset(displayData.x.toInt(), displayData.y.toInt())}
+            .then( if (size > 0.dp) Modifier.size(30.dp ) else Modifier.wrapContentSize())
         ,ElementTypes.toEnum(displayData.text)
         ,displayData.id
     ) {
@@ -533,6 +477,7 @@ internal class DragTargetInfo {
     var derive by mutableStateOf(false)
     var clearGraph by mutableStateOf(false)
     var arrowColor by mutableStateOf(Color.Black)
+    var xOffset by mutableStateOf(0f)
     //var bondList: () -> SnapshotStateList<String> = {mutableStateListOf<String>()}
 
     var dataToDrop = INVALID

@@ -7,30 +7,22 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
+import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.Bottom
 import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.input.key.Key.Companion.M
-import androidx.compose.ui.input.key.Key.Companion.R
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.BondGraph
 import bondgraph.ElementTypes
 import bondgraph.GraphElementDisplayData
-import com.example.draganddrop.*
 
 //val graphElementTypeNames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
 val bondGraph = BondGraph("test graph")
@@ -148,6 +140,7 @@ fun textColumn() {
                 var id = 1000
                 enumValues<ElementTypes>().forEach {
                     displayElement(GraphElementDisplayData(id++, it.displayString(), 0f, 0f, 0f, 0f, Offset(0f, 0f)))
+                    if (it == ElementTypes.ONE_JUNCTION || it == ElementTypes.MODULATED_TRANSFORMER) Divider(thickness = 2.dp, color = Color.Black)
                 }
             }
 
@@ -259,7 +252,7 @@ fun windowBox() {
                  .background(Color.Yellow)
          ) {
 
-             Draggable(
+             draggable(
                  Modifier
                      .background(color = Color.Gray)
                      .fillMaxWidth()
@@ -270,7 +263,7 @@ fun windowBox() {
                          .background(color = Color.Red)
                  ) {
                      textColumn()
-                     DropTarget(
+                     dropTarget(
                          modifier = Modifier.background(color = MyConstants.graphBackground)
                              .fillMaxSize()
                      )
