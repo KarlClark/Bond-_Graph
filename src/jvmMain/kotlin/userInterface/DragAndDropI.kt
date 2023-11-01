@@ -51,10 +51,15 @@ might be at either end so we need to store that info.
 class ArrowData(var color:Color, var offsets: Pair<Offset, Offset>, var strokeLocation: StrokeLocation)
 
 /*
-Data for drawing the half arrow and causal stroke on a bond. Use these offsets to
-draw a line form the end of the arrow to the offset.
+Data for drawing the half arrow and causal stroke on a bond. To use this data
+draw a lines form the end of the arrow to each offset.
  */
 class ArrowOffsets(val oArrow: Offset, val oCausal1: Offset, val oCausal2: Offset)
+
+/*
+The following three composables are used to implement the dragging and dropping of elements onto the work space.
+They communicate to each other use a Compositional Local
+ */
 
 @Composable
 fun draggable(
@@ -72,7 +77,7 @@ fun draggable(
             }
             Box(modifier = Modifier
                 .graphicsLayer {
-                    val offset = (state.dragPosition + state.dragOffset)
+                    val offset = (state.startPosition + state.dragOffset)
                     translationX = offset.x.minus(targetSize.width / 2)
                     translationY = offset.y.minus(targetSize.height / 2)
                 }
@@ -118,11 +123,11 @@ fun  dragTarget(
                         bondGraph.getElement(id)?.displayData?.text  = AnnotatedString("")
                         currentState.dataToDrop = dataToDrop
                         currentState.isDragging = true
-                        currentState.dragPosition = currentPosition + it
+                        currentState.startPosition = currentPosition + it
                         currentState.draggableComposable = { elementContent((dataToDrop.displayString())) }
                         currentState.centerOffsetx = charOffsetx
                         currentState.centerOffsety = charOffsety
-                        currentState.centerPosition = Offset(currentState.dragPosition.x - currentState.xOffset, currentState.dragPosition.y)
+                        currentState.centerPosition = Offset(currentState.startPosition.x - currentState.xOffset, currentState.startPosition.y)
                     }
                     //
                 }, onDrag = { change, dragAmount ->
@@ -137,8 +142,6 @@ fun  dragTarget(
 
                 }, onDragEnd = {
                     if (currentState.mode == Mode.ELEMENT_MODE) {
-                        currentState.finalOffset = currentState.dragOffset
-                        currentState.finalPosition = currentState.dragPosition
                         currentState.needsBondUpdate = true
                         currentState.isDragging = false
                     }
@@ -186,10 +189,8 @@ fun  dropTarget(
 
 
     val dragInfo = LocalStateInfo.current
-    val dragPosition = dragInfo.dragPosition
+    val startPosition = dragInfo.startPosition
     val dragOffset = dragInfo.dragOffset
-    val finalPosition = dragInfo.finalPosition
-    val finalOffset = dragInfo.finalOffset
     val textMeasurer = rememberTextMeasurer(50)
     var pointerOffset by remember {mutableStateOf(Offset(0f, 0f))}
     var pointerOrigin by remember { mutableStateOf(Offset(0f,0f))}
@@ -228,7 +229,7 @@ fun  dropTarget(
         //.offset{IntOffset(-50,0)}
         .onGloballyPositioned {
             it.boundsInWindow().let { rect ->
-                dragInfo.isCurrentDropTarget = rect.contains(dragPosition + dragOffset)
+                dragInfo.isCurrentDropTarget = rect.contains(startPosition + dragOffset)
                 dragInfo.xOffset = rect.left
             }
         }
@@ -395,8 +396,8 @@ fun  dropTarget(
 
         if ( ! dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
 
-            val x = with(LocalDensity.current) { (finalOffset + finalPosition).x - dragInfo.xOffset - dragInfo.centerOffsetx  }
-            val y = with(LocalDensity.current) { (finalPosition + finalOffset).y - dragInfo.centerOffsety}
+            val x = with(LocalDensity.current) { (startPosition + dragOffset).x - dragInfo.xOffset - dragInfo.centerOffsetx  }
+            val y = with(LocalDensity.current) { (startPosition + dragOffset).y - dragInfo.centerOffsety}
             val id = if (globalId >= 1000) count++ else globalId
 
             bondGraph.addElement(id, dragInfo.dataToDrop, x, y, Offset(dragInfo.centerOffsetx, dragInfo.centerOffsety))
@@ -405,7 +406,6 @@ fun  dropTarget(
         if ( ! dragInfo.isDragging) {
             val currentState = LocalStateInfo.current
             currentState.dragOffset = Offset.Zero
-            currentState.finalOffset = Offset.Zero
         }
 
         if (dragInfo.needsElementUpdate) {
@@ -451,10 +451,8 @@ fun displayElement(displayData: GraphElementDisplayData, size: Dp = 0.dp) {
 internal class StateInfo {
     var isDragging: Boolean by mutableStateOf(false)
     var isCurrentDropTarget: Boolean by mutableStateOf(false)
-    var dragPosition by mutableStateOf(Offset.Zero)
+    var startPosition by mutableStateOf(Offset.Zero)
     var dragOffset by mutableStateOf(Offset.Zero)
-    var finalOffset  by mutableStateOf (Offset.Zero)
-    var finalPosition  by mutableStateOf (Offset.Zero)
     var draggableComposable by mutableStateOf< (@Composable () -> Unit)?>(null)
     var needsElementUpdate by mutableStateOf(false)
     var needsBondUpdate by mutableStateOf(false)
