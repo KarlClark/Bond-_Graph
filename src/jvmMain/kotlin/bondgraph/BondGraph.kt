@@ -7,7 +7,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import bondgraph.ElementTypes.*
-import userInterface.LocalDragTargetInfo
+import userInterface.LocalStateInfo
 import userInterface.MyConstants
 import kotlin.math.*
 
@@ -213,7 +213,7 @@ class BondGraph(var name: String) {
 
     @Composable
     fun clear(){
-        val state = LocalDragTargetInfo.current
+        val state = LocalStateInfo.current
         elementsMap.clear()
         bondsMap.clear()
         state.needsElementUpdate = true
@@ -302,7 +302,7 @@ class BondGraph(var name: String) {
    @Composable
     fun augment() {
 
-       val state = LocalDragTargetInfo.current
+       val state = LocalStateInfo.current
 
        removeBondAugmentation()
 
@@ -383,7 +383,7 @@ class BondGraph(var name: String) {
     @Composable
     fun derive(){
 
-        val state = LocalDragTargetInfo.current
+        val state = LocalStateInfo.current
 
         try {
 

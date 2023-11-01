@@ -58,7 +58,7 @@ fun Modifier.conditional(
 @Composable
 fun textColumn() {
 
-    val currentState = LocalDragTargetInfo.current
+    val currentState = LocalStateInfo.current
     var bondModeColor by remember { mutableStateOf (Color.LightGray)}
     var nodeModeColor by remember { mutableStateOf( MyConstants.myGreen)}
 
@@ -157,7 +157,6 @@ fun textColumn() {
 
                 Button (colors = ButtonDefaults.buttonColors(backgroundColor = MyConstants.myGreen, contentColor = Color.White)
                     ,onClick = {
-                    println ("Button click")
                     currentState.augment = true
                 }
 
@@ -167,7 +166,6 @@ fun textColumn() {
                 }
                 Button (colors = ButtonDefaults.buttonColors(backgroundColor = MyConstants.myGreen, contentColor = Color.White)
                     ,onClick = {
-                        println ("Button click")
                         currentState.derive = true
                     }){
                     Text("Derive")
@@ -190,7 +188,7 @@ fun textColumn() {
 @Composable
 fun bottomBar() {
 
-    val currentState = LocalDragTargetInfo.current
+    val currentState = LocalStateInfo.current
 
     Row(Modifier
         .height(60.dp)
@@ -209,7 +207,6 @@ fun bottomBar() {
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
-                            println("Results tap")
                             currentState.showResults = !currentState.showResults
                         }
                     )
@@ -223,7 +220,6 @@ fun bottomBar() {
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
-                            println("Clear tap")
                             currentState.clearGraph = true
                         }
                     )
@@ -240,10 +236,10 @@ fun bottomBar() {
 fun windowBox() {
 
     //val currentState = LocalDragTargetInfo.current
-    val state = remember { DragTargetInfo() }
+    val state = remember { StateInfo() }
 
      CompositionLocalProvider(
-         LocalDragTargetInfo provides state
+         LocalStateInfo provides state
      ) {
 
          Column(
@@ -269,7 +265,6 @@ fun windowBox() {
                      )
                  }
              }
-             println("showResults = ${state.showResults}")
              if (state.showResults) {
                  Column(
                      modifier = Modifier
@@ -294,7 +289,7 @@ fun windowBox() {
                                  .fillMaxSize()
                                  .offset { IntOffset(0, -10) }
                                  .padding(horizontal = 10.dp)
-                                 .clickable { println("minimize called");state.showResults = false }
+                                 .clickable { state.showResults = false }
 
                          )
                      }

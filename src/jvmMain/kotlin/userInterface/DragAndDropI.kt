@@ -32,7 +32,7 @@ import bondgraph.BondGraph.Companion.offsetFromCenter
 import bondgraph.BondGraph.Companion.getLabelOffset
 
 
-internal val LocalDragTargetInfo = compositionLocalOf { DragTargetInfo() }
+internal val LocalStateInfo = compositionLocalOf { StateInfo() }
 private var globalId = 0
 private var count = 0
 
@@ -61,7 +61,7 @@ fun draggable(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val state = LocalDragTargetInfo.current
+    val state = LocalStateInfo.current
 
     Box(modifier = modifier.fillMaxSize())
     {
@@ -97,14 +97,16 @@ fun  dragTarget(
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
     var charOffsetx by remember { mutableStateOf(0f) }
     var charOffsety by remember { mutableStateOf(0f) }
-    val currentState = LocalDragTargetInfo.current
+    val currentState = LocalStateInfo.current
 
 
     val elementModeModifier = Modifier
         .onGloballyPositioned {
             it.boundsInWindow().let { rect ->
+                println ("in bounds window")
                 charOffsetx = rect.width/2f
                 charOffsety = rect.height/2f
+
             }
         }
         .pointerInput(Unit) {
@@ -120,7 +122,6 @@ fun  dragTarget(
                         currentState.draggableComposable = { elementContent((dataToDrop.displayString())) }
                         currentState.centerOffsetx = charOffsetx
                         currentState.centerOffsety = charOffsety
-                        //currentState.centerPosition = Offset(currentPosition.x + charOffsetx - currentState.xOffset, currentPosition.y + charOffsety)
                         currentState.centerPosition = Offset(currentState.dragPosition.x - currentState.xOffset, currentState.dragPosition.y)
                     }
                     //
@@ -131,7 +132,6 @@ fun  dragTarget(
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
                         currentState.centerPosition += Offset(dragAmount.x, dragAmount.y)
                         bondGraph.updateBondsForElement(id, currentState.centerPosition)
-                        //currentState.finalOffset += Offset(dragAmount.x, dragAmount.y)
                     }
 
 
@@ -152,12 +152,6 @@ fun  dragTarget(
         }
         .pointerInput(Unit) {
             detectTapGestures(
-                /*onPress = {
-                    if (id >= 1000) {
-                        textColor = Color.Black
-                        mode = Mode.NODE_MODE
-                    }
-                }*/
                 onDoubleTap = {
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         if (currentState.mode == Mode.ELEMENT_MODE) {
@@ -191,12 +185,11 @@ fun  dropTarget(
 ) {
 
 
-    val dragInfo = LocalDragTargetInfo.current
+    val dragInfo = LocalStateInfo.current
     val dragPosition = dragInfo.dragPosition
     val dragOffset = dragInfo.dragOffset
     val finalPosition = dragInfo.finalPosition
     val finalOffset = dragInfo.finalOffset
-    //var xOffset by remember{ mutableStateOf(0f) }
     val textMeasurer = rememberTextMeasurer(50)
     var pointerOffset by remember {mutableStateOf(Offset(0f, 0f))}
     var pointerOrigin by remember { mutableStateOf(Offset(0f,0f))}
@@ -204,10 +197,8 @@ fun  dropTarget(
     var isBondDragEnded by remember { mutableStateOf(false) }
     var haveBondDragged by remember { mutableStateOf(false) }
     var bondId by remember { mutableStateOf(0) }
-    //var needsUpdate by remember { mutableStateOf(false) }
     var originId by remember { mutableStateOf(-1) }
     var destinationId by remember { mutableStateOf(-1) }
-    //var displayData: GraphElementDisplayData? by remember(GraphElementDisplayData(-1,"", 0f, 0f, 0f, 0f, Offset(0f, 0f)))
 
     fun updateBonds(){
         dragInfo.needsBondUpdate =true
@@ -412,7 +403,7 @@ fun  dropTarget(
         }
 
         if ( ! dragInfo.isDragging) {
-            val currentState = LocalDragTargetInfo.current
+            val currentState = LocalStateInfo.current
             currentState.dragOffset = Offset.Zero
             currentState.finalOffset = Offset.Zero
         }
@@ -457,7 +448,7 @@ fun displayElement(displayData: GraphElementDisplayData, size: Dp = 0.dp) {
     }
 }
 
-internal class DragTargetInfo {
+internal class StateInfo {
     var isDragging: Boolean by mutableStateOf(false)
     var isCurrentDropTarget: Boolean by mutableStateOf(false)
     var dragPosition by mutableStateOf(Offset.Zero)
@@ -467,7 +458,6 @@ internal class DragTargetInfo {
     var draggableComposable by mutableStateOf< (@Composable () -> Unit)?>(null)
     var needsElementUpdate by mutableStateOf(false)
     var needsBondUpdate by mutableStateOf(false)
-    //var bondId by mutableStateOf("")
     var centerPosition by mutableStateOf(Offset.Zero)
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
@@ -478,9 +468,6 @@ internal class DragTargetInfo {
     var clearGraph by mutableStateOf(false)
     var arrowColor by mutableStateOf(Color.Black)
     var xOffset by mutableStateOf(0f)
-    //var bondList: () -> SnapshotStateList<String> = {mutableStateListOf<String>()}
-
     var dataToDrop = INVALID
-    //var trigger by mutableStateOf(0)
 
 }
