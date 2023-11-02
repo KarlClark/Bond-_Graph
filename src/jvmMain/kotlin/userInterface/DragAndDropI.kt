@@ -149,7 +149,6 @@ fun  dragTarget(
     content: @Composable (() -> Unit)
 ) {
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
-    var testPosition by remember{ mutableStateOf(Offset.Zero) }
     var centerOffsetx by remember { mutableStateOf(0f) }
     var centerOffsety by remember { mutableStateOf(0f) }
     val currentState = LocalStateInfo.current
@@ -164,7 +163,6 @@ fun  dragTarget(
                 // because to box containing our string is wrapContent.
                 centerOffsetx = rect.width/2f
                 centerOffsety = rect.height/2f
-                println("local to window = ${it.localToWindow(Offset.Zero)}")
             }
         }
         .pointerInput(Unit) {
@@ -185,8 +183,7 @@ fun  dragTarget(
                         currentState.draggableComposable = { elementContent((dataToDrop.toAnnotatedString())) }
                         currentState.centerOffsetx = centerOffsetx
                         currentState.centerOffsety = centerOffsety
-                        //currentState.centerPosition = Offset(currentState.startPosition.x - currentState.xOffset, currentState.startPosition.y)
-                        currentState.centerPosition = testPosition
+                        currentState.centerPosition = currentState.startPosition - currentState.workPaneToWindowOffset
                     }
                     //
                 }, onDrag = { change, dragAmount ->
@@ -228,8 +225,6 @@ fun  dragTarget(
         ,modifier = modifier
             .onGloballyPositioned {
                 currentPosition = it.localToWindow(Offset.Zero)
-                testPosition = it.localToRoot(Offset.Zero)
-                println("currentPosition = $currentPosition  testPosition = $testPosition  xOffset = ${currentState.xOffset}")
             }
             .then(dragAndDropModifier)
     ) {
@@ -278,12 +273,7 @@ fun  dropTarget(
     Box(modifier = modifier
         //.offset{IntOffset(-50,0)}
         .onGloballyPositioned {
-            it.boundsInWindow().let { rect ->
-                dragInfo.isCurrentDropTarget = rect.contains(startPosition + dragOffset)
-                dragInfo.xOffset = rect.left
-                println("xOffset = ${dragInfo.xOffset}")
-            }
-            println("dropTarget local to window = ${it.localToWindow(Offset.Zero)}")
+            dragInfo.workPaneToWindowOffset = it.localToWindow(Offset.Zero)
         }
         .pointerInput(Unit) {
             detectTapGestures (
@@ -448,8 +438,10 @@ fun  dropTarget(
 
         if ( ! dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
 
-            val x = with(LocalDensity.current) { (startPosition + dragOffset).x - dragInfo.xOffset - dragInfo.centerOffsetx  }
-            val y = with(LocalDensity.current) { (startPosition + dragOffset).y - dragInfo.centerOffsety}
+            val centerLocation = startPosition + dragOffset - dragInfo.workPaneToWindowOffset
+            val x =  centerLocation.x - dragInfo.centerOffsetx
+            val y =  centerLocation.y - dragInfo.centerOffsety
+
             val id = if (globalId >= 1000) count++ else globalId
 
             bondGraph.addElement(id, dragInfo.dataToDrop, x, y, Offset(dragInfo.centerOffsetx, dragInfo.centerOffsety))
@@ -509,7 +501,7 @@ internal class StateInfo {
     var needsElementUpdate by mutableStateOf(false)
     var needsBondUpdate by mutableStateOf(false)
     var centerPosition by mutableStateOf(Offset.Zero)
-    //var testPosition by mutableStateOf(Offset.Zero)
+    var workPaneToWindowOffset by mutableStateOf(Offset.Zero)
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
@@ -518,7 +510,6 @@ internal class StateInfo {
     var derive by mutableStateOf(false)
     var clearGraph by mutableStateOf(false)
     var arrowColor by mutableStateOf(Color.Black)
-    var xOffset by mutableStateOf(0f)
     var dataToDrop = INVALID
 
 }
