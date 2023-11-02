@@ -57,14 +57,31 @@ draw a lines form the end of the arrow to each offset.
 class ArrowOffsets(val oArrow: Offset, val oCausal1: Offset, val oCausal2: Offset)
 
 /*
-The following three composables are used to implement the dragging and dropping of elements onto the work space.
-They communicate to each other use a Compositional Local
+The following three composable functions draggable, dragTarget and dropTarget work together
+to implement the dragging and dropping of elements onto the work space.  dropTarget function
+also contains the code for drawing the bond arrows.  I found these functions in an article
+on the internet.  They were very general purpose.  They have been specialized to make them
+easier to use in this program and enhanced to provide functionality needed for this program.
+
+They communicate with each other by accessing variables in an instance of CompositionalLocal.
+
+draggable is basically a box that is capable of dragging any given composable over what ever
+contents are displayed in the box.  At the least, the contents need to include at least one
+dragTarget and dropTarget.
+
+The contents to display are passed in as composable parameter.  In our case is almost all
+of the ui minus the popup results window.
+
+The composable to drag is provided by the dragTarget function, which in our case is just a
+short Text().  The drag animation is accomplished by placing the composable in another box
+that uses a .graphicsLayer modifier to translate its coordinates. A stream of coordinates is
+provided by the dragTarget function.
  */
 
 @Composable
 fun draggable(
     modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit
+    content: @Composable BoxScope.() -> Unit  //Content to display
 ) {
     val state = LocalStateInfo.current
 
@@ -72,6 +89,8 @@ fun draggable(
     {
         content()
         if (state.isDragging) {
+            // dragTarget function says to start dragging whatever it has placed
+            // in the draggableComposable variable.
             var targetSize by remember {
                 mutableStateOf(IntSize.Zero)
             }
@@ -92,6 +111,36 @@ fun draggable(
     }
 }
 
+/*
+The idea behind dragTarget is to pass in composable content, display it and
+make it draggable. It does this by displaying the content in a box that uses a
+.pointer modifier to look for drag events.  When the box sees a onDragStart event
+it crates a another composable that we want to see dragged around. It stores
+this new composable in the draggableComposable variable and sets isDragging variable
+to true.  This notifies the draggable function that it is time to start positioning
+the composable based on the position data that this function will provide by
+processing onDrag events.
+
+It also stores data in the dataToDrop variable that can be used by the dropTarget
+function once dragging is complete.
+
+Several things to note:
+1. Calls to dragTarget must be place in the scope of a draggable function.
+2. The content being dragged is not the content being displayed.  It is
+   content created on the fly when an onDragStart event is processed. In
+   our case it looks the same as our displayed content, a short String.
+3. We only process drag events if we are in element mode, not while
+   we are dragging bond arrows.
+
+This is how to use this function. Say you have some content you want to be
+draggable.  Instead of placing the content directly in a composable say a row
+or a column, place a dragTarget there instead and then place your content in the
+dragTarget.  Remember you dragTarget must also be in a draggable.  Usually
+the row or column etc. will already be in a draggable.
+
+This function has been enhanced to check of doubleTap events which are a
+signal from the user to delete this element from the bond graph.
+ */
 @Composable
 fun  dragTarget(
     modifier: Modifier,
@@ -100,40 +149,49 @@ fun  dragTarget(
     content: @Composable (() -> Unit)
 ) {
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
-    var charOffsetx by remember { mutableStateOf(0f) }
-    var charOffsety by remember { mutableStateOf(0f) }
+    var testPosition by remember{ mutableStateOf(Offset.Zero) }
+    var centerOffsetx by remember { mutableStateOf(0f) }
+    var centerOffsety by remember { mutableStateOf(0f) }
     val currentState = LocalStateInfo.current
 
 
-    val elementModeModifier = Modifier
+    val dragAndDropModifier = Modifier
         .onGloballyPositioned {
             it.boundsInWindow().let { rect ->
-                println ("in bounds window")
-                charOffsetx = rect.width/2f
-                charOffsety = rect.height/2f
-
+                // Grab this data for later use. It is the Offset of
+                // the center of our string from the upper left corner
+                // which is what is used for positioning. This works
+                // because to box containing our string is wrapContent.
+                centerOffsetx = rect.width/2f
+                centerOffsety = rect.height/2f
+                println("local to window = ${it.localToWindow(Offset.Zero)}")
             }
         }
         .pointerInput(Unit) {
             detectDragGestures(
 
                 onDragStart = {
+                    // set things up for dragging. Save the id, centerOffsetx and centerOffsety for dropTarget to
+                    // use later.  Set the text for this element to null, so it will disappear from the screen.
+                    // We want it to look like the thing we are actually dragging is the thing the user clicked
+                    // on.  Set up our draggable composable which just a Box with Text in it.  Calculate the start
+                    // position realatve to the coordinates being used by the draggable function.
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         globalId = id
                         bondGraph.getElement(id)?.displayData?.text  = AnnotatedString("")
                         currentState.dataToDrop = dataToDrop
                         currentState.isDragging = true
                         currentState.startPosition = currentPosition + it
-                        currentState.draggableComposable = { elementContent((dataToDrop.displayString())) }
-                        currentState.centerOffsetx = charOffsetx
-                        currentState.centerOffsety = charOffsety
-                        currentState.centerPosition = Offset(currentState.startPosition.x - currentState.xOffset, currentState.startPosition.y)
+                        currentState.draggableComposable = { elementContent((dataToDrop.toAnnotatedString())) }
+                        currentState.centerOffsetx = centerOffsetx
+                        currentState.centerOffsety = centerOffsety
+                        //currentState.centerPosition = Offset(currentState.startPosition.x - currentState.xOffset, currentState.startPosition.y)
+                        currentState.centerPosition = testPosition
                     }
                     //
                 }, onDrag = { change, dragAmount ->
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         change.consume()
-
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
                         currentState.centerPosition += Offset(dragAmount.x, dragAmount.y)
                         bondGraph.updateBondsForElement(id, currentState.centerPosition)
@@ -166,17 +224,15 @@ fun  dragTarget(
             )
         }
 
-    Box( contentAlignment = Alignment.Center, modifier = modifier
-        .onGloballyPositioned {
-            currentPosition = it.localToWindow(Offset.Zero)
-
-        }
-        .then(elementModeModifier)
-
+    Box( contentAlignment = Alignment.Center
+        ,modifier = modifier
+            .onGloballyPositioned {
+                currentPosition = it.localToWindow(Offset.Zero)
+                testPosition = it.localToRoot(Offset.Zero)
+                println("currentPosition = $currentPosition  testPosition = $testPosition  xOffset = ${currentState.xOffset}")
+            }
+            .then(dragAndDropModifier)
     ) {
-
-
-
         content()
     }
 }
@@ -186,8 +242,6 @@ fun  dragTarget(
 fun  dropTarget(
     modifier: Modifier
 ) {
-
-
     val dragInfo = LocalStateInfo.current
     val startPosition = dragInfo.startPosition
     val dragOffset = dragInfo.dragOffset
@@ -201,9 +255,6 @@ fun  dropTarget(
     var originId by remember { mutableStateOf(-1) }
     var destinationId by remember { mutableStateOf(-1) }
 
-    fun updateBonds(){
-        dragInfo.needsBondUpdate =true
-    }
     fun findBond(x: Float, y: Float): Int {
         val epsilon = 5f
         val result = bondGraph.bondsMap.mapValues { (_,v) ->
@@ -220,7 +271,6 @@ fun  dropTarget(
         val result = bondGraph.getElementsMap().mapValues { (_,v) -> sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
-
         return if (result == null || result.key == originId) -1 else result.key
     }
 
@@ -231,7 +281,9 @@ fun  dropTarget(
             it.boundsInWindow().let { rect ->
                 dragInfo.isCurrentDropTarget = rect.contains(startPosition + dragOffset)
                 dragInfo.xOffset = rect.left
+                println("xOffset = ${dragInfo.xOffset}")
             }
+            println("dropTarget local to window = ${it.localToWindow(Offset.Zero)}")
         }
         .pointerInput(Unit) {
             detectTapGestures (
@@ -457,6 +509,7 @@ internal class StateInfo {
     var needsElementUpdate by mutableStateOf(false)
     var needsBondUpdate by mutableStateOf(false)
     var centerPosition by mutableStateOf(Offset.Zero)
+    //var testPosition by mutableStateOf(Offset.Zero)
     var centerOffsetx by mutableStateOf(0f)
     var centerOffsety by mutableStateOf(0f)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)

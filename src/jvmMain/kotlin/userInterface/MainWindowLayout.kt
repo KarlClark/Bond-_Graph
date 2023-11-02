@@ -139,7 +139,7 @@ fun textColumn() {
             ){
                 var id = 1000
                 enumValues<ElementTypes>().forEach {
-                    displayElement(GraphElementDisplayData(id++, it.displayString(), 0f, 0f, 0f, 0f, Offset(0f, 0f)))
+                    displayElement(GraphElementDisplayData(id++, it.toAnnotatedString(), 0f, 0f, 0f, 0f, Offset(0f, 0f)))
                     if (it == ElementTypes.ONE_JUNCTION || it == ElementTypes.MODULATED_TRANSFORMER) Divider(thickness = 2.dp, color = Color.Black)
                 }
             }

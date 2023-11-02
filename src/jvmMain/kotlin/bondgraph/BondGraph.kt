@@ -15,41 +15,41 @@ import kotlin.math.*
 class BadGraphException(message: String) : Exception(message)
 enum class ElementTypes {
     ZERO_JUNCTION{
-         override fun displayString () = _0
+         override fun toAnnotatedString () = _0
      },
     ONE_JUNCTION{
-        override fun displayString() = _1
+        override fun toAnnotatedString() = _1
     },
     CAPACITOR{
-        override fun displayString() = C
+        override fun toAnnotatedString() = C
     },
     RESISTOR{
-        override fun displayString() = R
+        override fun toAnnotatedString() = R
     },
     INERTIA{
-        override fun displayString() = I
+        override fun toAnnotatedString() = I
     },
     TRANSFORMER{
-        override fun displayString() = TF
+        override fun toAnnotatedString() = TF
     },
     GYRATOR{
-        override fun displayString() = GY
+        override fun toAnnotatedString() = GY
     },
     MODULATED_TRANSFORMER{
-        override fun displayString()  = MTF
+        override fun toAnnotatedString()  = MTF
     },
     SOURCE_OF_EFFORT{
-        override fun displayString() = Se
+        override fun toAnnotatedString() = Se
     },
     SOURCE_OF_FLOW{
-        override fun displayString() = Sf
+        override fun toAnnotatedString() = Sf
     },
 
     INVALID {
-        override fun displayString() = AnnotatedString("")
+        override fun toAnnotatedString() = AnnotatedString("")
     };
 
-    abstract fun displayString(): AnnotatedString
+    abstract fun toAnnotatedString(): AnnotatedString
 
     companion object {
 
@@ -158,7 +158,7 @@ class BondGraph(var name: String) {
 
     fun addElement(id: Int, elementType: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
         if (elementsMap.contains(id)){
-            elementsMap[id]?.displayData?.text = elementType.displayString()
+            elementsMap[id]?.displayData?.text = elementType.toAnnotatedString()
             elementsMap[id]?.displayData?.x = x
             elementsMap[id]?.displayData?.y = y
             elementsMap[id]?.displayData?.centerLocation = Offset(x + centerOffset.x, y + centerOffset.y)
@@ -183,7 +183,7 @@ class BondGraph(var name: String) {
                     elementType,
                     GraphElementDisplayData(
                         id,
-                        elementType.displayString(),
+                        elementType.toAnnotatedString(),
                         x,
                         y,
                         centerOffset.x * 2f,

@@ -1,6 +1,5 @@
 package bondgraph
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 
@@ -42,7 +41,7 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
             }
 
             displayId =buildAnnotatedString {
-                append (elementType.displayString())
+                append (elementType.toAnnotatedString())
                 append("-")
                 append (s.toString())
                 toAnnotatedString()
@@ -96,7 +95,7 @@ open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         val bondList = getBondList()
         if (bondList.isNotEmpty()){
             displayId = buildAnnotatedString {
-                append(elementType.displayString())
+                append(elementType.toAnnotatedString())
                 append(bondList[0].displayId)
                 toAnnotatedString()
             }
@@ -120,7 +119,7 @@ open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         if (bondList.isNotEmpty()){
             displayId = buildAnnotatedString {
                 append(bondList[0].displayId)
-                append(elementType.displayString())
+                append(elementType.toAnnotatedString())
                 append(bondList[1].displayId)
                 toAnnotatedString()
             }
