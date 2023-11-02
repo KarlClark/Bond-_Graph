@@ -169,11 +169,14 @@ fun  dragTarget(
             detectDragGestures(
 
                 onDragStart = {
-                    // set things up for dragging. Save the id, centerOffsetx and centerOffsety for dropTarget to
+                    // Set things up for dragging. Save the id, centerOffsetx and centerOffsety for dropTarget to
                     // use later.  Set the text for this element to null, so it will disappear from the screen.
                     // We want it to look like the thing we are actually dragging is the thing the user clicked
-                    // on.  Set up our draggable composable which just a Box with Text in it.  Calculate the start
-                    // position realatve to the coordinates being used by the draggable function.
+                    // on.  Set up our draggable composable which is just a Box with Text in it.  Calculate the
+                    // start position realative to the coordinates being used by the draggable function.
+                    // Calculate centerPosition relative to coordinates of the work pane.  We need this because
+                    // the dropTarget function will be redrawing the bonds attached to this element as we drag.
+
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         globalId = id
                         bondGraph.getElement(id)?.displayData?.text  = AnnotatedString("")
@@ -187,6 +190,10 @@ fun  dragTarget(
                     }
                     //
                 }, onDrag = { change, dragAmount ->
+                    // Add the distance we have been dragged to our positions. Update the
+                    // bonds that are attached to this element with the new position so
+                    // that they stay attached to the element as it is dragged.
+
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         change.consume()
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
@@ -196,6 +203,7 @@ fun  dragTarget(
 
 
                 }, onDragEnd = {
+                    // set some flags to inform dropTarget function that dragging is completed.
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         currentState.needsBondUpdate = true
                         currentState.isDragging = false
@@ -211,6 +219,7 @@ fun  dragTarget(
         .pointerInput(Unit) {
             detectTapGestures(
                 onDoubleTap = {
+                    // User wants to delete this element.
                     if (currentState.mode == Mode.ELEMENT_MODE) {
                         if (currentState.mode == Mode.ELEMENT_MODE) {
                             bondGraph.removeElement(id)
@@ -232,6 +241,18 @@ fun  dragTarget(
     }
 }
 
+/*
+The original main purpose of dropTarget was to handle things after a drag is
+completed.  In the original program there were several dropTargets. Each would
+check if the dragged composable was withing its layout bounds, and if it was
+it would store and tally information stored in dataToDrop variable.
+
+In this program there is only one dropTarget, the work pane where we are drawing
+the bond graph.  We want the text currently being shown by the draggable composable
+to remain on the screen where it was dropped. So we must either created a new element
+and add it to the bond graph, or we must update the position information if an
+existing element was moved.
+ */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTextApi::class)
 @Composable
 fun  dropTarget(
@@ -437,6 +458,14 @@ fun  dropTarget(
         }
     ) {
         println ("isDragging = ${dragInfo.isDragging}  isCurrentDropTarget = ${dragInfo.isCurrentDropTarget}  dragOffset = $dragOffset")
+        if ( ! dragInfo.isDragging && ! dragInfo.isCurrentDropTarget && globalId < 1000) {
+            val element = bondGraph.getElement(globalId)
+            if (element != null) {
+                element.displayData.text = element.elementType.toAnnotatedString()
+                bondGraph.updateBondsForElement(globalId, element.displayData.centerLocation)
+            }
+        }
+
         if ( ! dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
 
             println("workPane offset = ${dragInfo.workPaneToWindowOffset}")
@@ -450,8 +479,7 @@ fun  dropTarget(
         }
 
         if ( ! dragInfo.isDragging) {
-            val currentState = LocalStateInfo.current
-            currentState.dragOffset = Offset.Zero
+            dragInfo.dragOffset = Offset.Zero
         }
 
         if (dragInfo.needsElementUpdate) {
