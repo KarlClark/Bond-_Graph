@@ -273,6 +273,7 @@ fun  dropTarget(
     Box(modifier = modifier
         //.offset{IntOffset(-50,0)}
         .onGloballyPositioned {
+            it.boundsInWindow().let { rect -> dragInfo.isCurrentDropTarget = rect.contains(startPosition + dragOffset)}
             dragInfo.workPaneToWindowOffset = it.localToWindow(Offset.Zero)
         }
         .pointerInput(Unit) {
@@ -435,9 +436,10 @@ fun  dropTarget(
             }
         }
     ) {
-
+        println ("isDragging = ${dragInfo.isDragging}  isCurrentDropTarget = ${dragInfo.isCurrentDropTarget}  dragOffset = $dragOffset")
         if ( ! dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
 
+            println("workPane offset = ${dragInfo.workPaneToWindowOffset}")
             val centerLocation = startPosition + dragOffset - dragInfo.workPaneToWindowOffset
             val x =  centerLocation.x - dragInfo.centerOffsetx
             val y =  centerLocation.y - dragInfo.centerOffsety
