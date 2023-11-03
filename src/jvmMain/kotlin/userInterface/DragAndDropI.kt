@@ -16,8 +16,6 @@ import androidx.compose.ui.input.pointer.*
 //import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
@@ -36,7 +34,7 @@ internal val LocalStateInfo = compositionLocalOf { StateInfo() }
 private var globalId = 0
 private var count = 0
 
-private var arrowId = 0
+private var newBondId = 0
 internal var isShifted = false
 enum class Mode {BOND_MODE, ELEMENT_MODE }
 enum class StrokeLocation{START, END, NO_STROKE}
@@ -249,9 +247,16 @@ it would store and tally information stored in dataToDrop variable.
 
 In this program there is only one dropTarget, the work pane where we are drawing
 the bond graph.  We want the text currently being shown by the draggable composable
-to remain on the screen where it was dropped. So we must either created a new element
+to remain on the screen where it is dropped. So we must either create a new element
 and add it to the bond graph, or we must update the position information if an
 existing element was moved.
+
+In addition, this function handles all the drawing of the bonds, from creating them by
+dragging them, to updating them when they need to be changed.  Unlike the elements in
+the graph which are each displayed by their own function, all the bonds are drawn
+by this function.  It does this using modifiers to detect various tap and drag
+gestures and then uses .drawWithCache modifier to do the graphics.  When this function
+detects a gesture it must search to see is there is a bond or element near the gesture.
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTextApi::class)
 @Composable
@@ -262,26 +267,44 @@ fun  dropTarget(
     val startPosition = dragInfo.startPosition
     val dragOffset = dragInfo.dragOffset
     val textMeasurer = rememberTextMeasurer(50)
-    var pointerOffset by remember {mutableStateOf(Offset(0f, 0f))}
-    var pointerOrigin by remember { mutableStateOf(Offset(0f,0f))}
+    var bondEndOffset by remember {mutableStateOf(Offset(0f, 0f))}
+    var bondStartOffset by remember { mutableStateOf(Offset(0f,0f))}
     var isBondDragging by remember {mutableStateOf(false)}
     var isBondDragEnded by remember { mutableStateOf(false) }
-    var haveBondDragged by remember { mutableStateOf(false) }
+    //var haveBondDragged by remember { mutableStateOf(false) }
     var bondId by remember { mutableStateOf(0) }
     var originId by remember { mutableStateOf(-1) }
     var destinationId by remember { mutableStateOf(-1) }
 
+    // This function searches the bonds to see if the point (x,y) lies on any of them. Basically if
+    // we have a line from point p1 to point p3, we want to know if point px lies on the line.  To
+    // check this we use the idea that the distance for p1 to px + the distance from  p2 to px must
+    // equal the distance form p1 to p2,  d1x + d2x = d12.  To account for floating point error and
+    // to allow for clicking near the line, we check  -epsilon < d1x + d2x - d12 < epsilon where
+    // epsilon is a margin for error determined by experiment. The distance between two points is
+    // sqrt( (x1 x2) ** 2 + (y1 - y2) ** 2). So the steps are
+    // 1. map all the bonds to their d1x + d2x - d12 value
+    // 2. filter for the value being between - and + epsilon
+    // 3. choose the one with the smallest value if there is more than one.
     fun findBond(x: Float, y: Float): Int {
         val epsilon = 5f
-        val result = bondGraph.bondsMap.mapValues { (_,v) ->
-            sqrt((v.offset1.x - x ).pow(2) + (v.offset1.y - y).pow(2)) +
-                    sqrt((v.offset2.x - x ).pow(2) + (v.offset2.y - y).pow(2)) -
-                    sqrt((v.offset1.x - v.offset2.x).pow(2) + (v.offset1.y - v.offset2.y).pow(2) )}
+        val result = bondGraph.bondsMap
+            .mapValues { (_,v) ->
+                sqrt((v.offset1.x - x ).pow(2) + (v.offset1.y - y).pow(2)) +
+                sqrt((v.offset2.x - x ).pow(2) + (v.offset2.y - y).pow(2)) -
+                sqrt((v.offset1.x - v.offset2.x).pow(2) + (v.offset1.y - v.offset2.y).pow(2) )}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
         return result?.key ?: -1
     }
 
+    // Check to see if the point (x,y) is close to an element that is not the originId element.  We start
+    // dragging out a new bond for some element (originId).  We want to know if we are getting close to
+    // another element.  So similar to above
+    // 1. map the elements to their distance from the point.
+    // 2. filter to see if any of the distances are within epsilon.
+    // 3. Take the closest one if more than one.
+    // 4. The origin doesn't count.
     fun findElement(x: Float, y: Float, originId: Int ): Int {
         val epsilon = 50
         val result = bondGraph.getElementsMap().mapValues { (_,v) -> sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
@@ -292,18 +315,28 @@ fun  dropTarget(
 
 
     Box(modifier = modifier
-        //.offset{IntOffset(-50,0)}
+        // Get the bounding rectangle for this composable. We use this to tell if a dragged element is in
+        // the pane where the graph is drawn.
+        // Get the offset of this layout to the window to be used later for adjusting coordinates.
         .onGloballyPositioned {
             it.boundsInWindow().let { rect -> dragInfo.isCurrentDropTarget = rect.contains(startPosition + dragOffset)}
             dragInfo.workPaneToWindowOffset = it.localToWindow(Offset.Zero)
         }
         .pointerInput(Unit) {
             detectTapGestures (
-                onTap ={
-                    if (dragInfo.mode == Mode.BOND_MODE) {
 
-                        if (bondId >= 0) {
-                            if (isShifted){
+                // See if there is a bond near the press
+                 onPress = {
+                    if (dragInfo.mode == Mode.BOND_MODE) {
+                        //dragInfo.needsBondUpdate = true
+                        bondId = findBond(it.x, it.y)
+                    }
+                }
+                , onTap ={
+                    if (dragInfo.mode == Mode.BOND_MODE) {  // must be in BOND_MODE to work with bonds
+
+                        if (bondId >= 0) { // There was a tap near a bond
+                            if (isShifted){ // if shift tap then switch the end the causal stroke is on
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
                                     if (bond.effortElement == null){
@@ -312,7 +345,7 @@ fun  dropTarget(
                                         bondGraph.setCasualElement(bondId, if (bond.effortElement == bond.element1) bond.element2 else bond.element1)
                                     }
                                 }
-                            }else {
+                            }else { // Switch the end the arrow is on
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
                                     bondGraph.setPowerElement(bondId, if (bond.powerToElement == bond.element1) bond.element2 else bond.element1)
@@ -326,50 +359,89 @@ fun  dropTarget(
                 }
                 , onDoubleTap = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        if (bondId >= 0) {
+                        if (bondId >= 0) { // DOuble tap near a bond.  Delete it.
                             bondGraph.removeBond(bondId)
                             dragInfo.needsBondUpdate = true
                         }
                     }
                 }
-                , onPress = {
-                    if (dragInfo.mode == Mode.BOND_MODE) {
-                        dragInfo.needsBondUpdate = true
-                        bondId = findBond(it.x, it.y)
-                    }
-                }
+
             )
 
         }
+        // The drag gestures and .drawWithCache calls below are involved in drawing bonds. A bond is line
+        // with a half arrow on one end and a causal stroke at one end.  The arrow and causal stroke can
+        // both be at the same end or opposite ends.  The causal stroke is a short line perpendicular to
+        // line of the bond.  The bond can also have a label, a number located near the middle of the bond.
+        //
+        // A bond must start at one element and end at another. No free floating bonds or bonds with
+        // unconnected ends.
+        //
+        // Some elements can have only one bond, some can have two bonds and some can have many bonds.
+        // This program enforces these rules.
+        //
+        // A bond connects two elements, but graphically it doesn't touch them. The bond is aligned
+        // with the centers of the elements but stops short of them.  You can imagine a circle around
+        // each element and the bond is not allowed to cross it. The circle is a different size for
+        // different elements.  The circle for an 'I' element is smaller than the one for an 'MTF' element.
+        //
+        // In practical terms, to draw a line the drawLine() function requires actual x and y coordinates
+        // stored in an instance of the Offset class.  To draw the main line you need offsets for the
+        // endpoints calculated to stop short of the elements. To draw a half arrow you need an offset
+        // that is a little short of the endpoint and a little off to the side, etc. These offsets can be
+        // tricky to calculate since a bond can be located anywhere in the plane and at any angle.
+        // So the BondGraph companion object has functions for calculating all these offsets.
+        //
+        // To create a bond the user clicks near an element and drags.  The bond grows out of the
+        // element following the mouse pointer.  When he gets close to another element the bond
+        // jumps to the element and turns red to indicate the user can release the mouse button
+        // at this point.  If the user starts a drag far from an element then nothing happens.  If
+        // he releases the mouse button before reaching another element the bond disappears.
+        //
+        // This functions also updates existing bonds.  If the user drags one of the elements,
+        // the bonds must stay attached to it as it moves.
+
         .pointerInput(Unit) {
             detectDragGestures(
                 onDragStart = {
+                    // See if there ia an element near the pointer. If there is store the locations, the
+                    // location of the element, and the location of the actual click. Set IsBondDragging to true.
                     if (dragInfo.mode == Mode.BOND_MODE) {
                         originId = findElement(it.x, it.y, -1)
                         if (originId >= 0) {
-                            pointerOrigin = bondGraph.getElementsMap()[originId]?.displayData?.centerLocation!!
-                            pointerOffset = it
+                            bondStartOffset = bondGraph.getElementsMap()[originId]?.displayData?.centerLocation!!
+                            bondEndOffset = it
                             isBondDragging = true
                         }
                     }
                 }
                 , onDrag = { _, dragAmount ->
                     if (dragInfo.mode == Mode.BOND_MODE && originId >= 0) {
-                        destinationId = findElement(pointerOffset.x, pointerOffset.y, originId)
+
+                        // See if we are near another element yet.
+                        destinationId = findElement(bondEndOffset.x, bondEndOffset.y, originId)
 
                         if ( destinationId >= 0) {
+                            // We have reached a destination element.  Get its display data and use it to
+                            // calculate the ending offset of the bond.  When the drawing routines use this
+                            // offset, the bond will jump to the element.  Finally, turn the bond red.
                             val disData = bondGraph.getElement(destinationId)?.displayData
                             if (disData != null) {
-                                pointerOffset = offsetFromCenter(disData.centerLocation, pointerOrigin, disData.width, disData.height )
-                                dragInfo.arrowColor = Color.Red
+                                bondEndOffset = offsetFromCenter(disData.centerLocation, bondStartOffset, disData.width, disData.height )
+                                dragInfo.bondColor = Color.Red
                             }
-                        } else {
-                            pointerOffset += dragAmount
-                            dragInfo.arrowColor = Color.Black
+                        } else { // haven't reached another element, so update bondEndOffset with amount we have dragged.
+                            bondEndOffset += dragAmount
+                            dragInfo.bondColor = Color.Black
                         }
+
+                        // As we drag the end of the bond around, we must continually update the start offset so that
+                        // the bond stays aligned with origin element. The end of the bond appear to travel in circle
+                        // around the element.
                         val displayData = bondGraph.getElementsMap()[originId]?.displayData
-                        if (displayData != null)
-                        pointerOrigin = offsetFromCenter(displayData.centerLocation, pointerOffset, displayData.width, displayData.height)
+                        if (displayData != null) {
+                            bondStartOffset = offsetFromCenter(displayData.centerLocation, bondEndOffset, displayData.width,displayData.height)
+                        }
                     }
                 }
                 , onDragEnd = {
@@ -388,14 +460,12 @@ fun  dropTarget(
 
         }
 
-        .onSizeChanged {
-           //pointerOffset = Offset(it.width / 2f, it.height / 2f)
-        }
-
         .drawWithCache {
             onDrawBehind {
-                // draw behind the content
-                val drawArrowWithOffsets ={color: Color, start:  Offset, end: Offset, strokeLoc: StrokeLocation ->
+
+                // Draw a bond given the start and end offsets.  THe have arrow goes on the end offset.
+                // Draw a causal stroke if an end for it is specified.
+                val drawBondWithOffsets ={ color: Color, start:  Offset, end: Offset, strokeLoc: StrokeLocation ->
                     drawLine(color = color, start, end, 1f)
                     drawLine(color = color, end, getArrowOffsets(start, end), 1f)
                     when (strokeLoc) {
@@ -412,7 +482,8 @@ fun  dropTarget(
 
                 }
 
-                val drawArrowWithBond ={bond: Bond->
+                // Draw a bond given a Bond.
+                val drawBondWithBond ={ bond: Bond->
                     val color = Color.Black
                     drawLine(color = color, bond.offset1, bond.offset2, 1f)
 
@@ -436,29 +507,42 @@ fun  dropTarget(
                     val myLabelOffset = getLabelOffset(bond.offset1, bond.offset2, textLayoutResult.size.width, textLayoutResult.size.height)
                     drawText(text = bond.displayId, style = TextStyle(fontSize=MyConstants.labelFontsize), textMeasurer = textMeasurer, topLeft = myLabelOffset)
                 }
+
                 if (dragInfo.needsBondUpdate) {
-                    bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
+                    bondGraph.bondsMap.values.forEach{drawBondWithBond(it)}
                     dragInfo.needsBondUpdate = false
                 }
-                //bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
-                if (isBondDragging) {
-                    drawArrowWithOffsets(dragInfo.arrowColor, pointerOrigin, pointerOffset, StrokeLocation.NO_STROKE)
+
+                if (isBondDragging) { // Keep redrawing the bond as the user drags the mouse pointer
+                    drawBondWithOffsets(dragInfo.bondColor, bondStartOffset, bondEndOffset, StrokeLocation.NO_STROKE)
                 }
-                if (isBondDragEnded){
-                    val index = if (bondId >= 0) bondId else arrowId++
+                if (isBondDragEnded){  // Dragged ended. If we reached a another element then create a new bond.
+                    /*val index = if (bondId >= 0) bondId else newBondId++
                     if (destinationId >= 0) {
-                        bondGraph.addBond(index, originId, pointerOrigin, destinationId, pointerOffset, destinationId)
+                        bondGraph.addBond(index, originId, bondStartOffset, destinationId, bondEndOffset, destinationId)
+                    }*/
+                    if (destinationId >= 0) {
+                        bondGraph.addBond(newBondId++, originId, bondStartOffset, destinationId, bondEndOffset, destinationId)
                     }
+
                     isBondDragEnded = false
-                    haveBondDragged = true
+                    //haveBondDragged = true
                 }
 
-                bondGraph.bondsMap.values.forEach{drawArrowWithBond(it)}
+                bondGraph.bondsMap.values.forEach{drawBondWithBond(it)} // Draw the bonds.
             }
         }
     ) {
-        println ("isDragging = ${dragInfo.isDragging}  isCurrentDropTarget = ${dragInfo.isCurrentDropTarget}  dragOffset = $dragOffset")
+        // Handle dropping a dragged element. In the code below an element id >= 1000
+        // indicate and element that was dragged from the tool bar (a new element) as
+        // opposed to an existing element that has a normal id number.
+
+
         if ( ! dragInfo.isDragging && ! dragInfo.isCurrentDropTarget && globalId < 1000) {
+            // User has dragged an existing element out of the work area. So don't drop it
+            // here.  The element is still in its original location with its text set
+            // to null, so it's invisible.  So reset its text, and update its bonds so
+            // they go back to the correct locations.
             val element = bondGraph.getElement(globalId)
             if (element != null) {
                 element.displayData.text = element.elementType.toAnnotatedString()
@@ -468,11 +552,21 @@ fun  dropTarget(
 
         if ( ! dragInfo.isDragging && dragInfo.isCurrentDropTarget && dragOffset != Offset.Zero) {
 
-            println("workPane offset = ${dragInfo.workPaneToWindowOffset}")
+            // We are not dragging, something was dragged since the last time we were here since
+            // dragOffset is > 0 and the dragged composable is in this layout rectangle.
+            // Calculate the coordinates needed for displaying the element relative to this
+            // scope.  The center of the element is located at the pointer. The pointer is
+            // located at the stating position plus the amount we dragged.  Adjusted for
+            // this layout subtract the amount this layout is offset into the window.
+            // But when you position an element, you have to specify the location of the
+            // upper left corner not the center.  So subtract the distance from the corner
+            // to the center.
+
             val centerLocation = startPosition + dragOffset - dragInfo.workPaneToWindowOffset
             val x =  centerLocation.x - dragInfo.centerOffsetx
             val y =  centerLocation.y - dragInfo.centerOffsety
 
+            // If this is new element assign it a new id.
             val id = if (globalId >= 1000) count++ else globalId
 
             bondGraph.addElement(id, dragInfo.dataToDrop, x, y, Offset(dragInfo.centerOffsetx, dragInfo.centerOffsety))
@@ -493,6 +587,10 @@ fun  dropTarget(
 
 @Composable
 fun elementContent(text:AnnotatedString){
+    // This is our draggable composable. It is just text
+    // in the center of a Box that is the same size as the text.
+    // This is important because the size of this box is used
+    // in calculations.
     Box(
         modifier = Modifier
             .wrapContentSize()
@@ -507,17 +605,17 @@ fun elementContent(text:AnnotatedString){
 }
 
 @Composable
-fun displayElement(displayData: GraphElementDisplayData, size: Dp = 0.dp) {
+fun displayElement(displayData: GraphElementDisplayData) {
+    // create a dragTarget with text appropriate for this
+    // element and position it at the location stored in its
+    // display data.
     dragTarget(
         modifier = Modifier
-            //.size(MyConstants.nodeBoxSize)
-            //.wrapContentSize()
             .offset { IntOffset(displayData.x.toInt(), displayData.y.toInt())}
-            .then( if (size > 0.dp) Modifier.size(30.dp ) else Modifier.wrapContentSize())
+            .wrapContentSize()
         ,ElementTypes.toEnum(displayData.text)
         ,displayData.id
     ) {
-
         elementContent(displayData.text)
     }
 }
@@ -539,7 +637,7 @@ internal class StateInfo {
     var augment by mutableStateOf(false)
     var derive by mutableStateOf(false)
     var clearGraph by mutableStateOf(false)
-    var arrowColor by mutableStateOf(Color.Black)
+    var bondColor by mutableStateOf(Color.Black)
     var dataToDrop = INVALID
 
 }
