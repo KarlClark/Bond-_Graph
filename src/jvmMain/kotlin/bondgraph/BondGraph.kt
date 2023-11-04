@@ -44,9 +44,8 @@ enum class ElementTypes {
     SOURCE_OF_FLOW{
         override fun toAnnotatedString() = Sf
     },
-
     INVALID {
-        override fun toAnnotatedString() = AnnotatedString("")
+        override fun toAnnotatedString() = AnnotatedString("INVALID")
     };
 
     abstract fun toAnnotatedString(): AnnotatedString
