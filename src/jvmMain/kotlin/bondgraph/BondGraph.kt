@@ -9,6 +9,7 @@ import androidx.compose.ui.text.font.FontFamily
 import bondgraph.ElementTypes.*
 import userInterface.LocalStateInfo
 import userInterface.MyConstants
+import userInterface.bondGraph
 import kotlin.math.*
 
 
@@ -104,8 +105,19 @@ can be subscripts.
     }
 }
 
+/*
+The data needed to display a representation of the element on the screen.  The id, text and location are
+pretty obvious, the width and height are the size of the text, and the centerLocation is the location of
+the center of text.  This information is needed for drawing bonds to the element.  Every instance of
+Element contains an ElementDisplayData instance as one of its properties.
+ */
 class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
 
+/*
+The data class for a bond.  Contains the elements attached to each end of the bond and the Offsets of those elements on
+the screen.  The powerToElement indicates which element the arrow points to, and should match either element 1 or
+element 2.  THe effortElement indicates which element has the causal stroke and should match element 1 or element 2.
+ */
 class Bond(val id: Int, val element1: Element, var offset1: Offset, val element2: Element, var offset2: Offset, var powerToElement: Element?){
     var displayId: String = ""
     var effortElement: Element? = null
@@ -214,16 +226,20 @@ class BondGraph(var name: String) {
         }
     }
 
-    private val elementsMap = linkedMapOf<Int, Element>()
-    val bondsMap = mutableStateMapOf<Int, Bond>()
-    val resultsList = mutableStateListOf<String>()
+    private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
+    val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
+    val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
 
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset): Unit {
         if (elementsMap.contains(id)){
+            // Existing element was dragged so update position data. When dragging, the
+            // display data was set to null so it has to be reset also.
             elementsMap[id]?.displayData?.text = elementType.toAnnotatedString()
             elementsMap[id]?.displayData?.location = location
             elementsMap[id]?.displayData?.centerLocation = centerOffset
         } else {
+            // This is a new element. Figure out what subclass of element it is, invoke its constructor and add it
+            // to the elementsMap.
             val elementClass = when (elementType) {
                 ZERO_JUNCTION -> ::ZeroJunction
                 ONE_JUNCTION -> ::OneJunction
@@ -261,6 +277,22 @@ class BondGraph(var name: String) {
         return elementsMap[id]
     }
 
+    // Check to see if the point (x,y) is close to an element that is not the originId element.  We start
+    // dragging out a new bond for some element (originId).  We want to know if we are getting close to
+    // another element.  So similar to above
+    // 1. map the elements to their distance from the point.
+    // 2. filter to see if any of the distances are within epsilon.
+    // 3. Take the closest one if more than one.
+    // 4. The origin doesn't count.
+    fun findElement(x: Float, y: Float, originId: Int ): Int {
+        val epsilon = 50
+        val result = bondGraph.getElementsMap().mapValues { (_,v) ->
+            sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
+            .filter { (_, v) -> -epsilon < v && v < epsilon }
+            .minByOrNull { (_, value) -> value }
+        return if (result == null || result.key == originId) -1 else result.key
+    }
+
     fun removeElement (id: Int) {
         elementsMap[id]?.getBondList()?.forEach{
             it.element1.removeBond(it.id)
@@ -270,6 +302,10 @@ class BondGraph(var name: String) {
         elementsMap.remove(id)
         removeBondAugmentation()
     }
+
+
+
+
 
     @Composable
     fun clear(){
@@ -295,6 +331,29 @@ class BondGraph(var name: String) {
     fun getBond(id: Int): Bond? {
         return bondsMap[id]
     }
+
+    // This function searches the bonds to see if the point (x,y) lies on any of them. Basically if
+    // we have a line from point p1 to point p3, we want to know if point px lies on the line.  To
+    // check this we use the idea that the distance for p1 to px + the distance from  p2 to px must
+    // equal the distance form p1 to p2,  d1x + d2x = d12.  To account for floating point error and
+    // to allow for clicking near the line, we check  -epsilon < d1x + d2x - d12 < epsilon where
+    // epsilon is a margin for error determined by experiment. The distance between two points is
+    // sqrt( (x1 x2) ** 2 + (y1 - y2) ** 2). So the steps are
+    // 1. map all the bonds to their d1x + d2x - d12 value
+    // 2. filter for the value being between - and + epsilon
+    // 3. choose the one with the smallest value if there is more than one.
+    fun findBond(x: Float, y: Float): Int {
+        val epsilon = 5f
+        val result = bondGraph.bondsMap
+            .mapValues { (_,v) ->
+                sqrt((v.offset1.x - x ).pow(2) + (v.offset1.y - y).pow(2)) +
+                        sqrt((v.offset2.x - x ).pow(2) + (v.offset2.y - y).pow(2)) -
+                        sqrt((v.offset1.x - v.offset2.x).pow(2) + (v.offset1.y - v.offset2.y).pow(2) )}
+            .filter { (_, v) -> -epsilon < v && v < epsilon }
+            .minByOrNull { (_, value) -> value }
+        return result?.key ?: -1
+    }
+
 
     fun removeBond(id: Int){
         elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)

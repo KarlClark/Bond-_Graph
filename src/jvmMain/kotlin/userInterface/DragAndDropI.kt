@@ -273,44 +273,6 @@ fun  dropTarget(
     var originId by remember { mutableStateOf(-1) }
     var destinationId by remember { mutableStateOf(-1) }
 
-    // This function searches the bonds to see if the point (x,y) lies on any of them. Basically if
-    // we have a line from point p1 to point p3, we want to know if point px lies on the line.  To
-    // check this we use the idea that the distance for p1 to px + the distance from  p2 to px must
-    // equal the distance form p1 to p2,  d1x + d2x = d12.  To account for floating point error and
-    // to allow for clicking near the line, we check  -epsilon < d1x + d2x - d12 < epsilon where
-    // epsilon is a margin for error determined by experiment. The distance between two points is
-    // sqrt( (x1 x2) ** 2 + (y1 - y2) ** 2). So the steps are
-    // 1. map all the bonds to their d1x + d2x - d12 value
-    // 2. filter for the value being between - and + epsilon
-    // 3. choose the one with the smallest value if there is more than one.
-    fun findBond(x: Float, y: Float): Int {
-        val epsilon = 5f
-        val result = bondGraph.bondsMap
-            .mapValues { (_,v) ->
-                sqrt((v.offset1.x - x ).pow(2) + (v.offset1.y - y).pow(2)) +
-                sqrt((v.offset2.x - x ).pow(2) + (v.offset2.y - y).pow(2)) -
-                sqrt((v.offset1.x - v.offset2.x).pow(2) + (v.offset1.y - v.offset2.y).pow(2) )}
-            .filter { (_, v) -> -epsilon < v && v < epsilon }
-            .minByOrNull { (_, value) -> value }
-        return result?.key ?: -1
-    }
-
-    // Check to see if the point (x,y) is close to an element that is not the originId element.  We start
-    // dragging out a new bond for some element (originId).  We want to know if we are getting close to
-    // another element.  So similar to above
-    // 1. map the elements to their distance from the point.
-    // 2. filter to see if any of the distances are within epsilon.
-    // 3. Take the closest one if more than one.
-    // 4. The origin doesn't count.
-    fun findElement(x: Float, y: Float, originId: Int ): Int {
-        val epsilon = 50
-        val result = bondGraph.getElementsMap().mapValues { (_,v) ->
-            sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
-            .filter { (_, v) -> -epsilon < v && v < epsilon }
-            .minByOrNull { (_, value) -> value }
-        return if (result == null || result.key == originId) -1 else result.key
-    }
-
 
     Box(modifier = modifier
         // Get the bounding rectangle for this composable. We use this to tell if a dragged element is in
@@ -327,7 +289,7 @@ fun  dropTarget(
                  onPress = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
                         //dragInfo.needsBondUpdate = true
-                        bondId = findBond(it.x, it.y)
+                        bondId = bondGraph.findBond(it.x, it.y)
                     }
                 }
                 , onTap ={
@@ -405,7 +367,7 @@ fun  dropTarget(
                     // See if there ia an element near the pointer. If there is store the locations, the
                     // location of the element, and the location of the actual click. Set IsBondDragging to true.
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        originId = findElement(it.x, it.y, -1)
+                        originId = bondGraph.findElement(it.x, it.y, -1)
                         if (originId >= 0) {
                             bondStartOffset = bondGraph.getElementsMap()[originId]?.displayData?.centerLocation!!
                             bondEndOffset = it
@@ -417,7 +379,7 @@ fun  dropTarget(
                     if (dragInfo.mode == Mode.BOND_MODE && originId >= 0) {
 
                         // See if we are near another element yet.
-                        destinationId = findElement(bondEndOffset.x, bondEndOffset.y, originId)
+                        destinationId = bondGraph.findElement(bondEndOffset.x, bondEndOffset.y, originId)
 
                         if ( destinationId >= 0) {
                             // We have reached a destination element.  Get its display data and use it to
