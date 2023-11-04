@@ -4,7 +4,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 
 
-open class Element(val bondGraph: BondGraph, val id: Int, val elementType: ElementTypes, var displayData: GraphElementDisplayData){
+open class Element(val bondGraph: BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
     var displayId: AnnotatedString = AnnotatedString(id.toString())
     
     val bondsMap = linkedMapOf<Int, Bond>()
@@ -81,7 +81,7 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
 
 }
 
-open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
     override fun addBond(bond: Bond){
         if (bondsMap.size > 0){
             getBondList().forEach { bondGraph.removeBond(it.id) }
@@ -103,7 +103,7 @@ open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         println("displayId = $displayId")
     }
 }
-open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
     override fun addBond(bond: Bond) {
         if (bondsMap.size == 2){
@@ -129,7 +129,7 @@ open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
 }
 
-class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
@@ -185,7 +185,7 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
     }
 
 }
-class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
@@ -240,7 +240,7 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
     }
 }
 
-class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
 
@@ -265,7 +265,7 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
 
 }
 
-class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, element, displayData) {
 
     override fun assignCausality() {
 
@@ -288,7 +288,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     }
 }
 
-class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
 
@@ -313,7 +313,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 }
 
-class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     override fun assignCausality() {
         val bond = getBondList()[0]
@@ -333,7 +333,7 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
 
 }
 
-class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
     override fun assignCausality() {
         val bond = getBondList()[0]
 
@@ -352,7 +352,7 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
 }
 
-open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
+open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
     class Modulator(val element1: Element, val id: String){
         fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
@@ -399,7 +399,7 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     }
 }
 
-class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: GraphElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
+class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
     class Modulator(val element1: Element, val id: String){
         fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
@@ -447,6 +447,6 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
 }
-class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: GraphElementDisplayData): Transformer(bondGraph, id, elementType, displayData) {
+class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: ElementDisplayData): Transformer(bondGraph, id, elementType, displayData) {
 
 }

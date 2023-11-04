@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.BondGraph
 import bondgraph.ElementTypes
-import bondgraph.GraphElementDisplayData
+import bondgraph.ElementDisplayData
 
 //val graphElementTypeNames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
 val bondGraph = BondGraph("test graph")
@@ -122,7 +122,7 @@ fun sideBar() {
                 Spacer (modifier = Modifier .height(1.dp))
                 var id = 1000
                 enumValues<ElementTypes>().forEach {
-                    if (it != ElementTypes.INVALID) {displayElement (GraphElementDisplayData (id++, it.toAnnotatedString(), 0f, 0f, 0f, 0f,  Offset(0f, 0f)))
+                    if (it != ElementTypes.INVALID) {displayElement (ElementDisplayData (id++, it.toAnnotatedString(), Offset.Zero, 0f, 0f, Offset.Zero))
                     }
                     if (it == ElementTypes.ONE_JUNCTION || it == ElementTypes.MODULATED_TRANSFORMER) Divider(thickness = 2.dp, color = Color.Black)
                 }

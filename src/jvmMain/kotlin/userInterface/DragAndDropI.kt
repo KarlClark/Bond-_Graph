@@ -21,7 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import bondgraph.ElementTypes
 import bondgraph.ElementTypes.*
-import bondgraph.GraphElementDisplayData
+import bondgraph.ElementDisplayData
 import bondgraph.Bond
 import kotlin.math.*
 import bondgraph.BondGraph.Companion.getArrowOffsets
@@ -147,8 +147,7 @@ fun  dragTarget(
     content: @Composable (() -> Unit)
 ) {
     var currentPosition by remember { mutableStateOf(Offset.Zero) }
-    var centerOffsetx by remember { mutableStateOf(0f) }
-    var centerOffsety by remember { mutableStateOf(0f) }
+    var centerOffset by remember { mutableStateOf(Offset.Zero) }
     val currentState = LocalStateInfo.current
 
 
@@ -159,15 +158,14 @@ fun  dragTarget(
                 // the center of our string from the upper left corner
                 // which is what is used for positioning. This works
                 // because to box containing our string is wrapContent.
-                centerOffsetx = rect.width/2f
-                centerOffsety = rect.height/2f
+                centerOffset = Offset (rect.width/2f, rect.height/2f)
             }
         }
         .pointerInput(Unit) {
             detectDragGestures(
 
                 onDragStart = {
-                    // Set things up for dragging. Save the id, centerOffsetx and centerOffsety for dropTarget to
+                    // Set things up for dragging. Save the id, and centerOffset for dropTarget to
                     // use later.  Set the text for this element to null, so it will disappear from the screen.
                     // We want it to look like the thing we are actually dragging is the thing the user clicked
                     // on.  Set up our draggable composable which is just a Box with Text in it.  Calculate the
@@ -182,8 +180,7 @@ fun  dragTarget(
                         currentState.isDragging = true
                         currentState.startPosition = currentPosition + it
                         currentState.draggableComposable = { elementContent((dataToDrop.toAnnotatedString())) }
-                        currentState.centerOffsetx = centerOffsetx
-                        currentState.centerOffsety = centerOffsety
+                        currentState.centerOffset = centerOffset
                         currentState.centerPosition = currentState.startPosition - currentState.workPaneToWindowOffset
                     }
                     //
@@ -307,7 +304,8 @@ fun  dropTarget(
     // 4. The origin doesn't count.
     fun findElement(x: Float, y: Float, originId: Int ): Int {
         val epsilon = 50
-        val result = bondGraph.getElementsMap().mapValues { (_,v) -> sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
+        val result = bondGraph.getElementsMap().mapValues { (_,v) ->
+            sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
         return if (result == null || result.key == originId) -1 else result.key
@@ -563,13 +561,12 @@ fun  dropTarget(
             // to the center.
 
             val centerLocation = startPosition + dragOffset - dragInfo.workPaneToWindowOffset
-            val x =  centerLocation.x - dragInfo.centerOffsetx
-            val y =  centerLocation.y - dragInfo.centerOffsety
+            val location = centerLocation - dragInfo.centerOffset
 
             // If this is new element assign it a new id.
             val id = if (globalId >= 1000) count++ else globalId
 
-            bondGraph.addElement(id, dragInfo.dataToDrop, x, y, Offset(dragInfo.centerOffsetx, dragInfo.centerOffsety))
+            bondGraph.addElement(id, dragInfo.dataToDrop, location, centerLocation)
         }
 
         if ( ! dragInfo.isDragging) {
@@ -605,13 +602,13 @@ fun elementContent(text:AnnotatedString){
 }
 
 @Composable
-fun displayElement(displayData: GraphElementDisplayData) {
+fun displayElement(displayData: ElementDisplayData) {
     // create a dragTarget with text appropriate for this
     // element and position it at the location stored in its
     // display data.
     dragTarget(
         modifier = Modifier
-            .offset { IntOffset(displayData.x.toInt(), displayData.y.toInt())}
+            .offset { displayData.location.round()}
             .wrapContentSize()
         ,ElementTypes.toEnum(displayData.text)
         ,displayData.id
@@ -630,8 +627,7 @@ internal class StateInfo {
     var needsBondUpdate by mutableStateOf(false)
     var centerPosition by mutableStateOf(Offset.Zero)
     var workPaneToWindowOffset by mutableStateOf(Offset.Zero)
-    var centerOffsetx by mutableStateOf(0f)
-    var centerOffsety by mutableStateOf(0f)
+    var centerOffset by mutableStateOf(Offset.Zero)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
     var showResults by mutableStateOf(false)
     var augment by mutableStateOf(false)

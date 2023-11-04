@@ -13,6 +13,12 @@ import kotlin.math.*
 
 
 class BadGraphException(message: String) : Exception(message)
+
+/*
+An enum  for the different elements used in a bond graph, with the
+capability to convert enumm value to an AnnotatedString and from
+an AnnotatedString back to the enum value.
+ */
 enum class ElementTypes {
     ZERO_JUNCTION{
          override fun toAnnotatedString () = _0
@@ -49,7 +55,10 @@ enum class ElementTypes {
     };
 
     abstract fun toAnnotatedString(): AnnotatedString
-
+/*
+We use an AnnotatedString so that the 'e' and 'f' in the 'Se' and 'Sf' elements
+can be subscripts.
+ */
     companion object {
 
         val style = SpanStyle(fontSize = MyConstants.elementNameFontsize, fontFamily = FontFamily.Serif)
@@ -95,7 +104,7 @@ enum class ElementTypes {
     }
 }
 
-class GraphElementDisplayData (val id: Int, var text: AnnotatedString, var x: Float, var y: Float, val width: Float, val height: Float, var centerLocation: Offset)
+class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
 
 class Bond(val id: Int, val element1: Element, var offset1: Offset, val element2: Element, var offset2: Offset, var powerToElement: Element?){
     var displayId: String = ""
@@ -104,7 +113,43 @@ class Bond(val id: Int, val element1: Element, var offset1: Offset, val element2
 
 }
 class BondGraph(var name: String) {
+
+    /*
+    Drawing bonds is complicated.  A bond is a line with a half arrow on one end, and a causal stroke
+    on one end.  The half arrow and causal stroke can be on the same end or opposite ends.  The causal
+    stroke is a short line perpendicular to the bond. A bond can lie at any orientation on the drawing
+    surface pointing in any direction.
+
+    Doing anything graphically requires x and y coordinates stored in an instance of the Offset class.
+    For example the drawLine function requires two Offsets one for each endpoint.  So to draw the
+    half arrow from one of the endpoints you must calculate another Offset that is a little bit
+    short of the endpoint and a little off to the side of the bond.
+
+    This companion object contains functions for calculating the various Offsets require for drawing
+    a bond. Most of these functions have several things in common.
+
+    1. The first two parameters are Offsets that can be used to determine the direction of the line.
+       Sometimes they are also used as the starting point of a line.
+
+    2. Most of these functions use the atan function to get the angle of the bond in the plane.  The
+       Kotlin (and Java) documentation simply say that the atan function returns a value between
+       -pi/2 and pi/2.  In my unit circle way of thinking atan should return a value between 0 and 2*pi
+       or maybe between -pi and pi if you don't want obtuse angles.  On reflection if you are dealing
+       with right triangles, then the maximum magnitude of an angle would be pi/2. If the sides of the
+       triangle are oriented along the x and y axes, then the triangle could have four orientations.
+       In two of the orientations the ratio of the sides would be positive and in and in the other two
+       the ratio would be negative, and you would get angles between -pi//2 and pi/2. All this makes
+       our job a little tricky. Rather than taking two Offsets and trying to decide which of the four
+       cases applies, and then applying the appropriate one of four formulas, I use a variable to store
+       a sign value either -1 or 1 which is used in one formula to add or subtract terms as needed. I
+       admit that in most cases how to set the sign value was done by experiment.
+     */
     companion object {
+
+        /*
+        Given two endpoint Offsets calculate a 3rd Offset so that a line drawn from the
+        2nd endpoint to the 3rd Offset will form a half arrow.
+         */
         fun getArrowOffsets(startOffset: Offset, endOffset: Offset): Offset{
             val arrowAngle = .7f
             val arrowLength = 15f
@@ -112,20 +157,35 @@ class BondGraph(var name: String) {
             val yLength = endOffset.y - startOffset.y
             val angle = atan(yLength/xLength)
             val sign = if (xLength < 0) 1f else -1f
-            return Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * arrowAngle).toFloat())) , endOffset.y + sign*(arrowLength * sin(angle - sign * arrowAngle).toFloat()))
+            return Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * arrowAngle).toFloat())),
+                        endOffset.y + sign*(arrowLength * sin(angle - sign * arrowAngle).toFloat()))
         }
 
+        /*
+        Given two endpoint Offsets calculate two more Offsets so that drawing a line between them will
+        create a short line perpendicular to the bond at the second endpoint.
+         */
         fun getCausalOffsets(startOffset: Offset, endOffset: Offset): Pair<Offset, Offset> {
             val strokeLength = 7f
             val xLength = endOffset.x - startOffset.x
             val yLength = endOffset.y - startOffset.y
             val angle = atan(yLength/xLength)
             val sign = if (xLength < 0) 1f else -1f
-            val off1 = Offset((endOffset.x + sign*(strokeLength * cos(angle + sign * 3.14/2f).toFloat())) , endOffset.y + sign*(strokeLength * sin(angle + sign * 3.14/2f).toFloat()))
-            val off2= Offset((endOffset.x + sign*(strokeLength * cos(angle - sign * 3.14/2f).toFloat())) , endOffset.y + sign*(strokeLength * sin(angle - sign * 3.14/2f).toFloat()))
+
+            val off1 = Offset((endOffset.x + sign*(strokeLength * cos(angle + sign * 3.14/2f).toFloat())),
+                            endOffset.y + sign*(strokeLength * sin(angle + sign * 3.14/2f).toFloat()))
+
+            val off2= Offset((endOffset.x + sign*(strokeLength * cos(angle - sign * 3.14/2f).toFloat())) ,
+                           endOffset.y + sign*(strokeLength * sin(angle - sign * 3.14/2f).toFloat()))
+
             return Pair(off1, off2)
         }
 
+        /*
+        Given two endpoint Offsets and the width and height of a string, calculate and Offset for
+        positioning the text midway between the endpoints and off to the side of a line between them.
+        The Offset must specify the position of the upper left corner of the text.
+         */
         fun getLabelOffset (startOffset: Offset, endOffset: Offset, width: Int, height: Int): Offset{
 
             //val length = sqrt((endOffset.x - startOffset.x).pow(2) + (endOffset.y - startOffset.y).pow(2))
@@ -136,31 +196,33 @@ class BondGraph(var name: String) {
             val middleX = startOffset.x + xLength/2f
             val middleY = startOffset.y + yLength/2f
             val sign = if (xLength < 0) 1f else -1f
-            return Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())) , middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
+            return Offset((middleX - width/2 + sign*(length * cos(angle - sign * 3.14/2f).toFloat())),
+                        middleY - height/2 + sign*(length * sin(angle - sign * 3.14/2f).toFloat()))
         }
 
 
+        /*
+        Given two Offsets and the width and height of string located at the first Offset,
+        calculate an Offset that is along the line defined by the input Offsets and a little
+        ways away from the edge of the text.  This is used to determine where to end a bond
+        so that it doesn't touch the text.
+         */
         fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
-            //val l = (width + height)/2f + 3f
             val l = max(width, height)/2 + 5f
-            //val l = width/2f
-            //val l= 0
             val d = sqrt((offset1.x - offset2.x ).pow(2) + (offset1.y - offset2.y).pow(2))
-            //Offset(11f, 1f)
             return Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
         }
     }
 
-    val elementsMap = linkedMapOf<Int, Element>()
+    private val elementsMap = linkedMapOf<Int, Element>()
     val bondsMap = mutableStateMapOf<Int, Bond>()
     val resultsList = mutableStateListOf<String>()
 
-    fun addElement(id: Int, elementType: ElementTypes, x: Float, y: Float, centerOffset: Offset): Unit {
+    fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset): Unit {
         if (elementsMap.contains(id)){
             elementsMap[id]?.displayData?.text = elementType.toAnnotatedString()
-            elementsMap[id]?.displayData?.x = x
-            elementsMap[id]?.displayData?.y = y
-            elementsMap[id]?.displayData?.centerLocation = Offset(x + centerOffset.x, y + centerOffset.y)
+            elementsMap[id]?.displayData?.location = location
+            elementsMap[id]?.displayData?.centerLocation = centerOffset
         } else {
             val elementClass = when (elementType) {
                 ZERO_JUNCTION -> ::ZeroJunction
@@ -175,20 +237,19 @@ class BondGraph(var name: String) {
                 SOURCE_OF_FLOW -> :: SourceOfFlow
                 INVALID -> null
             }
+
             if (elementClass != null) {
                 elementsMap[id] = elementClass.invoke(
                     this,
                     id,
                     elementType,
-                    GraphElementDisplayData(
+                    ElementDisplayData(
                         id,
                         elementType.toAnnotatedString(),
-                        x,
-                        y,
-                        centerOffset.x * 2f,
-                        centerOffset.y * 2f,
-                        Offset(x + centerOffset.x, y + centerOffset.y)
-                    )
+                        location,
+                        (centerOffset.x - location.x) * 2f,
+                        (centerOffset.y - location.y) * 2f,
+                        centerOffset)
                 )
             }
         }
