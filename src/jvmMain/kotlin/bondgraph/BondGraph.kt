@@ -200,7 +200,6 @@ class BondGraph(var name: String) {
          */
         fun getLabelOffset (startOffset: Offset, endOffset: Offset, width: Int, height: Int): Offset{
 
-            //val length = sqrt((endOffset.x - startOffset.x).pow(2) + (endOffset.y - startOffset.y).pow(2))
             val length = 15f
             val xLength = endOffset.x - startOffset.x
             val yLength = endOffset.y - startOffset.y
@@ -221,16 +220,28 @@ class BondGraph(var name: String) {
          */
         fun offsetFromCenter(offset1: Offset, offset2: Offset, width: Float, height: Float):Offset {
             val l = max(width, height)/2 + 5f
-            val d = sqrt((offset1.x - offset2.x ).pow(2) + (offset1.y - offset2.y).pow(2))
+            val d = (offset1 - offset2).getDistance()
             return Offset((offset1.x - (l * (offset1.x - offset2.x)/d)), offset1.y - (l * (offset1.y - offset2.y)/d))
         }
     }
 
+    /*
+    All the information for the bond graph is stored in two maps, one for the elements and one
+    for the bonds.  These lists include both the bond graph info such as which elements are connected,
+    the power directions, causal settings ect. and all the graphical info needed to draw the bond
+    graph on the screen.  The two maps are linked in that an element store which bonds connect to it,
+    and a bond stores which two elements it connects.  Clearly only one map is really required, but
+    it is easier to process the bond graph from two maps rather than having to generate the info in
+    one map from the other when needed. Having two maps is definitely better for storing the
+    graphical data.  However, there have been a few bugs caused by failing to update both lists
+    properly when adding or removing elements or bonds.
 
+     */
     private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
 
+    // Add or update an element in the bond graph.
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {
         if (elementsMap.contains(id)){
             // Existing element was dragged so update position data. When dragging, the
@@ -272,8 +283,6 @@ class BondGraph(var name: String) {
         }
     }
 
-    //fun getElementsMap():Map<Int, Element> = elementsMap
-
     fun getElementList(): List<Element> = ArrayList(elementsMap.values)
 
     fun getElement(id: Int): Element? {
@@ -287,15 +296,30 @@ class BondGraph(var name: String) {
     // 2. filter to see if any of the distances are within epsilon.
     // 3. Take the closest one if more than one.
     // 4. The origin doesn't count.
-    fun findElement(x: Float, y: Float, originId: Int ): Int {
+    // 5. return -1 if we are not close to anything.
+
+    fun findElement(offset: Offset, originId: Int): Int {
         val epsilon = 50
-        val result = elementsMap.mapValues { (_,v) ->
-            sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
+        val result = elementsMap
+            .mapValues { (_,v) -> (v.displayData.centerLocation - offset).getDistance()}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
         return if (result == null || result.key == originId) -1 else result.key
     }
 
+    /*
+    Remove an element from the bond graph. We must also remove any
+    bonds attached to it, since we don't allow disconnected bonds.
+    So we have to get a list of bonds attached to this element and
+    then for each bond get the two elements attached to it and then
+    delete each element's reference to that bond.  We do this for
+    both elements even though one of the elements is the one we
+    will be deleting, just because it is easier to code rather than
+    checking each case to find which is the other element.
+    Then we can remove bond from the bondsMap.  After processing all
+    the bonds, we can remove the element.  Finally, we remove the
+    augmentation from the bond graph since it is no longer valid.
+     */
     fun removeElement (id: Int) {
         elementsMap[id]?.getBondList()?.forEach{
             it.element1.removeBond(it.id)
@@ -306,6 +330,14 @@ class BondGraph(var name: String) {
         removeBondAugmentation()
     }
 
+    /*
+    A function for iterating over the elementsMap and calling a function on
+    each element. This way the outside world doesn't need direct access to
+    the elementsMap.  I tried to do this with the bondsMap too, but calls
+    to that function occur inside a Modifier, and attempts to make the
+    function  @Composable caused the compiler to crash with a huge stack
+    trace, an indication of the complexity of the @Composable methodology.
+     */
     @Composable
     fun forEachElement ( fn: @Composable (element: Element) -> Unit ) {
         for (p  in elementsMap) {
@@ -313,6 +345,7 @@ class BondGraph(var name: String) {
         }
     }
 
+    // Clear everything from the bond graph and start over.
     @Composable
     fun clear(){
         val state = LocalStateInfo.current
@@ -321,6 +354,10 @@ class BondGraph(var name: String) {
         state.needsElementUpdate = true
     }
 
+    /*
+    Use the provided information to create a bond and add it to the bond graph.  It needs to be added
+    to the bondsMap and two each element it attaches to. Remove augmentation which is now invalid.
+     */
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
         val element1 = elementsMap[elementId1]
         val element2 = elementsMap[elementId2]
@@ -337,28 +374,27 @@ class BondGraph(var name: String) {
         return bondsMap[id]
     }
 
-    // This function searches the bonds to see if the point (x,y) lies on any of them. Basically if
-    // we have a line from point p1 to point p3, we want to know if point px lies on the line.  To
-    // check this we use the idea that the distance for p1 to px + the distance from  p2 to px must
-    // equal the distance form p1 to p2,  d1x + d2x = d12.  To account for floating point error and
-    // to allow for clicking near the line, we check  -epsilon < d1x + d2x - d12 < epsilon where
-    // epsilon is a margin for error determined by experiment. The distance between two points is
-    // sqrt( (x1 x2) ** 2 + (y1 - y2) ** 2). So the steps are
-    // 1. map all the bonds to their d1x + d2x - d12 value
-    // 2. filter for the value being between - and + epsilon
-    // 3. choose the one with the smallest value if there is more than one.
-    fun findBond(x: Float, y: Float): Int {
+    /*
+    Used to see if the user has clicked near a bond.
+    This function searches the bonds to see if the point (x,y) lies on any of them. Basically if
+    we have a line from point p1 to point p2, we want to know if point px lies on the line.  To
+    check this we use the idea that the distance for p1 to px + the distance from  p2 to px must
+    equal the distance form p1 to p2,  d1x + d2x = d12.  To account for floating point error and
+    to allow for clicking near the line, we check  -epsilon < d1x + d2x - d12 < epsilon where
+    epsilon is a margin for error determined by experiment. So the steps are
+    1. map all the bonds to their d1x + d2x - d12 value
+    2. filter for the value being between - and + epsilon
+    3. choose the one with the smallest value if there is more than one.
+    4. return -1 if the click was not near a bond.
+    */
+    fun findBond(offset: Offset): Int {
         val epsilon = 5f
-        val result = bondGraph.bondsMap
-            .mapValues { (_,v) ->
-                sqrt((v.offset1.x - x ).pow(2) + (v.offset1.y - y).pow(2)) +
-                        sqrt((v.offset2.x - x ).pow(2) + (v.offset2.y - y).pow(2)) -
-                        sqrt((v.offset1.x - v.offset2.x).pow(2) + (v.offset1.y - v.offset2.y).pow(2) )}
+        val result = bondsMap
+            .mapValues {(_, v) -> (v.offset1 - offset).getDistance() + (v.offset2 - offset).getDistance() - (v.offset1 - v.offset2).getDistance()}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
         return result?.key ?: -1
     }
-
 
     fun removeBond(id: Int){
         elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)

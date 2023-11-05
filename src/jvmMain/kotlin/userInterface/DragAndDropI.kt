@@ -274,7 +274,7 @@ fun  dropTarget(
                  onPress = {
                     if (dragInfo.mode == Mode.BOND_MODE) {
                         //dragInfo.needsBondUpdate = true
-                        bondId = bondGraph.findBond(it.x, it.y)
+                        bondId = bondGraph.findBond(it)
                     }
                 }
                 , onTap ={
@@ -352,7 +352,7 @@ fun  dropTarget(
                     // See if there ia an element near the pointer. If there is store the locations, the
                     // location of the element, and the location of the actual click. Set IsBondDragging to true.
                     if (dragInfo.mode == Mode.BOND_MODE) {
-                        originId = bondGraph.findElement(it.x, it.y, -1)
+                        originId = bondGraph.findElement(it, -1)
                         if (originId >= 0) {
                             bondStartOffset = bondGraph.getElement(originId)?.displayData?.centerLocation!!
                             bondEndOffset = it
@@ -364,7 +364,7 @@ fun  dropTarget(
                     if (dragInfo.mode == Mode.BOND_MODE && originId >= 0) {
 
                         // See if we are near another element yet.
-                        destinationId = bondGraph.findElement(bondEndOffset.x, bondEndOffset.y, originId)
+                        destinationId = bondGraph.findElement(bondEndOffset, originId)
 
                         if ( destinationId >= 0) {
                             // We have reached a destination element.  Get its display data and use it to
@@ -406,6 +406,7 @@ fun  dropTarget(
         }
 
         .drawWithCache {
+
             onDrawBehind {
 
                 // Draw a bond given the start and end offsets.  THe have arrow goes on the end offset.
@@ -428,7 +429,7 @@ fun  dropTarget(
                 }
 
                 // Draw a bond given a Bond.
-                val drawBondWithBond ={ bond: Bond->
+                val drawBondWithBond = { bond: Bond->
                     val color = Color.Black
                     drawLine(color = color, bond.offset1, bond.offset2, 1f)
 
