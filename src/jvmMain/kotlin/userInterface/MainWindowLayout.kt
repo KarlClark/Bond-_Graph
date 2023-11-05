@@ -24,15 +24,12 @@ import bondgraph.BondGraph
 import bondgraph.ElementTypes
 import bondgraph.ElementDisplayData
 
-//val graphElementTypeNames = arrayListOf<String>("0", "1", "C", "I", "R", "TF", "GY", "MTF")
 val bondGraph = BondGraph("test graph")
 
-//val graphElementDisplayDataMap    = linkedMapOf<Int, GraphElementDisplayData>()
-var textColor by mutableStateOf(Color.Black)
 object MyConstants {
-    val elementNameFontsize: TextUnit =20.sp
-    val subTextFontsize: TextUnit = 15.sp
-    val labelFontsize: TextUnit = 15.sp
+    val elementNameFontSize: TextUnit =20.sp
+    val subTextFontSize: TextUnit = 15.sp
+    val labelFontSize: TextUnit = 15.sp
     val bottomBarFontSize = 15.sp
     val resultsFontSize = 20.sp
     val myGreen = Color(10, 140, 10)
@@ -80,7 +77,7 @@ fun sideBar() {
                             detectTapGestures(
                                 onTap = {
                                     // Switch to BOND_MODE if there are at least two elements to draw a bond between
-                                    if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getElementsMap().size >= 2) {
+                                    if (currentState.mode == Mode.ELEMENT_MODE && bondGraph.getElementList().size >= 2) {
                                         bondModeColor = MyConstants.onColor
                                         nodeModeColor = MyConstants.offColor
                                         currentState.mode = Mode.BOND_MODE
@@ -155,7 +152,7 @@ fun sideBar() {
                     Text("Derive")
                 }
 
-                if (currentState.augment){  // Augent button was clicked
+                if (currentState.augment){  // Augment button was clicked
                     currentState.augment = false
                     bondGraph.augment()
                 }
@@ -243,7 +240,7 @@ fun windowBox() {
                      .background(color = Color.Gray)
                      .fillMaxWidth()
              ) {
-                 Row(  // Side bar on the left and drawing area on the right.
+                 Row(  // Sidebar on the left and drawing area on the right.
                      Modifier
                          //.fillMaxSize()
                          .background(color = Color.Red)
@@ -304,6 +301,6 @@ fun windowBox() {
 }
 
 @Composable
-fun App() {
+fun app() {
     windowBox()
 }

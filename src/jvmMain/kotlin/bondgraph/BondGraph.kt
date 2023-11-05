@@ -17,7 +17,7 @@ class BadGraphException(message: String) : Exception(message)
 
 /*
 An enum  for the different elements used in a bond graph, with the
-capability to convert enumm value to an AnnotatedString and from
+capability to convert enum value to an AnnotatedString and from
 an AnnotatedString back to the enum value.
  */
 enum class ElementTypes {
@@ -62,8 +62,8 @@ can be subscripts.
  */
     companion object {
 
-        val style = SpanStyle(fontSize = MyConstants.elementNameFontsize, fontFamily = FontFamily.Serif)
-        val subStyle = SpanStyle(fontSize = MyConstants.subTextFontsize)
+        private val style = SpanStyle(fontSize = MyConstants.elementNameFontSize, fontFamily = FontFamily.Serif)
+        private val subStyle = SpanStyle(fontSize = MyConstants.subTextFontSize)
         val _0 = AnnotatedString("0", style)
         val _1 = AnnotatedString("1", style)
         val C = AnnotatedString("C", style)
@@ -169,8 +169,8 @@ class BondGraph(var name: String) {
             val yLength = endOffset.y - startOffset.y
             val angle = atan(yLength/xLength)
             val sign = if (xLength < 0) 1f else -1f
-            return Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * arrowAngle).toFloat())),
-                        endOffset.y + sign*(arrowLength * sin(angle - sign * arrowAngle).toFloat()))
+            return Offset((endOffset.x + sign*(arrowLength * cos(angle - sign * arrowAngle))),
+                        endOffset.y + sign*(arrowLength * sin(angle - sign * arrowAngle)))
         }
 
         /*
@@ -226,14 +226,15 @@ class BondGraph(var name: String) {
         }
     }
 
+
     private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
 
-    fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset): Unit {
+    fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {
         if (elementsMap.contains(id)){
             // Existing element was dragged so update position data. When dragging, the
-            // display data was set to null so it has to be reset also.
+            // display data was set to null, so it has to be reset also.
             elementsMap[id]?.displayData?.text = elementType.toAnnotatedString()
             elementsMap[id]?.displayData?.location = location
             elementsMap[id]?.displayData?.centerLocation = centerOffset
@@ -271,7 +272,9 @@ class BondGraph(var name: String) {
         }
     }
 
-    fun getElementsMap():Map<Int, Element> = elementsMap
+    //fun getElementsMap():Map<Int, Element> = elementsMap
+
+    fun getElementList(): List<Element> = ArrayList(elementsMap.values)
 
     fun getElement(id: Int): Element? {
         return elementsMap[id]
@@ -279,14 +282,14 @@ class BondGraph(var name: String) {
 
     // Check to see if the point (x,y) is close to an element that is not the originId element.  We start
     // dragging out a new bond for some element (originId).  We want to know if we are getting close to
-    // another element.  So similar to above
+    // another element.  So
     // 1. map the elements to their distance from the point.
     // 2. filter to see if any of the distances are within epsilon.
     // 3. Take the closest one if more than one.
     // 4. The origin doesn't count.
     fun findElement(x: Float, y: Float, originId: Int ): Int {
         val epsilon = 50
-        val result = bondGraph.getElementsMap().mapValues { (_,v) ->
+        val result = elementsMap.mapValues { (_,v) ->
             sqrt((v.displayData.centerLocation.x - x).pow(2) + (v.displayData.centerLocation.y - y).pow(2))}
             .filter { (_, v) -> -epsilon < v && v < epsilon }
             .minByOrNull { (_, value) -> value }
@@ -303,9 +306,12 @@ class BondGraph(var name: String) {
         removeBondAugmentation()
     }
 
-
-
-
+    @Composable
+    fun forEachElement ( fn: @Composable (element: Element) -> Unit ) {
+        for (p  in elementsMap) {
+           key(p.key) {fn(p.value)}
+        }
+    }
 
     @Composable
     fun clear(){
@@ -316,7 +322,6 @@ class BondGraph(var name: String) {
     }
 
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
-        //val labelOffset = getLabelOffset(offset1, offse
         val element1 = elementsMap[elementId1]
         val element2 = elementsMap[elementId2]
         if (element1 != null && element2 != null) {
@@ -404,16 +409,16 @@ class BondGraph(var name: String) {
         }
     }
 
-    fun causalityComplete () = bondsMap.all{it.value.effortElement != null}
+    private fun causalityComplete () = bondsMap.all{it.value.effortElement != null}
 
-    fun getUnassignedStorageElements() = elementsMap.values.filter{ v  -> (v.elementType == CAPACITOR || v.elementType == INERTIA) && v.getBondList()[0].effortElement == null}
+    private fun getUnassignedStorageElements() = elementsMap.values.filter{ v  -> (v.elementType == CAPACITOR || v.elementType == INERTIA) && v.getBondList()[0].effortElement == null}
 
-    fun getUnassignedResistors() = elementsMap.values.filter{ v -> v.elementType == RESISTOR  && v.getBondList()[0].effortElement == null}
+    private fun getUnassignedResistors() = elementsMap.values.filter{ v -> v.elementType == RESISTOR  && v.getBondList()[0].effortElement == null}
 
-    fun getIndepdentStorageelements()  = elementsMap.values.filter { v -> (v.elementType == CAPACITOR && v.getBondList()[0].effortElement != v) ||
+    private fun getIndependentStorageElements()  = elementsMap.values.filter { v -> (v.elementType == CAPACITOR && v.getBondList()[0].effortElement != v) ||
             (v.elementType == INERTIA && v.getBondList()[0].effortElement == v)}
 
-    fun removeBondAugmentation() {
+    private fun removeBondAugmentation() {
         bondsMap.values.forEach { it.effortElement = null
         it.displayId = ""
         }
@@ -433,7 +438,7 @@ class BondGraph(var name: String) {
            // Remove any previous augmentation
 
            // Assign number labels to the bonds
-           var cnt = 1;
+           var cnt = 1
            bondsMap.values.forEach {it.displayId = cnt++.toString() }
            // Get a list of all sources
            val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
@@ -453,8 +458,8 @@ class BondGraph(var name: String) {
            }
 
            // Create a name for each element based on its type
-           //and the bond number or numbers its attached to.
-           elementsMap.forEach { it.value.creatDisplayId() }
+           //and the numbers of the bonds it's attached to.
+           elementsMap.forEach { it.value.createDisplayId() }
 
            // Assign causality starting from the sources
            sources.forEach{it.assignCausality()}
@@ -510,7 +515,7 @@ class BondGraph(var name: String) {
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
-            val elementsList = getIndepdentStorageelements()
+            val elementsList = getIndependentStorageElements()
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
 
             for (element in elementsList ) {

@@ -8,13 +8,12 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
     var displayId: AnnotatedString = AnnotatedString(id.toString())
     
     val bondsMap = linkedMapOf<Int, Bond>()
-    fun getBondList(): List<Bond> {
-        return ArrayList(bondsMap.values)
-    }
+    fun getBondList(): List<Bond> = ArrayList(bondsMap.values)
 
-    fun getOtherElements(element: Element): List<Element>{
+
+    private fun getOtherElements(element: Element): List<Element>{
         return bondsMap.filter{(_,v) -> v.element1 != element && v.element2 != element}
-            .map{(k,v) -> if (v.element1 === this) v.element2 else v.element1}
+            .map{(_,v) -> if (v.element1 === this) v.element2 else v.element1}
     }
 
     fun getAssignedBonds(): List<Bond> = getBondList().filter{it.effortElement != null}
@@ -29,14 +28,14 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
         (bond1.powerToElement !== element &&  bond2.powerToElement !== element) )
 
 
-    open fun creatDisplayId(id: String = ""){
+    open fun createDisplayId(id: String = ""){
         if (id != "") {
             displayId = AnnotatedString(id)
         } else {
             val bondDisplayIds = bondsMap.flatMap {listOf(it.value.displayId)}
             val s = StringBuilder("")
-            for ((indx,did) in bondDisplayIds.withIndex()){
-                if (indx > 0) s.append(",")
+            for ((index, did) in bondDisplayIds.withIndex()){
+                if (index > 0) s.append(",")
                 s.append(did)
             }
 
@@ -48,7 +47,6 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
             }
 
         }
-        println("default displayId = $displayId")
     }
 
     open fun addBond(bond: Bond) {
@@ -88,10 +86,9 @@ open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
             bondsMap.clear()
         }
         bondsMap[bond.id] = bond
-        println("oneport add bond  ${bond.id}  ${bond.element1.id}  ${bond.element2.id}")
     }
 
-    override fun creatDisplayId(id: String) {
+    override fun createDisplayId(id: String) {
         val bondList = getBondList()
         if (bondList.isNotEmpty()){
             displayId = buildAnnotatedString {
@@ -100,7 +97,6 @@ open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
                 toAnnotatedString()
             }
         }
-        println("displayId = $displayId")
     }
 }
 open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
@@ -113,7 +109,7 @@ open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         bondsMap[bond.id] = bond
     }
 
-    override fun creatDisplayId(id: String) {
+    override fun createDisplayId(id: String) {
         val bondList = getBondList()
         if (bondList.size == 1) throw BadGraphException("Error: The 2-port on bond ${bondList[0].displayId} is missing a bond")
         if (bondList.isNotEmpty()){
@@ -124,7 +120,6 @@ open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
                 toAnnotatedString()
             }
         }
-        println("displayId = $displayId")
     }
 
 }
@@ -134,11 +129,10 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
         val unassignedBonds = getUnassignedBonds()
-        val settingFlow = assignedBonds.filter{ ! (it.effortElement === this)}
+        val settingFlow = assignedBonds.filter{ it.effortElement !== this}
         if (settingFlow.size > 1) throw BadGraphException("Error: Multiple bonds an 1 junction are setting flow. ${this.displayId}")
         if (settingFlow.size == 1) {
 
-            println("there are ${unassignedBonds.size} unassigned bonds")
             for (bond in unassignedBonds){
                 //bond.effortElement = this
                 val otherElement = getOtherElement(this, bond)
@@ -158,30 +152,24 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
 
     override fun getFlow(bond: Bond): String {
         val bondsList = getBondList()
-        println("${this.displayId}")
-        bondsList.forEach{println ("${it.displayId}  ${it.effortElement?.displayId}")}
         val flowBond = bondsList.filter{it.effortElement !== this}[0]
         return getOtherElement(this, flowBond).getFlow(flowBond)
 
     }
 
     override fun getEffort(bond: Bond): String {
-        println ("element1 = ${bond.element1.displayId}  element2 = ${bond.element2.displayId}  powerToElement = ${bond.powerToElement?.displayId}  effortElement = ${bond.effortElement?.displayId}")
 
         val otherBonds = getOtherBonds(bond)
         val thisElement = this
         val sb = buildString {
             append("(")
             for (otherBond in otherBonds){
-                println ("${bond.powerToElement?.displayId}  ${otherBond.powerToElement?.displayId}")
-
                 append (if (sameDirection(thisElement, bond, otherBond)) " - " else " + " )
-
                 append (getOtherElement(thisElement, otherBond).getEffort(otherBond))
             }
             append (")")
         }
-        return sb.toString()
+        return sb
     }
 
 }
@@ -189,12 +177,8 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
-        println("ZeroJunction  assigned bonds")
-        assignedBonds.forEach{println("${it.displayId}")}
         val unassignedBonds = getUnassignedBonds()
         val settingEffort = assignedBonds.filter{ it.effortElement === this}
-        println("bonds setting effort")
-        settingEffort.forEach{println("${it.displayId}")}
         if (settingEffort.size > 1) throw BadGraphException("Error: Multiple bonds on 0 junction are setting effort.  ${this.displayId}")
         if (settingEffort.size == 1) {
 
@@ -221,14 +205,12 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
     }
 
     override fun getFlow(bond: Bond): String {
-        println ("element1 = ${bond.element1.displayId}  element2 = ${bond.element2.displayId}  powerToElement = ${bond.powerToElement?.displayId}  effortElement = ${bond.effortElement?.displayId}")
 
         val otherBonds = getOtherBonds(bond)
         val thisElement = this
         val sb = buildString {
             append("(")
             for (otherBond in otherBonds){
-                println ("${bond.powerToElement?.displayId}  ${otherBond.powerToElement?.displayId}")
 
                 append (if (sameDirection(thisElement, bond, otherBond)) " - " else " + " )
 
@@ -236,7 +218,7 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
             }
             append (")")
         }
-        return sb.toString()
+        return sb
     }
 }
 
@@ -269,7 +251,6 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
 
     override fun assignCausality() {
 
-        println("Inertia augment")
         val bond = getBondList()[0]
         if (bond.effortElement == null) {
             val otherElement = getOtherElement(this, bond)
@@ -303,13 +284,13 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     override fun getEffort(bond: Bond): String {
         val thisBond = getBondList()[0]
         val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
-        return  sFlow + "*" + displayId.toString()
+        return "$sFlow*$displayId"
     }
 
     override fun getFlow(bond: Bond): String {
         val thisBond = getBondList()[0]
         val sEffort=  getOtherElement(this, thisBond).getEffort(thisBond)
-        return sEffort  + "*1/" + displayId.toString()
+        return "$sEffort*1/$displayId"
     }
 }
 
@@ -342,7 +323,7 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
             bond.effortElement = this
             otherElement.assignCausality()
         } else {
-            if ( ! (this === bond.effortElement)) throw BadGraphException("Error: A source of flow has been forced into effort causality. ${this.displayId}")
+            if ( this !== bond.effortElement) throw BadGraphException("Error: A source of flow has been forced into effort causality. ${this.displayId}")
         }
     }
 
@@ -354,16 +335,16 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
 open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
-    class Modulator(val element1: Element, val id: String){
+    class Modulator(private val element1: Element, private val id: String){
         fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
 
         fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) "1/M$id" else "M$id"
 
     }
 
-    lateinit  var modulator: Modulator
+    private lateinit var modulator: Modulator
     override fun assignCausality() {
-        if (bondsMap.size == 1) throw BadGraphException("Error transformer ${displayId} has only one bond.")
+        if (bondsMap.size == 1) throw BadGraphException("Error transformer $displayId has only one bond.")
         modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val assignedBonds = getAssignedBonds()
         if (assignedBonds.size == 2){
@@ -401,18 +382,17 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
 class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
-    class Modulator(val element1: Element, val id: String){
+    class Modulator(private val element1: Element, private val id: String){
         fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
 
         fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) "1/M$id" else "M$id"
 
     }
 
-    lateinit  var modulator: Modulator
+    private lateinit  var modulator: Modulator
 
     override fun assignCausality() {
-        if (bondsMap.size == 1) throw BadGraphException("Error gyrator ${displayId} has only one bond.")
-        if (bondsMap.size == 1) throw BadGraphException("Error gyrator ${displayId} has only one bond.")
+        if (bondsMap.size == 1) throw BadGraphException("Error gyrator $displayId has only one bond.")
         val assignedBonds = getAssignedBonds()
         if (assignedBonds.size == 2){
             if ( (assignedBonds[0].effortElement === this &&  assignedBonds[1].effortElement !== this)
@@ -447,6 +427,4 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
 }
-class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: ElementDisplayData): Transformer(bondGraph, id, elementType, displayData) {
-
-}
+class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: ElementDisplayData): Transformer(bondGraph, id, elementType, displayData)

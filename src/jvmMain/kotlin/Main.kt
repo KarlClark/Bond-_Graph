@@ -4,7 +4,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import userInterface.isShifted
-import userInterface.App
+import userInterface.app
 
 fun main() = application {
     Window(title = "lkdfjlafk"
@@ -18,6 +18,6 @@ fun main() = application {
             false
         }) {
 
-        App()
+        app()
     }
 }
