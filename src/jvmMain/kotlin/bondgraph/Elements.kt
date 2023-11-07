@@ -8,6 +8,10 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
     var displayId: AnnotatedString = AnnotatedString(id.toString())
     
     val bondsMap = linkedMapOf<Int, Bond>()
+
+    companion object {
+        fun getOtherElement(element: Element, bond: Bond) = if (element === bond.element1) bond.element2 else bond.element1
+    }
     fun getBondList(): List<Bond> = ArrayList(bondsMap.values)
 
 
@@ -19,7 +23,7 @@ open class Element(val bondGraph: BondGraph, val id: Int, val elementType: Eleme
     fun getAssignedBonds(): List<Bond> = getBondList().filter{it.effortElement != null}
 
     fun getUnassignedBonds(): List<Bond> = getBondList().filter{it.effortElement == null}
-    fun getOtherElement(element: Element, bond: Bond) = if (element === bond.element1) bond.element2 else bond.element1
+
 
     fun getOtherBonds(bond: Bond): List<Bond> = getBondList().filter{ it !==  bond}
 

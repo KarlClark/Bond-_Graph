@@ -9,7 +9,6 @@ import androidx.compose.ui.text.font.FontFamily
 import bondgraph.ElementTypes.*
 import userInterface.LocalStateInfo
 import userInterface.MyConstants
-import userInterface.bondGraph
 import kotlin.math.*
 
 
@@ -350,6 +349,7 @@ class BondGraph(var name: String) {
     fun clear(){
         val state = LocalStateInfo.current
         elementsMap.clear()
+
         bondsMap.clear()
         state.needsElementUpdate = true
     }
@@ -396,6 +396,11 @@ class BondGraph(var name: String) {
         return result?.key ?: -1
     }
 
+    /*
+    Remove a bond form the bond graph. First get each element attached
+    to this bond and remove the element's references to the bond.
+    Then remove the bond from the bondsMap.
+     */
     fun removeBond(id: Int){
         elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)
         elementsMap[bondsMap[id]?.element2?.id]?.removeBond(id)
@@ -403,6 +408,10 @@ class BondGraph(var name: String) {
         removeBondAugmentation()
     }
 
+    /*
+    Set which element on the bond is the power element.  First make sure
+    the element is one of the elements attached to the bond.
+     */
     fun setPowerElement(id: Int, element: Element?){
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
@@ -410,6 +419,11 @@ class BondGraph(var name: String) {
             }
         }
     }
+
+    /*
+    Set which element on the bond is the causal or Effort element.  First make sure
+    the element is one of the elements attached to the bond.
+     */
     fun setCasualElement(id: Int, element: Element?) {
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
@@ -418,52 +432,103 @@ class BondGraph(var name: String) {
         }
     }
 
-    fun updateBondsForElement(elementId: Int, newCenter: Offset)  {
-        val width = elementsMap[elementId]?.displayData?.width
-        val height = elementsMap[elementId]?.displayData?.height
+    /*
+    This function is used when the user is dragging an element that has bonds
+    attached to it.  As the element moves we need to update the endpoint of the
+    bond so that they stay close to the element. Both ends of the bond need to be
+    updated so the bond stays aligned with the centers of both elements. We need
+    to call offsetsFromCenter on both ends of ever bond attached to the element.
+    TO do that we the width, height and center offset for both elements
+    attached to the bond.  So get the width hand height of the element defined
+    by elementId.  Then get a alist of all the bonds attached to that element.
+    Then for each bond find the other element and get its width, height and
+    center.  Then make the calls to set the bond offsets.
+
+     */
+    fun updateBondsForElement(elementId: Int, movingCenter: Offset)  {
+        val movingWidth = elementsMap[elementId]?.displayData?.width
+        val movingHeight = elementsMap[elementId]?.displayData?.height
         val bondsList = elementsMap[elementId]?.getBondList()
-        if (width != null && height != null &&  ! bondsList.isNullOrEmpty()) {
+        if (movingWidth != null && movingHeight != null &&  ! bondsList.isNullOrEmpty()) {
             for (bond in bondsList){
-                if (bond.element1.id == elementId) {
-                    val stableCenter = bond.element2.displayData.centerLocation
-                    val stableWidth = bond.element2.displayData.width
-                    val stableHeight = bond.element2.displayData.height
-                   /* bond.offset2 = offsetFromCenter(stableCenter, newCenter, width, height)
-                    bond.offset1 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)*/
-                    bond.offset2 = offsetFromCenter(stableCenter, newCenter, stableWidth, stableHeight)
-                    bond.offset1 = offsetFromCenter(newCenter, stableCenter, width, height)
+                if (bond.element1.id === elementId) {
+                    val fixedCenter = bond.element2.displayData.centerLocation
+                    val fixedWidth = bond.element2.displayData.width
+                    val fixedHeight = bond.element2.displayData.height
+                    bond.offset2 = offsetFromCenter(fixedCenter, movingCenter, fixedWidth, fixedHeight)
+                    bond.offset1 = offsetFromCenter(movingCenter, fixedCenter, movingWidth, movingHeight)
                 } else {
-                    val stableCenter = bond.element1.displayData.centerLocation
-                    val stableWidth = bond.element1.displayData.width
-                    val stableHeight = bond.element1.displayData.height
-                   /* bond.offset1 = offsetFromCenter(stableCenter, newCenter, width, height)
-                    bond.offset2 = offsetFromCenter(newCenter, stableCenter, stableWidth, stableHeight)*/
-                    bond.offset1 = offsetFromCenter(stableCenter, newCenter, stableWidth, stableHeight)
-                    bond.offset2 = offsetFromCenter(newCenter, stableCenter, width, height)
+                    val fixedCenter = bond.element1.displayData.centerLocation
+                    val fixedWidth = bond.element1.displayData.width
+                    val fixedHeight = bond.element1.displayData.height
+                    bond.offset1 = offsetFromCenter(fixedCenter, movingCenter, fixedWidth, fixedHeight)
+                    bond.offset2 = offsetFromCenter(movingCenter, fixedCenter, movingWidth, movingHeight)
                 }
             }
         }
     }
 
+    // Iterate the bondsMap to see if every bond has an effortElement assigned.
     private fun causalityComplete () = bondsMap.all{it.value.effortElement != null}
 
+    // iterate the elementsMap and make a list of storage elements (capacitors and inertias) that so not have an effort element assigned.
     private fun getUnassignedStorageElements() = elementsMap.values.filter{ v  -> (v.elementType == CAPACITOR || v.elementType == INERTIA) && v.getBondList()[0].effortElement == null}
 
+    // iterate the elementsMap and make a list of resistors that so not have an effort element assigned.
     private fun getUnassignedResistors() = elementsMap.values.filter{ v -> v.elementType == RESISTOR  && v.getBondList()[0].effortElement == null}
 
+    /*
+    Search the elementsMap looking for storage elements (capacitors and inertias) that are in integral causality.
+    That is capacitors that are setting the effort, and inertias that are setting the flow.
+     */
     private fun getIndependentStorageElements()  = elementsMap.values.filter { v -> (v.elementType == CAPACITOR && v.getBondList()[0].effortElement != v) ||
             (v.elementType == INERTIA && v.getBondList()[0].effortElement == v)}
 
+    /*
+    We remove tha augmentation when the bond graph is changed, such as adding
+    or deleting elements or bonds.  The previous augmentation would no longer
+    be valid.
+    */
     private fun removeBondAugmentation() {
         bondsMap.values.forEach { it.effortElement = null
         it.displayId = ""
         }
     }
+
+    /*
+    The first step in augmenting a bond graph is to assign a unique number to each bond, typically
+    from 1 to the number of bonds.  The numbers are used to distinguish different entities in the
+    bond graph. For example the flow on bond 4 would be called f4.
+
+    The second step is to assign causality. I can't thoroughly explain causality in a comment,
+    this usually takes a couple of college lectures.  But it deals with the idea that an
+    element in a bond graph can set either the effort or the flow on a bond but not both.
+    For an easy example, a source of effort has only one causality. It sets the effort on a bond.
+    The flow is then determined by what the bond connects to on the other end.  To see this,
+    think of a battery, a source of effort.  It sets the voltage on a circuit, say 12 volts.
+    If it maintains a steady 12 volts, it can't also set the current, the flow.  The rest of
+    the circuit will determine how much current is drawn.
+
+    Every type of element has rules about the causality of it bonds. Some like a source of effort
+    have only one. Some allow certain combinations.  Some have preferred causality from a modeling
+    point of view.  To assign causality start with a sourced of effort or flow and assign its
+    required causality.  Then look at what it is connected to and see if that element's rules force
+    the causality on any other bonds.  For example, a source of effort connected to a 1 junction
+    (common flow junction) doesn't force anything.  But a source of effort connected to a
+    0 junction (common effort junction) does a lot.  Since all bonds on a 0 junction have the same
+    effort (by definition) only one can set that effort.  All the others must set the flow. So now
+    you check what all those bonds are attached to and see if anything else is forced etc.
+    There are more rules about what bonds to set and extend until every bond has been set.
+
+    Also, during augmentation the bond graph will be checked for errors that would make it a
+    nonfunctional graph.
+     */
    @Composable
     fun augment() {
 
        val state = LocalStateInfo.current
 
+       // Remove any previous augmentation
        removeBondAugmentation()
 
        try{
@@ -471,17 +536,22 @@ class BondGraph(var name: String) {
            if(bondsMap.isEmpty()){
                throw BadGraphException("Error: graph has no bonds")
            }
-           // Remove any previous augmentation
 
            // Assign number labels to the bonds
+           /*TODO: assign bond numbers considering their display location and the elements they
+               attach to.  Try to get the numbers to flow across the graph in order. Elements
+               like transformers should have consecutive numbers on their bonds.
+          */
            var cnt = 1
            bondsMap.values.forEach {it.displayId = cnt++.toString() }
+
            // Get a list of all sources
            val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
            val sources = ArrayList(sourcesMap.values)
            if (sources.isEmpty()) {
                throw BadGraphException("Error: graph has no sources.")
            }
+
            // Starting with one of the sources, count all the elements reachable from that point. If this count doesn't
            // equal the number of elements in the whole graph, then there are elements that are not connected to the graph.
            val element1 = sources[0]?.getBondList()?.get(0)?.element1
@@ -493,11 +563,22 @@ class BondGraph(var name: String) {
                }
            }
 
-           // Create a name for each element based on its type
-           //and the numbers of the bonds it's attached to.
+           /*
+           Create a name for each element based on its type
+           and the numbers of the bonds it's attached to.
+           Each element type has a function for creating
+           it name from the numbers of the bonds it's
+           attached to.
+           */
            elementsMap.forEach { it.value.createDisplayId() }
 
-           // Assign causality starting from the sources
+           /*
+           Assign causality starting from the sources.  Each element
+           has a function for assigning causality based on its
+           rules. So calling an element's assignCausality() function
+           will start a chain of calls to other element's
+           assignCausality() functions.
+           */
            sources.forEach{it.assignCausality()}
 
            // While causality is incomplete and there are still
@@ -517,7 +598,7 @@ class BondGraph(var name: String) {
                }
            }
 
-           // If causality is stile incomplete then continue
+           // If causality is still incomplete then continue
            // using R elements.
            done = causalityComplete()
            while ( ! done ){
