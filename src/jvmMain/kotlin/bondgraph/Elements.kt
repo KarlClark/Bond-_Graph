@@ -246,6 +246,7 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
     override fun deriveEquation(): String {
         val bond = getBondList()[0]
         return "dq" + bond.displayId + "/dt = " + getOtherElement(this,bond).getFlow(bond)
+        //return bond.displayId + '\u0307' + " = " + getOtherElement(this,bond).getFlow(bond)
     }
 
 
@@ -270,6 +271,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     override fun deriveEquation(): String {
         val bond = getBondList()[0]
         return "dp" + bond.displayId + "/dt = " + getOtherElement(this,bond).getEffort(bond)
+        //return bond.displayId + '\u0307' + " = "+ getOtherElement(this,bond).getEffort(bond)
     }
 }
 

@@ -27,11 +27,11 @@ import bondgraph.ElementDisplayData
 val bondGraph = BondGraph("test graph")
 
 object MyConstants {
-    val elementNameFontSize: TextUnit =20.sp
-    val subTextFontSize: TextUnit = 15.sp
     val labelFontSize: TextUnit = 15.sp
     val bottomBarFontSize = 15.sp
     val resultsFontSize = 20.sp
+    val elementNameFontSize: TextUnit =20.sp
+    val subTextFontSize: TextUnit = 15.sp
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)
     val offColor = Color.LightGray
