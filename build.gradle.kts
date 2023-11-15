@@ -2,6 +2,8 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     kotlin("multiplatform")
+    //kotlin("jvm") version "1.9.0"
+   kotlin("plugin.serialization") version "1.6.0"
     id("org.jetbrains.compose")
 }
 
@@ -25,9 +27,17 @@ kotlin {
                 implementation(compose.desktop.currentOs)
             }
         }
+
+        val commonMain by getting{
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.6.0")
+            }
+        }
         val jvmTest by getting
     }
 }
+
+
 
 compose.desktop {
     application {

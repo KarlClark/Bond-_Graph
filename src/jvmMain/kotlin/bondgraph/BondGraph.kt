@@ -6,13 +6,17 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
 import bondgraph.ElementTypes.*
+import kotlinx.serialization.*
 import userInterface.LocalStateInfo
 import userInterface.MyConstants
 import kotlin.math.*
+import kotlinx.serialization.cbor.Cbor
 
 
 class BadGraphException(message: String) : Exception(message)
+
 
 /*
 An enum  for the different elements used in a bond graph, with the
@@ -50,8 +54,8 @@ enum class ElementTypes {
     SOURCE_OF_FLOW{
         override fun toAnnotatedString() = Sf
     },
-    INVALID {
-        override fun toAnnotatedString() = AnnotatedString("INVALID")
+    INVALID_TYPE {
+        override fun toAnnotatedString() = INVALID
     };
 
     abstract fun toAnnotatedString(): AnnotatedString
@@ -86,6 +90,7 @@ can be subscripts.
             append("f")
             toAnnotatedString()
         }
+        val INVALID = AnnotatedString("INVALID", style)
         fun toEnum(value: AnnotatedString): ElementTypes {
             return when (value) {
                 _0 -> ZERO_JUNCTION
@@ -98,31 +103,85 @@ can be subscripts.
                 MTF-> MODULATED_TRANSFORMER
                 Se -> SOURCE_OF_EFFORT
                 Sf -> SOURCE_OF_FLOW
-                else -> INVALID
+                else -> INVALID_TYPE
             }
         }
+
+    fun toEnum(value: String): ElementTypes {
+        return when (value) {
+            "0" -> ZERO_JUNCTION
+            "1" -> ONE_JUNCTION
+            "C" -> CAPACITOR
+            "R'" -> RESISTOR
+            "I" -> INERTIA
+            "TF" -> TRANSFORMER
+            "GY" -> GYRATOR
+            "MTF" -> MODULATED_TRANSFORMER
+            "Se" -> SOURCE_OF_EFFORT
+            "Sf" -> SOURCE_OF_FLOW
+            else -> INVALID_TYPE
+        }
+    }
     }
 }
 
-/*
-The data needed to display a representation of the element on the screen.  The id, text and location are
-pretty obvious, the width and height are the size of the text, and the centerLocation is the location of
-the center of text.  This information is needed for drawing bonds to the element.  Every instance of
-Element contains an ElementDisplayData instance as one of its properties.
- */
-class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
+
 
 /*
 The data class for a bond.  Contains the elements attached to each end of the bond and the Offsets of those elements on
 the screen.  The powerToElement indicates which element the arrow points to, and should match either element 1 or
 element 2.  THe effortElement indicates which element has the causal stroke and should match element 1 or element 2.
+
  */
-class Bond(val id: Int, val element1: Element, var offset1: Offset, val element2: Element, var offset2: Offset, var powerToElement: Element?){
+class Bond(val id: Int, val element1: Element, var offset1: @Contextual Offset, val element2: Element, var offset2: @Contextual Offset, var powerToElement: Element){
     var displayId: String = ""
     var effortElement: Element? = null
-
-
 }
+
+class BondSerializatonData(val id: Int, val displayId: String, val elementId1: Int, val loc1x: Float, val loc1y: Float, val elementId2: Int, val locx2: Float, val locy2: Float, val powerToElementId: Int, val effortElementId: Int) {
+    companion object {
+        fun getData(bond: Bond): BondSerializatonData {
+            with(bond) {
+                return BondSerializatonData(
+                    id,
+                    displayId,
+                    element1.id,
+                    offset1.x,
+                    offset1.y,
+                    element2.id,
+                    offset2.x,
+                    offset2.y,
+                    powerToElement.id,
+                    effortElement?.id ?: -1
+                )
+            }
+        }
+
+        fun makeBond(data: BondSerializatonData, elementsMap: Map<Int, Element>): Bond? {
+
+            with(data) {
+                val element1 = elementsMap[elementId1]
+                val element2 = elementsMap[elementId2]
+                val powerToElement = elementsMap[powerToElementId]
+                if (element1 != null && element2 != null && powerToElement != null) {
+                    val bond = Bond(
+                        id, element1, Offset(loc1x, loc1y), element2, Offset(locx2, locy2), powerToElement
+                    )
+                    bond.displayId = displayId
+                    if (effortElementId != -1) {
+                        bond.effortElement = elementsMap[effortElementId]
+                    }
+                    return bond
+                } else {
+                    return null
+                }
+            }
+        }
+    }
+}
+
+class BondGraphSerializationData(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializatonData>)
+
 class BondGraph(var name: String) {
 
     /*
@@ -162,6 +221,7 @@ class BondGraph(var name: String) {
         2nd endpoint to the 3rd Offset will form a half arrow.
          */
         fun getArrowOffsets(startOffset: Offset, endOffset: Offset): Offset{
+
             val arrowAngle = .7f
             val arrowLength = 15f
             val xLength = endOffset.x - startOffset.x
@@ -236,9 +296,42 @@ class BondGraph(var name: String) {
     properly when adding or removing elements or bonds.
 
      */
-    private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
-    val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
+    private var elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
+    var bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
+    val resultsListAnnotated = mutableListOf<AnnotatedString>()
+
+    fun toSerializedStrings(): BondGraphSerializationData {
+
+
+        val elementData = elementsMap.values.map{ElementSerializationData.getData(it)}
+        val bondData = bondsMap.values.map{BondSerializatonData.getData(it)}
+
+        return BondGraphSerializationData(elementData, bondData)
+        }
+
+@Composable
+    fun fromSerializedStrings(strings: BondGraphSerializationData) {
+
+        val state = LocalStateInfo.current
+
+        elementsMap.clear()
+        bondsMap.clear()
+        for (elementDatum in strings.elementData) {
+            val element = ElementSerializationData.makeElement(this, elementDatum)
+            key(element.id){elementsMap[element.id] = element}
+        }
+
+        for (bondDatum in strings.bondData){
+            val bond = BondSerializatonData.makeBond(bondDatum, elementsMap)
+            if (bond != null) {
+                bondsMap[bond.id] = bond
+                bond.element1.addBond(bond)
+                bond.element2.addBond(bond)
+            }
+        }
+    state.needsBondUpdate = true
+    }
 
     // Add or update an element in the bond graph.
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {
@@ -262,7 +355,7 @@ class BondGraph(var name: String) {
                 MODULATED_TRANSFORMER -> ::ModulatedTransformer
                 SOURCE_OF_EFFORT -> ::SourceOfEffort
                 SOURCE_OF_FLOW -> :: SourceOfFlow
-                INVALID -> null
+                INVALID_TYPE -> null
             }
 
             if (elementClass != null) {
@@ -361,11 +454,13 @@ class BondGraph(var name: String) {
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
         val element1 = elementsMap[elementId1]
         val element2 = elementsMap[elementId2]
+
         if (element1 != null && element2 != null) {
-            val bond = Bond(id, element1, offset1, element2, offset2, elementsMap[powerToElementId])
+            val powerToElement = if (element1.id == powerToElementId) element1 else element2
+            val bond = Bond(id, element1, offset1, element2, offset2, powerToElement)
             bondsMap[id] = bond
-            elementsMap[elementId1]?.addBond(bond)
-            elementsMap[elementId2]?.addBond(bond)
+            element1.addBond(bond) 
+            element2.addBond(bond)
             removeBondAugmentation()
         }
     }
@@ -412,9 +507,9 @@ class BondGraph(var name: String) {
     Set which element on the bond is the power element.  First make sure
     the element is one of the elements attached to the bond.
      */
-    fun setPowerElement(id: Int, element: Element?){
+    fun setPowerElement(id: Int, element: Element){
         if (bondsMap[id] != null){
-            if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
+            if(bondsMap[id]?.element1 === element || bondsMap[id]?.element2 === element){
                 bondsMap[id]?.powerToElement = element
             }
         }
@@ -451,7 +546,7 @@ class BondGraph(var name: String) {
         val bondsList = elementsMap[elementId]?.getBondList()
         if (movingWidth != null && movingHeight != null &&  ! bondsList.isNullOrEmpty()) {
             for (bond in bondsList){
-                if (bond.element1.id === elementId) {
+                if (bond.element1.id == elementId) {
                     val fixedCenter = bond.element2.displayData.centerLocation
                     val fixedWidth = bond.element2.displayData.width
                     val fixedHeight = bond.element2.displayData.height
@@ -490,7 +585,7 @@ class BondGraph(var name: String) {
     be valid.
     */
     private fun removeBondAugmentation() {
-        bondsMap.values.forEach { it.effortElement = null
+        bondsMap.values.forEach {println("removeAugmentation on bond ${it.id}  ${it.displayId}"); it.effortElement = null
         it.displayId = ""
         }
     }
@@ -536,7 +631,7 @@ class BondGraph(var name: String) {
            if(bondsMap.isEmpty()){
                throw BadGraphException("Error: graph has no bonds")
            }
-
+            println("here 1")
            // Assign number labels to the bonds
            /*TODO: assign bond numbers considering their display location and the elements they
                attach to.  Try to get the numbers to flow across the graph in order. Elements
@@ -545,13 +640,14 @@ class BondGraph(var name: String) {
            var cnt = 1
            bondsMap.values.forEach {it.displayId = cnt++.toString() }
 
+           println("here 2")
            // Get a list of all sources
            val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
            val sources = ArrayList(sourcesMap.values)
            if (sources.isEmpty()) {
                throw BadGraphException("Error: graph has no sources.")
            }
-
+           println("here 3")
            // Starting with one of the sources, count all the elements reachable from that point. If this count doesn't
            // equal the number of elements in the whole graph, then there are elements that are not connected to the graph.
            val element1 = sources[0]?.getBondList()?.get(0)?.element1
@@ -570,6 +666,8 @@ class BondGraph(var name: String) {
            it name from the numbers of the bonds it's
            attached to.
            */
+
+           println("here 4")
            elementsMap.forEach { it.value.createDisplayId() }
 
            /*
@@ -579,12 +677,15 @@ class BondGraph(var name: String) {
            will start a chain of calls to other element's
            assignCausality() functions.
            */
+           println("here 5")
            sources.forEach{it.assignCausality()}
 
            // While causality is incomplete and there are still
            // I and C elements with unassigned causality, use
            // them to continue assigning causality.
+           println("here 6")
            var done = causalityComplete()
+           bondsMap.values.forEach{println ("bond ${it.id} effort element= ${it.effortElement?.id}")}
            while ( ! done ){
 
                if (! done){
@@ -592,6 +693,7 @@ class BondGraph(var name: String) {
                    if (elementList.isNotEmpty()){
                        elementList[0].assignCausality()
                        done = causalityComplete()
+                       bondsMap.values.forEach{println ("bond ${it.id} effort element= ${it.effortElement?.id}")}
                    } else {
                        done = true
                    }

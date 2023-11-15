@@ -119,7 +119,7 @@ fun sideBar() {
                 Spacer (modifier = Modifier .height(1.dp))
                 var id = 1000
                 enumValues<ElementTypes>().forEach {
-                    if (it != ElementTypes.INVALID) {displayElement (ElementDisplayData (id++, it.toAnnotatedString(), Offset.Zero, 0f, 0f, Offset.Zero))
+                    if (it != ElementTypes.INVALID_TYPE) {displayElement (ElementDisplayData (id++, it.toAnnotatedString(), Offset.Zero, 0f, 0f, Offset.Zero))
                     }
                     if (it == ElementTypes.ONE_JUNCTION || it == ElementTypes.MODULATED_TRANSFORMER) Divider(thickness = 2.dp, color = Color.Black)
                 }
@@ -224,6 +224,7 @@ fun windowBox() {
 
     val state = remember { StateInfo() }
 
+
      CompositionLocalProvider(
          LocalStateInfo provides state
 
@@ -291,6 +292,13 @@ fun windowBox() {
                                      .padding(start = 10.dp, top = 5.dp)
                              )
                          }
+
+                         bondGraph.resultsListAnnotated.forEach {
+                             Text(
+                                 it,  modifier = Modifier
+                                     .padding(start = 10.dp, top = 5.dp)
+                             )
+                         }
                      }
                  }
              }
@@ -298,9 +306,4 @@ fun windowBox() {
          }
      }
 
-}
-
-@Composable
-fun app() {
-    windowBox()
 }

@@ -1,11 +1,78 @@
 package bondgraph
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
+/*
+The data needed to display a representation of the element on the screen.  The id, text and location are
+pretty obvious, the width and height are the size of the text, and the centerLocation is the location of
+the center of text.  This information is needed for drawing bonds to the element.  Every instance of
+Element contains an ElementDisplayData instance as one of its properties.
+ */
+class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
 
-open class Element(val bondGraph: BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
-    var displayId: AnnotatedString = AnnotatedString(id.toString())
+@Serializable
+class ElementSerializationData(val id: Int, @Contextual val type: AnnotatedString, @Contextual val displayId: AnnotatedString, val displayDatId: Int, @Contextual val text: AnnotatedString, val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
+    companion object {
+        fun getData(element: Element): ElementSerializationData {
+
+            return with(element) {
+                ElementSerializationData(
+                    id,
+                    elementType.toAnnotatedString(),
+                    displayId,
+                    displayData.id,
+                    displayData.text,
+                    displayData.location.x,
+                    displayData.location.y,
+                    displayData.width,
+                    displayData.height,
+                    displayData.centerLocation.x,
+                    displayData.centerLocation.y
+                )
+            }
+        }
+
+        fun makeElement(bondgraph: BondGraph, data: ElementSerializationData): Element {
+            val elementType = ElementTypes.toEnum(data.type)
+            val elementClass = when (elementType) {
+                ElementTypes.ZERO_JUNCTION -> ::ZeroJunction
+                ElementTypes.ONE_JUNCTION -> ::OneJunction
+                ElementTypes.CAPACITOR -> ::Capacitor
+                ElementTypes.RESISTOR -> ::Resistor
+                ElementTypes.INERTIA -> ::Inertia
+                ElementTypes.TRANSFORMER -> ::Transformer
+                ElementTypes.GYRATOR -> ::Gyrator
+                ElementTypes.MODULATED_TRANSFORMER -> ::ModulatedTransformer
+                ElementTypes.SOURCE_OF_EFFORT -> ::SourceOfEffort
+                ElementTypes.SOURCE_OF_FLOW -> :: SourceOfFlow
+                ElementTypes.INVALID_TYPE -> null
+            }
+            with(data) {
+                if (elementClass != null) {
+                    println("type = $type, enum = $elementType")
+                    val element = elementClass.invoke(
+                        bondgraph,
+                        id,
+                        elementType,
+                        ElementDisplayData(displayDatId, text, Offset(locx, locy), width, height, Offset(cenx, ceny))
+                    )
+                    element.displayId = displayId
+                    return element
+                } else {
+                    throw BadGraphException("Error in function makeElement, invalid ElementType = $elementType, derived from string ${data.type}")
+                }
+            }
+        }
+    }
+}
+
+open class Element(val bondGraph:  BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
+    var displayId: @Contextual AnnotatedString = AnnotatedString(id.toString())
     
     val bondsMap = linkedMapOf<Int, Bond>()
 
@@ -348,10 +415,8 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     }
 
-    private lateinit var modulator: Modulator
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error transformer $displayId has only one bond.")
-        modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val assignedBonds = getAssignedBonds()
         if (assignedBonds.size == 2){
             if ( (assignedBonds[0].effortElement === this &&  assignedBonds[1].effortElement === this)
@@ -372,6 +437,7 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     }
 
     override fun getEffort(bond: Bond): String {
+        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val mod = modulator.getEffortModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
@@ -379,6 +445,7 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     }
 
     override fun getFlow(bond: Bond): String {
+        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val mod = modulator.getFlowModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
@@ -395,7 +462,6 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
 
     }
 
-    private lateinit  var modulator: Modulator
 
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error gyrator $displayId has only one bond.")
@@ -419,6 +485,7 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
     override fun getEffort(bond: Bond): String {
+        val modulator  = Transformer.Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val mod = modulator.getEffortModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
@@ -426,6 +493,7 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
     override fun getFlow(bond: Bond): String {
+        val modulator  = Transformer.Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
         val mod = modulator.getFlowModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)

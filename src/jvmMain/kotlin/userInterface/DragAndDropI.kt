@@ -579,6 +579,6 @@ internal class StateInfo {
     var derive by mutableStateOf(false)
     var clearGraph by mutableStateOf(false)
     var bondColor by mutableStateOf(Color.Black)
-    var dataToDrop = INVALID
+    var dataToDrop = INVALID_TYPE
 
 }
