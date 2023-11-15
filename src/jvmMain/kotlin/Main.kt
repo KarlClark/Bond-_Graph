@@ -6,8 +6,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
-import userInterface.isShifted
-import userInterface.windowBox
 import java.nio.file.Path
 import androidx.compose.ui.window.AwtWindow
 import bondgraph.BondGraphSerializationData
@@ -18,8 +16,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
-import userInterface.MyConstants
-import userInterface.bondGraph
+import userInterface.*
+import userInterface.LocalStateInfo
+import userInterface.StateInfo
+import userInterface.isShifted
 import java.awt.FileDialog
 import java.io.File
 
@@ -83,41 +83,50 @@ fun main() = application {
         var showClose by remember { mutableStateOf(false) }
         var buildGraph by remember { mutableStateOf(false) }
         lateinit var  bondGrraphData: BondGraphSerializationData
-        Window(
-            onCloseRequest = ::exitApplication, state = WindowState(width = 1200.dp, height = 800.dp)
-            //, icon = (painterResource("one_by_one_pixel.jpg"))
+        val state = remember { StateInfo() }
 
-            , onKeyEvent = {
-                println("Key Event,  isShiftPressed = ${it.isShiftPressed}")
-                if (it.isShiftPressed) {
-                    isShifted = true
+
+        CompositionLocalProvider(
+            LocalStateInfo provides state
+
+        ) {
+            Window(
+                onCloseRequest = ::exitApplication, state = WindowState(width = 1200.dp, height = 800.dp)
+                //, icon = (painterResource("one_by_one_pixel.jpg"))
+
+                , onKeyEvent = {
+                    println("Key Event,  isShiftPressed = ${it.isShiftPressed}")
+                    if (it.isShiftPressed) {
+                        isShifted = true
+                    }
+                    false
+                }) {
+
+                MenuBar {
+                    Menu("File") {
+                        Item("Open...", onClick = { showOpen = true })
+                        Item("Save", onClick = { showClose = true })
+                    }
                 }
-                false
-            }) {
 
-            MenuBar {
-                Menu("File") {
-                    Item("Open...", onClick = {showOpen = true})
-                    Item("Save", onClick = {showClose = true})
+                windowBox()
+                if (showOpen) fileDialog("Test String", true) {
+                    showOpen = false
+                    bondGrraphData = bondGraph.toSerializedStrings()
+
                 }
-            }
 
-            windowBox()
-            if (showOpen)  fileDialog("Test String", true) {
-                showOpen = false
-                bondGrraphData = bondGraph.toSerializedStrings()
+                if (showClose) fileDialog("Test String", false) {
+                    @Composable
+                    showClose = false
+                    println("$it")
+                    buildGraph = true
+                }
 
-            }
-
-            if (showClose)  fileDialog("Test String", false) {@Composable
-                showClose = false
-                println("$it")
-                buildGraph = true
-            }
-
-            if (buildGraph){
-                buildGraph = false
-                bondGraph.fromSerializedStrings(bondGrraphData)
+                if (buildGraph) {
+                    buildGraph = false
+                    bondGraph.fromSerializedStrings(bondGrraphData)
+                }
             }
         }
     }

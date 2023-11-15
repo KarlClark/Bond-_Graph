@@ -258,7 +258,6 @@ fun  dropTarget(
     var originId by remember { mutableStateOf(-1) }
     var destinationId by remember { mutableStateOf(-1) }
 
-
     Box(modifier = modifier
         // Get the bounding rectangle for this composable. We use this to tell if a dragged element is in
         // the pane where the graph is drawn.

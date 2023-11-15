@@ -222,13 +222,14 @@ with a drawing area on the right.  There is also a bar across the bottom.
 @Composable
 fun windowBox() {
 
-    val state = remember { StateInfo() }
+    val state = LocalStateInfo.current
+   /* val state = remember { StateInfo() }
 
 
      CompositionLocalProvider(
          LocalStateInfo provides state
 
-     ) {
+     ) {*/
 
          Column(                 // Contains a draggable on top followed by the results screen
              modifier = Modifier // followed by the bottom bar. The results screen is not always visible.
@@ -304,6 +305,6 @@ fun windowBox() {
              }
              bottomBar()
          }
-     }
+
 
 }

@@ -13,6 +13,7 @@ import userInterface.LocalStateInfo
 import userInterface.MyConstants
 import kotlin.math.*
 import kotlinx.serialization.cbor.Cbor
+import userInterface.dropTarget
 
 
 class BadGraphException(message: String) : Exception(message)
@@ -330,7 +331,7 @@ class BondGraph(var name: String) {
                 bond.element2.addBond(bond)
             }
         }
-    state.needsBondUpdate = true
+    state.needsElementUpdate = true
     }
 
     // Add or update an element in the bond graph.
