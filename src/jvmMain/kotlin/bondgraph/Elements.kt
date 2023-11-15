@@ -6,6 +6,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.reflect.KClass
 
 /*
 The data needed to display a representation of the element on the screen.  The id, text and location are
@@ -39,19 +40,7 @@ class ElementSerializationData(val id: Int, @Contextual val type: AnnotatedStrin
 
         fun makeElement(bondgraph: BondGraph, data: ElementSerializationData): Element {
             val elementType = ElementTypes.toEnum(data.type)
-            val elementClass = when (elementType) {
-                ElementTypes.ZERO_JUNCTION -> ::ZeroJunction
-                ElementTypes.ONE_JUNCTION -> ::OneJunction
-                ElementTypes.CAPACITOR -> ::Capacitor
-                ElementTypes.RESISTOR -> ::Resistor
-                ElementTypes.INERTIA -> ::Inertia
-                ElementTypes.TRANSFORMER -> ::Transformer
-                ElementTypes.GYRATOR -> ::Gyrator
-                ElementTypes.MODULATED_TRANSFORMER -> ::ModulatedTransformer
-                ElementTypes.SOURCE_OF_EFFORT -> ::SourceOfEffort
-                ElementTypes.SOURCE_OF_FLOW -> :: SourceOfFlow
-                ElementTypes.INVALID_TYPE -> null
-            }
+            val elementClass = Element.getElementClass(elementType)
             with(data) {
                 if (elementClass != null) {
                     println("type = $type, enum = $elementType")
@@ -78,6 +67,22 @@ open class Element(val bondGraph:  BondGraph, val id: Int, val elementType: Elem
 
     companion object {
         fun getOtherElement(element: Element, bond: Bond) = if (element === bond.element1) bond.element2 else bond.element1
+
+        fun  getElementClass(elementType: ElementTypes) =
+
+            when (elementType) {
+                ElementTypes.ZERO_JUNCTION -> ::ZeroJunction
+                ElementTypes.ONE_JUNCTION -> ::OneJunction
+                ElementTypes.CAPACITOR -> ::Capacitor
+                ElementTypes.RESISTOR -> ::Resistor
+                ElementTypes.INERTIA -> ::Inertia
+                ElementTypes.TRANSFORMER -> ::Transformer
+                ElementTypes.GYRATOR -> ::Gyrator
+                ElementTypes.MODULATED_TRANSFORMER -> ::ModulatedTransformer
+                ElementTypes.SOURCE_OF_EFFORT -> ::SourceOfEffort
+                ElementTypes.SOURCE_OF_FLOW -> :: SourceOfFlow
+                ElementTypes.INVALID_TYPE -> null
+            }
     }
     fun getBondList(): List<Bond> = ArrayList(bondsMap.values)
 

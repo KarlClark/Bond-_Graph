@@ -342,21 +342,7 @@ class BondGraph(var name: String) {
             elementsMap[id]?.displayData?.location = location
             elementsMap[id]?.displayData?.centerLocation = centerOffset
         } else {
-            // This is a new element. Figure out what subclass of element it is, invoke its constructor and add it
-            // to the elementsMap.
-            val elementClass = when (elementType) {
-                ZERO_JUNCTION -> ::ZeroJunction
-                ONE_JUNCTION -> ::OneJunction
-                CAPACITOR -> ::Capacitor
-                RESISTOR -> ::Resistor
-                INERTIA -> ::Inertia
-                TRANSFORMER -> ::Transformer
-                GYRATOR -> ::Gyrator
-                MODULATED_TRANSFORMER -> ::ModulatedTransformer
-                SOURCE_OF_EFFORT -> ::SourceOfEffort
-                SOURCE_OF_FLOW -> :: SourceOfFlow
-                INVALID_TYPE -> null
-            }
+            val elementClass = Element.getElementClass(elementType)
 
             if (elementClass != null) {
                 elementsMap[id] = elementClass.invoke(
@@ -459,7 +445,7 @@ class BondGraph(var name: String) {
             val powerToElement = if (element1.id == powerToElementId) element1 else element2
             val bond = Bond(id, element1, offset1, element2, offset2, powerToElement)
             bondsMap[id] = bond
-            element1.addBond(bond) 
+            element1.addBond(bond)
             element2.addBond(bond)
             removeBondAugmentation()
         }
