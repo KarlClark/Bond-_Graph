@@ -13,118 +13,17 @@ import userInterface.LocalStateInfo
 import userInterface.MyConstants
 import kotlin.math.*
 import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromHexString
+import kotlinx.serialization.encodeToHexString
 import userInterface.dropTarget
 
 
 class BadGraphException(message: String) : Exception(message)
 
 
-/*
-An enum  for the different elements used in a bond graph, with the
-capability to convert enum value to an AnnotatedString and from
-an AnnotatedString back to the enum value.
- */
-enum class ElementTypes {
-    ZERO_JUNCTION{
-         override fun toAnnotatedString () = _0
-     },
-    ONE_JUNCTION{
-        override fun toAnnotatedString() = _1
-    },
-    CAPACITOR{
-        override fun toAnnotatedString() = C
-    },
-    RESISTOR{
-        override fun toAnnotatedString() = R
-    },
-    INERTIA{
-        override fun toAnnotatedString() = I
-    },
-    TRANSFORMER{
-        override fun toAnnotatedString() = TF
-    },
-    GYRATOR{
-        override fun toAnnotatedString() = GY
-    },
-    MODULATED_TRANSFORMER{
-        override fun toAnnotatedString()  = MTF
-    },
-    SOURCE_OF_EFFORT{
-        override fun toAnnotatedString() = Se
-    },
-    SOURCE_OF_FLOW{
-        override fun toAnnotatedString() = Sf
-    },
-    INVALID_TYPE {
-        override fun toAnnotatedString() = INVALID
-    };
 
-    abstract fun toAnnotatedString(): AnnotatedString
-/*
-We use an AnnotatedString so that the 'e' and 'f' in the 'Se' and 'Sf' elements
-can be subscripts.
- */
-    companion object {
-
-        private val style = SpanStyle(fontSize = MyConstants.elementNameFontSize, fontFamily = FontFamily.Serif)
-        private val subStyle = SpanStyle(fontSize = MyConstants.subTextFontSize)
-        val _0 = AnnotatedString("0", style)
-        val _1 = AnnotatedString("1", style)
-        val C = AnnotatedString("C", style)
-        val R = AnnotatedString("R", style)
-        val I = AnnotatedString("I", style)
-        val TF = AnnotatedString("TF", style)
-        val GY = AnnotatedString("GY", style)
-        val MTF = AnnotatedString("MTF", style)
-        val Se = buildAnnotatedString {
-            pushStyle(style)
-            append ("S")
-            pushStyle(subStyle)
-            append("e")
-            toAnnotatedString()
-        }
-
-        val Sf = buildAnnotatedString {
-            pushStyle(style)
-            append ("S")
-            pushStyle(subStyle)
-            append("f")
-            toAnnotatedString()
-        }
-        val INVALID = AnnotatedString("INVALID", style)
-        fun toEnum(value: AnnotatedString): ElementTypes {
-            return when (value) {
-                _0 -> ZERO_JUNCTION
-                _1 -> ONE_JUNCTION
-                C -> CAPACITOR
-                R -> RESISTOR
-                I -> INERTIA
-                TF -> TRANSFORMER
-                GY-> GYRATOR
-                MTF-> MODULATED_TRANSFORMER
-                Se -> SOURCE_OF_EFFORT
-                Sf -> SOURCE_OF_FLOW
-                else -> INVALID_TYPE
-            }
-        }
-
-    fun toEnum(value: String): ElementTypes {
-        return when (value) {
-            "0" -> ZERO_JUNCTION
-            "1" -> ONE_JUNCTION
-            "C" -> CAPACITOR
-            "R'" -> RESISTOR
-            "I" -> INERTIA
-            "TF" -> TRANSFORMER
-            "GY" -> GYRATOR
-            "MTF" -> MODULATED_TRANSFORMER
-            "Se" -> SOURCE_OF_EFFORT
-            "Sf" -> SOURCE_OF_FLOW
-            else -> INVALID_TYPE
-        }
-    }
-    }
-}
 
 
 
@@ -138,7 +37,7 @@ class Bond(val id: Int, val element1: Element, var offset1: @Contextual Offset, 
     var displayId: String = ""
     var effortElement: Element? = null
 }
-
+@Serializable
 class BondSerializatonData(val id: Int, val displayId: String, val elementId1: Int, val loc1x: Float, val loc1y: Float, val elementId2: Int, val locx2: Float, val locy2: Float, val powerToElementId: Int, val effortElementId: Int) {
     companion object {
         fun getData(bond: Bond): BondSerializatonData {
@@ -180,7 +79,7 @@ class BondSerializatonData(val id: Int, val displayId: String, val elementId1: I
         }
     }
 }
-
+@Serializable
 class BondGraphSerializationData(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializatonData>)
 
 class BondGraph(var name: String) {
@@ -302,28 +201,28 @@ class BondGraph(var name: String) {
     val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
     val resultsListAnnotated = mutableListOf<AnnotatedString>()
 
-    fun toSerializedStrings(): BondGraphSerializationData {
+    fun toSerializedStrings(): String {
 
 
         val elementData = elementsMap.values.map{ElementSerializationData.getData(it)}
         val bondData = bondsMap.values.map{BondSerializatonData.getData(it)}
-
-        return BondGraphSerializationData(elementData, bondData)
+        return Cbor.encodeToHexString( elementData[0])
         }
 
 @Composable
-    fun fromSerializedStrings(strings: BondGraphSerializationData) {
+    fun fromSerializedStrings(serializedString: String) {
 
         val state = LocalStateInfo.current
+        val data:BondGraphSerializationData = Cbor.decodeFromHexString(serializedString)
 
         elementsMap.clear()
         bondsMap.clear()
-        for (elementDatum in strings.elementData) {
+        for (elementDatum in data.elementData) {
             val element = ElementSerializationData.makeElement(this, elementDatum)
             key(element.id){elementsMap[element.id] = element}
         }
 
-        for (bondDatum in strings.bondData){
+        for (bondDatum in data.bondData){
             val bond = BondSerializatonData.makeBond(bondDatum, elementsMap)
             if (bond != null) {
                 bondsMap[bond.id] = bond
@@ -646,16 +545,7 @@ class BondGraph(var name: String) {
                }
            }
 
-           /*
-           Create a name for each element based on its type
-           and the numbers of the bonds it's attached to.
-           Each element type has a function for creating
-           it name from the numbers of the bonds it's
-           attached to.
-           */
 
-           println("here 4")
-           elementsMap.forEach { it.value.createDisplayId() }
 
            /*
            Assign causality starting from the sources.  Each element
@@ -718,6 +608,17 @@ class BondGraph(var name: String) {
         try {
 
             resultsList.clear()
+
+            /*
+          Create a name for each element based on its type
+          and the numbers of the bonds it's attached to.
+          Each element type has a function for creating
+          its name from the numbers of the bonds it's
+          attached to.
+          */
+
+            println("here 4")
+            elementsMap.forEach { it.value.createDisplayId() }
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 

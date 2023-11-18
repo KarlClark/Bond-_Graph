@@ -8,14 +8,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
 import java.nio.file.Path
 import androidx.compose.ui.window.AwtWindow
-import bondgraph.BondGraphSerializationData
-import bondgraph.BondSerializatonData
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 import kotlinx.serialization.cbor.Cbor
-import kotlinx.serialization.decodeFromHexString
-import kotlinx.serialization.encodeToHexString
 import userInterface.*
 import userInterface.LocalStateInfo
 import userInterface.StateInfo
@@ -25,6 +20,26 @@ import java.io.File
 
 val openDialog = DialogState<Path?>()
 var testSer: String = ""
+@Serializable
+class TestClass( @Contextual val ans:  AnnotatedString)
+@Serializable
+class TestClass2(val s: String)
+
+@Contextual val ans = buildAnnotatedString {
+    pushStyle(SpanStyle(fontSize = 22.sp))
+    append("XXX")
+    pushStyle((SpanStyle(fontSize = 15.sp)))
+    append("1232")
+    pop()
+    append("YYY")
+}
+
+val s = "XXX123YYY"
+
+ val tc = TestClass(ans)
+val tc2 = TestClass2(s)
+
+
 
 @Composable
 fun FrameWindowScope.fileDialog(
@@ -76,13 +91,14 @@ class DialogState<T> {
 
 
 }
+@OptIn(ExperimentalSerializationApi::class)
 fun main() = application {
     @Composable
     fun mainWindow() {
         var showOpen by remember { mutableStateOf(false) }
         var showClose by remember { mutableStateOf(false) }
         var buildGraph by remember { mutableStateOf(false) }
-        lateinit var  bondGrraphData: BondGraphSerializationData
+        lateinit var  bondGrraphData: String
         val state = remember { StateInfo() }
 
 
@@ -112,8 +128,17 @@ fun main() = application {
                 windowBox()
                 if (showOpen) fileDialog("Test String", true) {
                     showOpen = false
-                    bondGrraphData = bondGraph.toSerializedStrings()
+                    //bondGrraphData = bondGraph.toSerializedStrings()
+                    println("${tc.ans}")
+                    bondGraph.resultsListAnnotated .add(tc.ans)
+                    val s = Cbor.encodeToHexString(tc)
+                    val tc3 = Cbor.decodeFromHexString<TestClass>(s)
+                    if (tc3 is TestClass) {
+                        println("${tc.ans}")
+                    }
 
+                    bondGraph.resultsListAnnotated.add(tc.ans)
+                    state.showResults
                 }
 
                 if (showClose) fileDialog("Test String", false) {

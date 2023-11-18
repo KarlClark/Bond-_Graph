@@ -2,11 +2,121 @@ package bondgraph
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import userInterface.MyConstants
 import kotlin.reflect.KClass
+
+/*
+An enum  for the different elements used in a bond graph, with the
+capability to convert enum value to an AnnotatedString and from
+an AnnotatedString back to the enum value.
+ */
+enum class ElementTypes {
+    ZERO_JUNCTION{
+        override fun toAnnotatedString () = _0
+    },
+    ONE_JUNCTION{
+        override fun toAnnotatedString() = _1
+    },
+    CAPACITOR{
+        override fun toAnnotatedString() = C
+    },
+    RESISTOR{
+        override fun toAnnotatedString() = R
+    },
+    INERTIA{
+        override fun toAnnotatedString() = I
+    },
+    TRANSFORMER{
+        override fun toAnnotatedString() = TF
+    },
+    GYRATOR{
+        override fun toAnnotatedString() = GY
+    },
+    MODULATED_TRANSFORMER{
+        override fun toAnnotatedString()  = MTF
+    },
+    SOURCE_OF_EFFORT{
+        override fun toAnnotatedString() = Se
+    },
+    SOURCE_OF_FLOW{
+        override fun toAnnotatedString() = Sf
+    },
+    INVALID_TYPE {
+        override fun toAnnotatedString() = INVALID
+    };
+
+    abstract fun toAnnotatedString(): AnnotatedString
+    /*
+    We use an AnnotatedString so that the 'e' and 'f' in the 'Se' and 'Sf' elements
+    can be subscripts.
+     */
+    companion object {
+
+        private val style = SpanStyle(fontSize = MyConstants.elementNameFontSize, fontFamily = FontFamily.Serif)
+        private val subStyle = SpanStyle(fontSize = MyConstants.subTextFontSize)
+        val _0 = AnnotatedString("0", style)
+        val _1 = AnnotatedString("1", style)
+        val C = AnnotatedString("C", style)
+        val R = AnnotatedString("R", style)
+        val I = AnnotatedString("I", style)
+        val TF = AnnotatedString("TF", style)
+        val GY = AnnotatedString("GY", style)
+        val MTF = AnnotatedString("MTF", style)
+        val Se = buildAnnotatedString {
+            pushStyle(style)
+            append ("S")
+            pushStyle(subStyle)
+            append("e")
+            toAnnotatedString()
+        }
+
+        val Sf = buildAnnotatedString {
+            pushStyle(style)
+            append ("S")
+            pushStyle(subStyle)
+            append("f")
+            toAnnotatedString()
+        }
+        val INVALID = AnnotatedString("INVALID", style)
+        fun toEnum(value: AnnotatedString): ElementTypes {
+            return when (value) {
+                _0 -> ZERO_JUNCTION
+                _1 -> ONE_JUNCTION
+                C -> CAPACITOR
+                R -> RESISTOR
+                I -> INERTIA
+                TF -> TRANSFORMER
+                GY-> GYRATOR
+                MTF-> MODULATED_TRANSFORMER
+                Se -> SOURCE_OF_EFFORT
+                Sf -> SOURCE_OF_FLOW
+                else -> INVALID_TYPE
+            }
+        }
+
+        fun toEnum(value: String): ElementTypes {
+            return when (value) {
+                "0" -> ZERO_JUNCTION
+                "1" -> ONE_JUNCTION
+                "C" -> CAPACITOR
+                "R'" -> RESISTOR
+                "I" -> INERTIA
+                "TF" -> TRANSFORMER
+                "GY" -> GYRATOR
+                "MTF" -> MODULATED_TRANSFORMER
+                "Se" -> SOURCE_OF_EFFORT
+                "Sf" -> SOURCE_OF_FLOW
+                else -> INVALID_TYPE
+            }
+        }
+    }
+}
 
 /*
 The data needed to display a representation of the element on the screen.  The id, text and location are
@@ -17,7 +127,7 @@ Element contains an ElementDisplayData instance as one of its properties.
 class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
 
 @Serializable
-class ElementSerializationData(val id: Int, @Contextual val type: AnnotatedString, @Contextual val displayId: AnnotatedString, val displayDatId: Int, @Contextual val text: AnnotatedString, val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
+class ElementSerializationData(val id: Int, val type: @Contextual AnnotatedString,  val displayId: @Contextual AnnotatedString, val displayDatId: Int, val text: @Contextual AnnotatedString, val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
     companion object {
         fun getData(element: Element): ElementSerializationData {
 

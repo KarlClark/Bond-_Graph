@@ -2,9 +2,10 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     kotlin("multiplatform")
-    //kotlin("jvm") version "1.9.0"
-   kotlin("plugin.serialization") version "1.6.0"
+    kotlin("plugin.serialization") version "1.8.0"
     id("org.jetbrains.compose")
+    //id ("kotlinx-serialization")
+
 }
 
 group = "com.bondgraph"
@@ -30,7 +31,7 @@ kotlin {
 
         val commonMain by getting{
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.6.1")
             }
         }
         val jvmTest by getting
