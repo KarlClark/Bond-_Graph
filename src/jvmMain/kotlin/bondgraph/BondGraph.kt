@@ -3,21 +3,14 @@ package bondgraph
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.sp
 import bondgraph.ElementTypes.*
-import kotlinx.serialization.*
 import userInterface.LocalStateInfo
-import userInterface.MyConstants
 import kotlin.math.*
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
-import userInterface.dropTarget
 
 
 class BadGraphException(message: String) : Exception(message)
@@ -38,11 +31,11 @@ class Bond(val id: Int, val element1: Element, var offset1: @Contextual Offset, 
     var effortElement: Element? = null
 }
 @Serializable
-class BondSerializatonData(val id: Int, val displayId: String, val elementId1: Int, val loc1x: Float, val loc1y: Float, val elementId2: Int, val locx2: Float, val locy2: Float, val powerToElementId: Int, val effortElementId: Int) {
+class BondSerializationData(val id: Int, val displayId: String, val elementId1: Int, val loc1x: Float, val loc1y: Float, val elementId2: Int, val locx2: Float, val locy2: Float, val powerToElementId: Int, val effortElementId: Int) {
     companion object {
-        fun getData(bond: Bond): BondSerializatonData {
+        fun getData(bond: Bond): BondSerializationData {
             with(bond) {
-                return BondSerializatonData(
+                return BondSerializationData(
                     id,
                     displayId,
                     element1.id,
@@ -57,7 +50,7 @@ class BondSerializatonData(val id: Int, val displayId: String, val elementId1: I
             }
         }
 
-        fun makeBond(data: BondSerializatonData, elementsMap: Map<Int, Element>): Bond? {
+        fun makeBond(data: BondSerializationData, elementsMap: Map<Int, Element>): Bond? {
 
             with(data) {
                 val element1 = elementsMap[elementId1]
@@ -80,7 +73,7 @@ class BondSerializatonData(val id: Int, val displayId: String, val elementId1: I
     }
 }
 @Serializable
-class BondGraphSerializationData(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializatonData>)
+class BondGraphSerializationData(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializationData>)
 
 class BondGraph(var name: String) {
 
@@ -205,8 +198,8 @@ class BondGraph(var name: String) {
 
 
         val elementData = elementsMap.values.map{ElementSerializationData.getData(it)}
-        val bondData = bondsMap.values.map{BondSerializatonData.getData(it)}
-        return Cbor.encodeToHexString( elementData[0])
+        val bondData = bondsMap.values.map{BondSerializationData.getData(it)}
+        return Cbor.encodeToHexString( BondGraphSerializationData(elementData, bondData))
         }
 
 @Composable
@@ -223,13 +216,16 @@ class BondGraph(var name: String) {
         }
 
         for (bondDatum in data.bondData){
-            val bond = BondSerializatonData.makeBond(bondDatum, elementsMap)
+            val bond = BondSerializationData.makeBond(bondDatum, elementsMap)
             if (bond != null) {
                 bondsMap[bond.id] = bond
                 bond.element1.addBond(bond)
                 bond.element2.addBond(bond)
             }
         }
+
+    elementsMap.values.forEach{it.createDisplayId()}
+
     state.needsElementUpdate = true
     }
 
@@ -517,7 +513,6 @@ class BondGraph(var name: String) {
            if(bondsMap.isEmpty()){
                throw BadGraphException("Error: graph has no bonds")
            }
-            println("here 1")
            // Assign number labels to the bonds
            /*TODO: assign bond numbers considering their display location and the elements they
                attach to.  Try to get the numbers to flow across the graph in order. Elements
@@ -526,14 +521,12 @@ class BondGraph(var name: String) {
            var cnt = 1
            bondsMap.values.forEach {it.displayId = cnt++.toString() }
 
-           println("here 2")
            // Get a list of all sources
            val sourcesMap = elementsMap.filter { it.value.elementType == SOURCE_OF_FLOW || it.value.elementType == SOURCE_OF_EFFORT }
            val sources = ArrayList(sourcesMap.values)
            if (sources.isEmpty()) {
                throw BadGraphException("Error: graph has no sources.")
            }
-           println("here 3")
            // Starting with one of the sources, count all the elements reachable from that point. If this count doesn't
            // equal the number of elements in the whole graph, then there are elements that are not connected to the graph.
            val element1 = sources[0]?.getBondList()?.get(0)?.element1
@@ -554,13 +547,11 @@ class BondGraph(var name: String) {
            will start a chain of calls to other element's
            assignCausality() functions.
            */
-           println("here 5")
            sources.forEach{it.assignCausality()}
 
            // While causality is incomplete and there are still
            // I and C elements with unassigned causality, use
            // them to continue assigning causality.
-           println("here 6")
            var done = causalityComplete()
            bondsMap.values.forEach{println ("bond ${it.id} effort element= ${it.effortElement?.id}")}
            while ( ! done ){

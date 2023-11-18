@@ -127,17 +127,15 @@ Element contains an ElementDisplayData instance as one of its properties.
 class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
 
 @Serializable
-class ElementSerializationData(val id: Int, val type: @Contextual AnnotatedString,  val displayId: @Contextual AnnotatedString, val displayDatId: Int, val text: @Contextual AnnotatedString, val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
+class ElementSerializationData(val id: Int, val type: ElementTypes,  val displayDatId: Int,  val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
     companion object {
         fun getData(element: Element): ElementSerializationData {
 
             return with(element) {
                 ElementSerializationData(
                     id,
-                    elementType.toAnnotatedString(),
-                    displayId,
+                    elementType,
                     displayData.id,
-                    displayData.text,
                     displayData.location.x,
                     displayData.location.y,
                     displayData.width,
@@ -149,19 +147,17 @@ class ElementSerializationData(val id: Int, val type: @Contextual AnnotatedStrin
         }
 
         fun makeElement(bondgraph: BondGraph, data: ElementSerializationData): Element {
-            val elementType = ElementTypes.toEnum(data.type)
+            val elementType = data.type
             val elementClass = Element.getElementClass(elementType)
             with(data) {
                 if (elementClass != null) {
                     println("type = $type, enum = $elementType")
-                    val element = elementClass.invoke(
+                   return elementClass.invoke(
                         bondgraph,
                         id,
                         elementType,
-                        ElementDisplayData(displayDatId, text, Offset(locx, locy), width, height, Offset(cenx, ceny))
+                        ElementDisplayData(displayDatId, elementType.toAnnotatedString(), Offset(locx, locy), width, height, Offset(cenx, ceny))
                     )
-                    element.displayId = displayId
-                    return element
                 } else {
                     throw BadGraphException("Error in function makeElement, invalid ElementType = $elementType, derived from string ${data.type}")
                 }

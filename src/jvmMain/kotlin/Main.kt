@@ -8,37 +8,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.*
 import java.nio.file.Path
 import androidx.compose.ui.window.AwtWindow
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.*
-import kotlinx.serialization.cbor.Cbor
 import userInterface.*
 import userInterface.LocalStateInfo
 import userInterface.StateInfo
 import userInterface.isShifted
 import java.awt.FileDialog
 import java.io.File
-
-val openDialog = DialogState<Path?>()
-var testSer: String = ""
-@Serializable
-class TestClass( @Contextual val ans:  AnnotatedString)
-@Serializable
-class TestClass2(val s: String)
-
-@Contextual val ans = buildAnnotatedString {
-    pushStyle(SpanStyle(fontSize = 22.sp))
-    append("XXX")
-    pushStyle((SpanStyle(fontSize = 15.sp)))
-    append("1232")
-    pop()
-    append("YYY")
-}
-
-val s = "XXX123YYY"
-
- val tc = TestClass(ans)
-val tc2 = TestClass2(s)
-
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 
 @Composable
@@ -66,39 +44,14 @@ fun FrameWindowScope.fileDialog(
     dispose = FileDialog::dispose
 )
 
-
-suspend fun open() {
-
-        val path = openDialog.awaitResult()
-        if (path != null) {
-            println("$path")
-        }
-}
-
-class DialogState<T> {
-    private var onResult: CompletableDeferred<T>? by mutableStateOf(null)
-
-    val isAwaiting get() = onResult != null
-
-    suspend fun awaitResult(): T {
-        onResult = CompletableDeferred()
-        val result = onResult!!.await()
-        onResult = null
-        return result
-    }
-
-    fun onResult(result: T) = onResult!!.complete(result)
-
-
-}
 @OptIn(ExperimentalSerializationApi::class)
 fun main() = application {
     @Composable
     fun mainWindow() {
         var showOpen by remember { mutableStateOf(false) }
-        var showClose by remember { mutableStateOf(false) }
+        var showSave by remember { mutableStateOf(false) }
         var buildGraph by remember { mutableStateOf(false) }
-        lateinit var  bondGrraphData: String
+        lateinit var  bondGraphData: String
         val state = remember { StateInfo() }
 
 
@@ -121,36 +74,33 @@ fun main() = application {
                 MenuBar {
                     Menu("File") {
                         Item("Open...", onClick = { showOpen = true })
-                        Item("Save", onClick = { showClose = true })
+                        Item("Save", onClick = { showSave = true })
                     }
                 }
 
                 windowBox()
                 if (showOpen) fileDialog("Test String", true) {
+                    @Composable
                     showOpen = false
-                    //bondGrraphData = bondGraph.toSerializedStrings()
-                    println("${tc.ans}")
-                    bondGraph.resultsListAnnotated .add(tc.ans)
-                    val s = Cbor.encodeToHexString(tc)
-                    val tc3 = Cbor.decodeFromHexString<TestClass>(s)
-                    if (tc3 is TestClass) {
-                        println("${tc.ans}")
+                    println("$it")
+                    if (it != null) {
+                        bondGraphData = it.readText()
+                        buildGraph = true
                     }
 
-                    bondGraph.resultsListAnnotated.add(tc.ans)
-                    state.showResults
                 }
 
-                if (showClose) fileDialog("Test String", false) {
-                    @Composable
-                    showClose = false
+                if (showSave) fileDialog("Test String", false) {
                     println("$it")
-                    buildGraph = true
+                    showSave = false
+                    if (it != null) {
+                        it.writeText(bondGraph.toSerializedStrings())
+                    }
                 }
 
                 if (buildGraph) {
                     buildGraph = false
-                    bondGraph.fromSerializedStrings(bondGrraphData)
+                    bondGraph.fromSerializedStrings(bondGraphData)
                 }
             }
         }
