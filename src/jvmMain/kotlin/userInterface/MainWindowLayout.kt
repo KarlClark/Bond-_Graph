@@ -207,10 +207,7 @@ fun bottomBar() {
                     )
                 }
         )
-        if (currentState.clearGraph) { // Clear the work area of the current bond graph drawing.
-            currentState.clearGraph = false
-            bondGraph.clear()
-        }
+
     }
 }
 

@@ -11,6 +11,8 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
+import userInterface.count
+import userInterface.newBondId
 
 
 class BadGraphException(message: String) : Exception(message)
@@ -193,6 +195,7 @@ class BondGraph(var name: String) {
     var bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
     val resultsListAnnotated = mutableListOf<AnnotatedString>()
+    var graphHasChanged = false
 
     fun toSerializedStrings(): String {
 
@@ -226,11 +229,16 @@ class BondGraph(var name: String) {
 
     elementsMap.values.forEach{it.createDisplayId()}
 
+    count = elementsMap.values.maxOf{it.id} + 1
+    newBondId = bondsMap.values.maxOf{it.id} + 1
+
     state.needsElementUpdate = true
     }
 
     // Add or update an element in the bond graph.
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {
+        println("addElement set graphHasChanged to true")
+        graphHasChanged = true
         if (elementsMap.contains(id)){
             // Existing element was dragged so update position data. When dragging, the
             // display data was set to null, so it has to be reset also.
@@ -295,6 +303,8 @@ class BondGraph(var name: String) {
     augmentation from the bond graph since it is no longer valid.
      */
     fun removeElement (id: Int) {
+        println("removeElement set graphHasChanged to true")
+        graphHasChanged = true
         elementsMap[id]?.getBondList()?.forEach{
             it.element1.removeBond(it.id)
             it.element2.removeBond(it.id)
@@ -322,6 +332,8 @@ class BondGraph(var name: String) {
     // Clear everything from the bond graph and start over.
     @Composable
     fun clear(){
+        println("clear() set graphHasChanged to true")
+        graphHasChanged = true
         val state = LocalStateInfo.current
         elementsMap.clear()
 
@@ -336,6 +348,9 @@ class BondGraph(var name: String) {
     fun addBond(id: Int, elementId1: Int, offset1: Offset, elementId2: Int, offset2: Offset, powerToElementId: Int) {
         val element1 = elementsMap[elementId1]
         val element2 = elementsMap[elementId2]
+
+        println("addBinbd set graphHasChanged to true")
+        graphHasChanged = true
 
         if (element1 != null && element2 != null) {
             val powerToElement = if (element1.id == powerToElementId) element1 else element2
@@ -379,6 +394,8 @@ class BondGraph(var name: String) {
     Then remove the bond from the bondsMap.
      */
     fun removeBond(id: Int){
+        println("removeBond set graphHasChanged to true")
+        graphHasChanged = true
         elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)
         elementsMap[bondsMap[id]?.element2?.id]?.removeBond(id)
         bondsMap.remove(id)
@@ -390,6 +407,8 @@ class BondGraph(var name: String) {
     the element is one of the elements attached to the bond.
      */
     fun setPowerElement(id: Int, element: Element){
+        println("setPowerElement set graphHasChanged to true")
+        graphHasChanged = true
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 === element || bondsMap[id]?.element2 === element){
                 bondsMap[id]?.powerToElement = element
@@ -402,6 +421,8 @@ class BondGraph(var name: String) {
     the element is one of the elements attached to the bond.
      */
     fun setCasualElement(id: Int, element: Element?) {
+        println("setCausalElement set graphHasChanged to true")
+        graphHasChanged = true
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
                 bondsMap[id]?.effortElement = element
@@ -423,6 +444,8 @@ class BondGraph(var name: String) {
 
      */
     fun updateBondsForElement(elementId: Int, movingCenter: Offset)  {
+        println("updateBondsForElement set graphHasChanged to true")
+        graphHasChanged = true
         val movingWidth = elementsMap[elementId]?.displayData?.width
         val movingHeight = elementsMap[elementId]?.displayData?.height
         val bondsList = elementsMap[elementId]?.getBondList()
@@ -467,6 +490,8 @@ class BondGraph(var name: String) {
     be valid.
     */
     private fun removeBondAugmentation() {
+        println("removeBondAugmentation set graphHasChanged to true")
+        graphHasChanged = true
         bondsMap.values.forEach {println("removeAugmentation on bond ${it.id}  ${it.displayId}"); it.effortElement = null
         it.displayId = ""
         }
@@ -502,6 +527,8 @@ class BondGraph(var name: String) {
      */
    @Composable
     fun augment() {
+        println("augment set graphHasChanged to true")
+        graphHasChanged = true
 
        val state = LocalStateInfo.current
 

@@ -30,9 +30,9 @@ import bondgraph.BondGraph.Companion.getLabelOffset
 
 internal val LocalStateInfo = compositionLocalOf { StateInfo() }
 private var globalId = 0
-private var count = 0
+var count = 0
 
-private var newBondId = 0
+var newBondId = 0
 internal var isShifted = false
 enum class Mode {BOND_MODE, ELEMENT_MODE }
 enum class StrokeLocation{START, END, NO_STROKE}
@@ -178,6 +178,7 @@ fun  dragTarget(
                         change.consume()
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
                         currentState.centerPosition += Offset(dragAmount.x, dragAmount.y)
+                        println("dragTarget onDrag calling updateBondsForElement")
                         bondGraph.updateBondsForElement(id, currentState.centerPosition)
                     }
 
@@ -484,11 +485,17 @@ fun  dropTarget(
             // User has dragged an existing element out of the work area. So don't drop it
             // here.  The element is still in its original location with its text set
             // to null, so it's invisible.  So reset its text, and update its bonds, so
-            // they go back to the correct locations.
+            // they go back to the correct locations.  This means we haven't actually
+            // changed the bong graph, but the call to updateBondsForElement will set
+            // the graphHasChangedFlag to true.  So save the current correct value and
+            // re-assign it after the call.
             val element = bondGraph.getElement(globalId)
             if (element != null) {
+                val hasChanged = bondGraph.graphHasChanged
                 element.displayData.text = element.elementType.toAnnotatedString()
+                println("dropTarget ! dragging... calling updateBondsForElement")
                 bondGraph.updateBondsForElement(globalId, element.displayData.centerLocation)
+                bondGraph.graphHasChanged = hasChanged
             }
         }
 
@@ -579,5 +586,6 @@ internal class StateInfo {
     var clearGraph by mutableStateOf(false)
     var bondColor by mutableStateOf(Color.Black)
     var dataToDrop = INVALID_TYPE
+    var showSaveFileDialog by mutableStateOf(false)
 
 }
