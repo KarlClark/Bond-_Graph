@@ -15,6 +15,16 @@ import kotlin.io.path.writeText
 
 var pathToBondGraphFile: Path? = null
 
+/* TODO
+    1. Add .bdgh extension to file name.
+    2. test saving partial bond graph
+    3.delete results list when opening a new file
+    4. put file name in menu bar
+    5.zero out counts after clear
+    6. null out pathToBondGraph after clear
+    7. check for unsaved file when user request opening a file
+
+ */
 fun getDataFilePath(): Path{
     val separator = System.getProperty("file.separator")
     //val pathString = System.getenv("LocalAppData") + separator +"Bond_Graph" + separator + "filename.txt"
@@ -39,11 +49,17 @@ fun main() = application {
         var open by remember { mutableStateOf(false) }
         var saveAs by remember { mutableStateOf(false) }
         var save by remember { mutableStateOf(false) }
+        var exit by remember { mutableStateOf(false) }
+        var processAfterSaveAction by remember { mutableStateOf(false) }
         var buildGraph by remember { mutableStateOf(false) }
         var startUp by remember { mutableStateOf(true) }
         lateinit var  bondGraphData: String
         val state = remember { StateInfo() }
         val pathToDataFile = getDataFilePath()
+        var afterSaveAction by remember {mutableStateOf< (@Composable () -> Unit)?>({println("default")})}
+
+
+        //var xx by remember{ mutableStateOf(() -> unit = {})}
 
 
 
@@ -56,7 +72,7 @@ fun main() = application {
 
 
             Window(
-                onCloseRequest = ::exitApplication, state = WindowState(width = 1200.dp, height = 800.dp)
+                /*onCloseRequest = ::exitApplication*/ onCloseRequest = {exit = true}, state = WindowState(width = 1200.dp, height = 800.dp)
                 //, icon = (painterResource("one_by_one_pixel.jpg"))
 
                 , onKeyEvent = {
@@ -67,6 +83,8 @@ fun main() = application {
                     false
                 }) {
 
+
+
                 MenuBar {
                     Menu("File") {
                         Item("Open...", onClick = { open = true })
@@ -74,6 +92,8 @@ fun main() = application {
                         Item("Save As", onClick = { saveAs = true })
                     }
                 }
+
+
 
                 windowBox()
 
@@ -92,6 +112,7 @@ fun main() = application {
                             it.writeText(bondGraph.toSerializedStrings())
                             pathToBondGraphFile = it
                             bondGraph.graphHasChanged= false
+                            processAfterSaveAction = true
                         }
                     }
                 }
@@ -102,9 +123,11 @@ fun main() = application {
                     println("processSave, pathToBondGraphFile = $pathToBondGraphFile")
                     if (pathToBondGraphFile == null){
                         processSaveAsDialog()
+                        println("processSave saveAsDialog processed")
                     } else {
                         pathToBondGraphFile?.writeText(bondGraph.toSerializedStrings())
                         bondGraph.graphHasChanged = false
+                        afterSaveAction?.invoke()
                         save = false
                     }
                 }
@@ -135,6 +158,23 @@ fun main() = application {
                     processSave()
                 }
 
+                if (processAfterSaveAction){
+                    println("processAfterSaveAction afterSaveAction= $afterSaveAction")
+                    //afterSaveAction = {println("test")}
+                    afterSaveAction?.invoke()
+                    processAfterSaveAction = false
+                }
+
+                if (exit){
+                    if (bondGraph.graphHasChanged){
+                        afterSaveAction = {exitApplication()}
+                        state.showSaveFileDialog = true;
+                        exit = false
+                    } else {
+                        exitApplication()
+                    }
+                }
+
                 if (buildGraph) {
                     buildGraph = false
                     bondGraph.fromSerializedStrings(bondGraphData)
@@ -158,7 +198,13 @@ fun main() = application {
                     //bondGraph.clear()
                     println("if clearGraph  graphHasChanged = ${bondGraph.graphHasChanged}")
                     if (bondGraph.graphHasChanged) {
+                        afterSaveAction = {
+                            println("afteSaveAction")
+                            bondGraph.clear()
+                            pathToBondGraphFile = null
+                        }
                         state.showSaveFileDialog = true
+
                         state.clearGraph = false
                     } else {
                         bondGraph.clear()
@@ -179,6 +225,7 @@ fun main() = application {
                             println("Don't Save")
                             bondGraph.graphHasChanged = false
                             state.showSaveFileDialog = false
+                            processAfterSaveAction = true
                         },
                         onCancel = {
                             println("Cancel")
