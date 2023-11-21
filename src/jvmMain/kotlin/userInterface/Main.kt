@@ -132,21 +132,29 @@ fun main() = application {
                     }
                 }
 
-                if (open) fileDialog("Test String", true) {
-                    @Composable
-                    open = false
-                    println("fileDialog path = $it")
-                    if (it != null) {
-                        println("pathstring = ${it.pathString}  filename = ${it.fileName}}")
-                        if (! pathToDataFile.exists()){
-                            Files.createFile(pathToDataFile)
-                        }
-                        pathToDataFile.writeText(it.pathString)
-                        bondGraphData = it.readText()
-                        buildGraph = true
-                        pathToBondGraphFile = it
-                    }
+                if (open) {
+                    if (bondGraph.graphHasChanged) {
+                        afterSaveAction = {open = true}
+                        state.showSaveFileDialog = true
+                        open = false
+                    } else {
+                        fileDialog("Test String", true) {
+                            @Composable
+                            open = false
+                            println("fileDialog path = $it")
+                            if (it != null) {
+                                println("pathstring = ${it.pathString}  filename = ${it.fileName}}")
+                                if (!pathToDataFile.exists()) {
+                                    Files.createFile(pathToDataFile)
+                                }
+                                pathToDataFile.writeText(it.pathString)
+                                bondGraphData = it.readText()
+                                buildGraph = true
+                                pathToBondGraphFile = it
+                            }
 
+                        }
+                    }
                 }
 
                 if (saveAs) {

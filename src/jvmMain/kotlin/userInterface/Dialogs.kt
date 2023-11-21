@@ -15,6 +15,7 @@ import androidx.compose.ui.window.FrameWindowScope
 import java.awt.FileDialog
 import java.io.File
 import java.nio.file.Path
+import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 fun FrameWindowScope.fileDialog(
@@ -28,6 +29,14 @@ fun FrameWindowScope.fileDialog(
                 super.setVisible(value)
                 if (value) {
                     if (file != null) {
+                        if ( ! isLoad) {
+                            val index = file.lastIndexOf(".")
+                            if (index > 0) {
+                                file = file.substring(0,index)
+                            }
+                            file = file  + ".bdgh"
+                            println("file = $file")
+                        }
                         onResult(File(directory).resolve(file).toPath())
                     } else {
                         onResult(null)
@@ -36,6 +45,9 @@ fun FrameWindowScope.fileDialog(
             }
         }.apply {
             this.title = title
+            if(! isLoad) {
+                this.file = ".bdgh"
+            }
         }
     },
     dispose = FileDialog::dispose
