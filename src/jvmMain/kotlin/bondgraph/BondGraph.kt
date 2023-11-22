@@ -230,7 +230,8 @@ class BondGraph(var name: String) {
     elementsMap.values.forEach{it.createDisplayId()}
 
     count = elementsMap.values.maxOf{it.id} + 1
-    newBondId = bondsMap.values.maxOf{it.id} + 1
+    newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
+    resultsList.clear()
 
     state.needsElementUpdate = true
     }
@@ -333,11 +334,12 @@ class BondGraph(var name: String) {
     @Composable
     fun clear(){
         println("clear() set graphHasChanged to true")
-        graphHasChanged = true
+        graphHasChanged = false
         val state = LocalStateInfo.current
         elementsMap.clear()
-
         bondsMap.clear()
+        count = 0
+        newBondId = 0
         state.needsElementUpdate = true
     }
 

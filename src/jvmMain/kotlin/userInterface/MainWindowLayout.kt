@@ -32,6 +32,8 @@ object MyConstants {
     val resultsFontSize = 20.sp
     val elementNameFontSize: TextUnit =20.sp
     val subTextFontSize: TextUnit = 15.sp
+    val menuBarFontSize = 18.sp
+    val menuItemFontSize = 14.sp
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)
     val offColor = Color.LightGray
