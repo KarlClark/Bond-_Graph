@@ -30,9 +30,6 @@ import bondgraph.BondGraph.Companion.getLabelOffset
 
 internal val LocalStateInfo = compositionLocalOf { StateInfo() }
 private var globalId = 0
-var count = 0
-
-var newBondId = 0
 internal var isShifted = false
 enum class Mode {BOND_MODE, ELEMENT_MODE }
 enum class StrokeLocation{START, END, NO_STROKE}
@@ -67,8 +64,14 @@ fun draggable(
     content: @Composable BoxScope.() -> Unit  //Content to display
 ) {
     val state = LocalStateInfo.current
+    var localOffsetToWindow by remember { mutableStateOf(Offset.Zero)}
 
-    Box(modifier = modifier.fillMaxSize())
+    Box(modifier = modifier
+        .fillMaxSize()
+        .onGloballyPositioned {
+            localOffsetToWindow = it.localToWindow(Offset.Zero)
+        }
+    )
     {
         content()
         if (state.isDragging) {
@@ -80,8 +83,8 @@ fun draggable(
             Box(modifier = Modifier
                 .graphicsLayer {
                     val offset = (state.startPosition + state.dragOffset)
-                    translationX = offset.x.minus(targetSize.width / 2)
-                    translationY = offset.y.minus(targetSize.height / 2)
+                    translationX = offset.x.minus(targetSize.width / 2) - localOffsetToWindow.x
+                    translationY = offset.y.minus(targetSize.height / 2) - localOffsetToWindow.y
                 }
                 .onGloballyPositioned {
                     targetSize = it.size
@@ -163,8 +166,12 @@ fun  dragTarget(
                         bondGraph.getElement(id)?.displayData?.text  = AnnotatedString("")
                         currentState.dataToDrop = dataToDrop
                         currentState.isDragging = true
+
+                        // currentPosition is the position of upper left corner of the box, 'it' is the small offset
+                        // from the currentPosition to where the user actually clicked.
                         currentState.startPosition = currentPosition + it
-                        currentState.draggableComposable = { elementContent((dataToDrop.toAnnotatedString())) }
+
+                        currentState.draggableComposable = { elementContent((dataToDrop.toAnnotatedString()), MyConstants.draggingColor) }
                         currentState.centerOffset = centerOffset
                         currentState.centerPosition = currentState.startPosition - currentState.workPaneToWindowOffset
                     }
@@ -178,7 +185,6 @@ fun  dragTarget(
                         change.consume()
                         currentState.dragOffset += Offset(dragAmount.x, dragAmount.y)
                         currentState.centerPosition += Offset(dragAmount.x, dragAmount.y)
-                        println("dragTarget onDrag calling updateBondsForElement")
                         bondGraph.updateBondsForElement(id, currentState.centerPosition)
                     }
 
@@ -373,7 +379,7 @@ fun  dropTarget(
                             val disData = bondGraph.getElement(destinationId)?.displayData
                             if (disData != null) {
                                 bondEndOffset = offsetFromCenter(disData.centerLocation, bondStartOffset, disData.width, disData.height )
-                                dragInfo.bondColor = Color.Red
+                                dragInfo.bondColor = MyConstants.draggingColor
                             }
                         } else { // haven't reached another element, so update bondEndOffset with amount we have dragged.
                             bondEndOffset += dragAmount
@@ -465,7 +471,7 @@ fun  dropTarget(
                 if (isBondDragEnded){  // Dragged ended. If we reached another element then create a new bond.
 
                     if (destinationId >= 0) {
-                        bondGraph.addBond(newBondId++, originId, bondStartOffset, destinationId, bondEndOffset, destinationId)
+                        bondGraph.addBond(bondGraph.getNextBondId(), originId, bondStartOffset, destinationId, bondEndOffset, destinationId)
                     }
 
                     isBondDragEnded = false
@@ -493,7 +499,6 @@ fun  dropTarget(
             if (element != null) {
                 val hasChanged = bondGraph.graphHasChanged
                 element.displayData.text = element.elementType.toAnnotatedString()
-                println("dropTarget ! dragging... calling updateBondsForElement")
                 bondGraph.updateBondsForElement(globalId, element.displayData.centerLocation)
                 bondGraph.graphHasChanged = hasChanged
             }
@@ -515,7 +520,7 @@ fun  dropTarget(
             val location = centerLocation - dragInfo.centerOffset
 
             // If this is new element assign it a new id.
-            val id = if (globalId >= 1000) count++ else globalId
+            val id = if (globalId >= 1000) bondGraph.getNextElementId() else globalId
 
             bondGraph.addElement(id, dragInfo.dataToDrop, location, centerLocation)
         }
@@ -534,11 +539,12 @@ fun  dropTarget(
 }
 
 @Composable
-fun elementContent(text:AnnotatedString){
+fun elementContent(text:AnnotatedString, textColor: Color){
     // This is our draggable composable. It is just text
     // in the center of a Box that is the same size as the text.
-    // This is important because the size of this box is used
+    // This is important because the size of this box is us ed
     // in calculations.
+    val state = LocalStateInfo.current
     Box(
         modifier = Modifier
             .wrapContentSize()
@@ -547,7 +553,8 @@ fun elementContent(text:AnnotatedString){
             text = text,
             Modifier.align(Alignment.Center),
             fontSize = MyConstants.elementNameFontSize,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = textColor
         )
     }
 }
@@ -564,7 +571,7 @@ fun displayElement(displayData: ElementDisplayData) {
         ,ElementTypes.toEnum(displayData.text)
         ,displayData.id
     ) {
-        elementContent(displayData.text)
+        elementContent(displayData.text, MyConstants.notDraggingColor)
     }
 }
 

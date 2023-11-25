@@ -11,13 +11,34 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
-import userInterface.count
-import userInterface.newBondId
 
 
 class BadGraphException(message: String) : Exception(message)
 
 
+class Results() {
+    val resultsList = mutableListOf<AnnotatedString>()
+
+    fun add(string: String) {
+        resultsList.add(AnnotatedString( string))
+    }
+
+    fun add(string: AnnotatedString) {
+        resultsList.add(string)
+    }
+
+    fun clear(){
+        resultsList.clear()
+        resultsList.clear()
+    }
+
+    @Composable
+    fun forEachResult ( fn: @Composable (string: AnnotatedString) -> Unit ) {
+        for (r  in resultsList) {
+            fn(r)
+        }
+    }
+}
 
 
 
@@ -193,9 +214,13 @@ class BondGraph(var name: String) {
      */
     private var elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     var bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
-    val resultsList = mutableStateListOf<String>() // List of error or results that we want to display.
-    val resultsListAnnotated = mutableListOf<AnnotatedString>()
+    val results = Results()
+
     var graphHasChanged = false
+    var newElementId = 0
+    var newBondId = 0
+
+
 
     fun toSerializedStrings(): String {
 
@@ -229,16 +254,18 @@ class BondGraph(var name: String) {
 
     elementsMap.values.forEach{it.createDisplayId()}
 
-    count = elementsMap.values.maxOf{it.id} + 1
+    newElementId = elementsMap.values.maxOf{it.id} + 1
     newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
-    resultsList.clear()
+    results.clear()
 
     state.needsElementUpdate = true
     }
 
+    fun getNextElementId() = newElementId++
+    fun getNextBondId() = newBondId++
+
     // Add or update an element in the bond graph.
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {
-        println("addElement set graphHasChanged to true")
         graphHasChanged = true
         if (elementsMap.contains(id)){
             // Existing element was dragged so update position data. When dragging, the
@@ -304,7 +331,6 @@ class BondGraph(var name: String) {
     augmentation from the bond graph since it is no longer valid.
      */
     fun removeElement (id: Int) {
-        println("removeElement set graphHasChanged to true")
         graphHasChanged = true
         elementsMap[id]?.getBondList()?.forEach{
             it.element1.removeBond(it.id)
@@ -333,12 +359,11 @@ class BondGraph(var name: String) {
     // Clear everything from the bond graph and start over.
     @Composable
     fun clear(){
-        println("clear() set graphHasChanged to true")
         graphHasChanged = false
         val state = LocalStateInfo.current
         elementsMap.clear()
         bondsMap.clear()
-        count = 0
+        newElementId = 0
         newBondId = 0
         state.needsElementUpdate = true
     }
@@ -351,7 +376,6 @@ class BondGraph(var name: String) {
         val element1 = elementsMap[elementId1]
         val element2 = elementsMap[elementId2]
 
-        println("addBinbd set graphHasChanged to true")
         graphHasChanged = true
 
         if (element1 != null && element2 != null) {
@@ -396,7 +420,6 @@ class BondGraph(var name: String) {
     Then remove the bond from the bondsMap.
      */
     fun removeBond(id: Int){
-        println("removeBond set graphHasChanged to true")
         graphHasChanged = true
         elementsMap[bondsMap[id]?.element1?.id]?.removeBond(id)
         elementsMap[bondsMap[id]?.element2?.id]?.removeBond(id)
@@ -409,7 +432,6 @@ class BondGraph(var name: String) {
     the element is one of the elements attached to the bond.
      */
     fun setPowerElement(id: Int, element: Element){
-        println("setPowerElement set graphHasChanged to true")
         graphHasChanged = true
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 === element || bondsMap[id]?.element2 === element){
@@ -423,7 +445,6 @@ class BondGraph(var name: String) {
     the element is one of the elements attached to the bond.
      */
     fun setCasualElement(id: Int, element: Element?) {
-        println("setCausalElement set graphHasChanged to true")
         graphHasChanged = true
         if (bondsMap[id] != null){
             if(bondsMap[id]?.element1 == element || bondsMap[id]?.element2 == element){
@@ -446,7 +467,6 @@ class BondGraph(var name: String) {
 
      */
     fun updateBondsForElement(elementId: Int, movingCenter: Offset)  {
-        println("updateBondsForElement set graphHasChanged to true")
         graphHasChanged = true
         val movingWidth = elementsMap[elementId]?.displayData?.width
         val movingHeight = elementsMap[elementId]?.displayData?.height
@@ -492,9 +512,8 @@ class BondGraph(var name: String) {
     be valid.
     */
     private fun removeBondAugmentation() {
-        println("removeBondAugmentation set graphHasChanged to true")
         graphHasChanged = true
-        bondsMap.values.forEach {println("removeAugmentation on bond ${it.id}  ${it.displayId}"); it.effortElement = null
+        bondsMap.values.forEach { it.effortElement = null
         it.displayId = ""
         }
     }
@@ -529,7 +548,6 @@ class BondGraph(var name: String) {
      */
    @Composable
     fun augment() {
-        println("augment set graphHasChanged to true")
         graphHasChanged = true
 
        val state = LocalStateInfo.current
@@ -582,7 +600,6 @@ class BondGraph(var name: String) {
            // I and C elements with unassigned causality, use
            // them to continue assigning causality.
            var done = causalityComplete()
-           bondsMap.values.forEach{println ("bond ${it.id} effort element= ${it.effortElement?.id}")}
            while ( ! done ){
 
                if (! done){
@@ -613,8 +630,8 @@ class BondGraph(var name: String) {
            }
 
        }catch(e: BadGraphException ) {
-           resultsList.clear()
-           resultsList.add(e.message.toString())
+           results.clear()
+           results.add(e.message.toString())
            state.showResults = true
        }
 
@@ -627,7 +644,7 @@ class BondGraph(var name: String) {
 
         try {
 
-            resultsList.clear()
+            results.clear()
 
             /*
           Create a name for each element based on its type
@@ -637,8 +654,8 @@ class BondGraph(var name: String) {
           attached to.
           */
 
-            println("here 4")
             elementsMap.forEach { it.value.createDisplayId() }
+            elementsMap.forEach{it.value.createTokens()}
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
@@ -646,13 +663,13 @@ class BondGraph(var name: String) {
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
 
             for (element in elementsList ) {
-                resultsList.add(element.deriveEquation())
+                results.add(element.deriveEquation().toAnnotatedString())
             }
             state.showResults = true
 
         }catch(e: BadGraphException ) {
-            resultsList.clear()
-            resultsList.add(e.message.toString())
+            results.clear()
+            results.add(e.message.toString())
             state.showResults = true
         }
     }

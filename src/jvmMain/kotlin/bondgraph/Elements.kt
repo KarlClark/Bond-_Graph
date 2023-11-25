@@ -1,5 +1,6 @@
 package bondgraph
 
+import algebra.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -151,7 +152,6 @@ class ElementSerializationData(val id: Int, val type: ElementTypes,  val display
             val elementClass = Element.getElementClass(elementType)
             with(data) {
                 if (elementClass != null) {
-                    println("type = $type, enum = $elementType")
                    return elementClass.invoke(
                         bondgraph,
                         id,
@@ -166,7 +166,7 @@ class ElementSerializationData(val id: Int, val type: ElementTypes,  val display
     }
 }
 
-open class Element(val bondGraph:  BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
+abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
     var displayId: @Contextual AnnotatedString = AnnotatedString(id.toString())
     
     val bondsMap = linkedMapOf<Int, Bond>()
@@ -231,6 +231,8 @@ open class Element(val bondGraph:  BondGraph, val id: Int, val elementType: Elem
         }
     }
 
+    abstract fun createTokens()
+
     open fun addBond(bond: Bond) {
         bondsMap[bond.id] = bond
     }
@@ -253,15 +255,23 @@ open class Element(val bondGraph:  BondGraph, val id: Int, val elementType: Elem
 
     open fun implement(){}
 
-    open fun deriveEquation(): String = ""
+    abstract fun deriveEquation(): Equation
 
-    open fun getFlow(bond: Bond): String = ""
+    abstract fun getFlow(bond: Bond): Expr
 
-    open fun getEffort(bond: Bond): String = ""
+    abstract fun getEffort(bond: Bond): Expr
 
 }
 
-open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+
+    override abstract fun deriveEquation(): Equation
+
+    override abstract fun getEffort(bond: Bond): Expr
+
+    override abstract fun getFlow(bond: Bond): Expr
+
+
     override fun addBond(bond: Bond){
         if (bondsMap.size > 0){
             getBondList().forEach { bondGraph.removeBond(it.id) }
@@ -281,7 +291,14 @@ open class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         }
     }
 }
-open class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+
+    override abstract fun deriveEquation(): Equation
+
+    override abstract fun getEffort(bond: Bond): Expr
+
+    override abstract fun getFlow(bond: Bond): Expr
+
 
     override fun addBond(bond: Bond) {
         if (bondsMap.size == 2){
@@ -332,26 +349,30 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
         }
     }
 
-    override fun getFlow(bond: Bond): String {
+    override fun createTokens() {}
+    override fun deriveEquation(): Equation {
+        return Equation.empty()
+    }
+
+    override fun getFlow(bond: Bond): Expr {
         val bondsList = getBondList()
         val flowBond = bondsList.filter{it.effortElement !== this}[0]
         return getOtherElement(this, flowBond).getFlow(flowBond)
 
     }
 
-    override fun getEffort(bond: Bond): String {
+    override fun getEffort(bond: Bond): Expr {
 
         val otherBonds = getOtherBonds(bond)
         val thisElement = this
-        val sb = buildString {
-            append("(")
-            for (otherBond in otherBonds){
-                append (if (sameDirection(thisElement, bond, otherBond)) " - " else " + " )
-                append (getOtherElement(thisElement, otherBond).getEffort(otherBond))
-            }
-            append (")")
+
+
+        val sum = Sum()
+        for (otherBond in otherBonds ) {
+            val otherElement = getOtherElement(thisElement, otherBond)
+            if (sameDirection(thisElement, bond, otherBond)) sum.minus(otherElement.getEffort(otherBond)) else sum.add(otherElement.getEffort(otherBond))
         }
-        return sb
+        return sum
     }
 
 }
@@ -379,32 +400,51 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         }
     }
 
-    override fun getEffort(bond: Bond): String {
+    override fun createTokens() {}
+
+    override fun deriveEquation(): Equation {
+        return Equation.empty()
+    }
+
+    override fun getEffort(bond: Bond): Expr {
         val bondsList = getBondList()
         val effortBond = bondsList.filter{it.effortElement === this}[0]
         return getOtherElement(this, effortBond).getEffort(effortBond)
 
     }
 
-    override fun getFlow(bond: Bond): String {
+    override fun getFlow(bond: Bond): Expr {
 
         val otherBonds = getOtherBonds(bond)
         val thisElement = this
-        val sb = buildString {
-            append("(")
-            for (otherBond in otherBonds){
 
-                append (if (sameDirection(thisElement, bond, otherBond)) " - " else " + " )
-
-                append (getOtherElement(thisElement, otherBond).getFlow(otherBond))
-            }
-            append (")")
+        val sum = Sum()
+        for (otherBond in otherBonds) {
+            val otherElement = getOtherElement(thisElement, otherBond)
+            if (sameDirection(thisElement, bond, otherBond)) sum.minus(otherElement.getFlow(otherBond)) else sum.add(otherElement.getFlow(otherBond))
         }
-        return sb
+        return sum
     }
 }
 
 class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+
+    var cToken = Token()
+    var qToken = Token()
+    var qDotToken = Token()
+
+
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        val bond = bondsList[0]
+        if (bond.effortElement == null) throw BadGraphException("Error: Attempt to create tokens on an element with no causality set. Has createdTokens been called before augmntation?")
+
+        cToken = Token(bond.displayId, "",  elementType.toAnnotatedString(), false, false, false, false)
+        qToken = Token(bond.displayId, "", AnnotatedString("q"), false, true, bond.effortElement !== this,false,)
+        qDotToken = Token(bond.displayId, "", AnnotatedString("q"), false, true, bond.effortElement !== this, true)
+    }
+
 
     override fun assignCausality() {
 
@@ -417,20 +457,47 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
 
     }
 
-    override fun getEffort(bond: Bond): String {
-        return "q" + getBondList()[0].displayId + "/" + displayId.toString()
+    override fun getFlow(bond: Bond): Expr {
+        if (true) throw BadGraphException("Error: call to Capacitor.getFlow() which is not implemented")
+        return Term()
     }
 
-    override fun deriveEquation(): String {
+    override fun getEffort(bond: Bond): Expr {
+
+        if (cToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called but tokens have not been created.  Has createdTokens been called?")
+
+        return Term().multiply(qToken).divide(cToken)
+    }
+
+    override fun deriveEquation(): Equation {
         val bond = getBondList()[0]
-        return "dq" + bond.displayId + "/dt = " + getOtherElement(this,bond).getFlow(bond)
-        //return bond.displayId + '\u0307' + " = " + getOtherElement(this,bond).getFlow(bond)
+
+        if (qDotToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called but tokens have not been created.  Has createdTokens been called?")
+        return Equation(qDotToken, getOtherElement(this, bond).getFlow(bond))
+
     }
 
 
 }
 
 class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, element, displayData) {
+
+
+    var iToken = Token()
+    var pToken = Token()
+    var pDotToken = Token()
+
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        val bond = bondsList[0]
+        if (bond.effortElement == null) throw BadGraphException("Error: Attempt to create tokens on an element with no causality set. Has createdTokens been called before augmntation?")
+
+        iToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+        pToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement !== this,false,)
+        pDotToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement !== this, true)
+    }
+
 
     override fun assignCausality() {
 
@@ -442,18 +509,35 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
         }
     }
 
-    override fun getFlow(bond: Bond): String {
-        return "p" + getBondList()[0].displayId +"/" + displayId
+    override fun getEffort(bond: Bond): Expr {
+        if (true) throw BadGraphException("Error: call to Inertia.getEffort which is not implemented")
+        return Term()
     }
 
-    override fun deriveEquation(): String {
+    override fun getFlow(bond: Bond): Expr {
+
+        if (iToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called but tokens have not been created.  Has createdTokens been called?")
+        return Term().multiply(pToken).divide(iToken)
+    }
+
+    override fun deriveEquation(): Equation {
         val bond = getBondList()[0]
-        return "dp" + bond.displayId + "/dt = " + getOtherElement(this,bond).getEffort(bond)
-        //return bond.displayId + '\u0307' + " = "+ getOtherElement(this,bond).getEffort(bond)
+        return Equation(pDotToken, getOtherElement(this, bond).getEffort(bond))
     }
 }
 
 class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+
+    var rToken = Token()
+
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        val bond = bondsList[0]
+
+        rToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+    }
+
 
     override fun assignCausality() {
 
@@ -465,20 +549,36 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
         }
     }
 
-    override fun getEffort(bond: Bond): String {
+    override fun getEffort(bond: Bond): Expr {
         val thisBond = getBondList()[0]
         val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
-        return "$sFlow*$displayId"
+        return Term().multiply(sFlow).multiply(rToken)
     }
 
-    override fun getFlow(bond: Bond): String {
+    override fun getFlow(bond: Bond): Expr {
         val thisBond = getBondList()[0]
         val sEffort=  getOtherElement(this, thisBond).getEffort(thisBond)
-        return "$sEffort*1/$displayId"
+        return Term().multiply(sEffort).divide(rToken)
+    }
+
+    override fun deriveEquation(): Equation {
+        if (true) throw BadGraphException("Error: Call to Resistor.deriveEquation which is not implemented.")
+
+        return Equation(Term(), Term())
     }
 }
 
 class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+
+    var sToken = Token()
+
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        val bond = bondsList[0]
+
+        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+    }
 
     override fun assignCausality() {
         val bond = getBondList()[0]
@@ -492,13 +592,36 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
         }
     }
 
-    override fun getEffort(bond: Bond): String {
-        return "e" + getBondList()[0].displayId + "(t)"
+    override fun getFlow(bond: Bond): Expr {
+        if (true) throw BadGraphException("Error: call to SourecOfEffort.getFlow()  which make no since and is clearly an error")
+        return Term()
     }
 
+
+    override fun getEffort(bond: Bond): Expr {
+        return Term().multiply(sToken)
+    }
+
+    override fun deriveEquation(): Equation {
+        if (true) throw BadGraphException("Error: Call to SourceOfFlow.deriveEquation which is not implemented.")
+
+        return Equation(Term(), Term())
+    }
 }
 
 class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+
+    var sToken = Token()
+
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        val bond = bondsList[0]
+
+        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+    }
+
+
     override fun assignCausality() {
         val bond = getBondList()[0]
 
@@ -511,18 +634,39 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         }
     }
 
-    override fun getFlow(bond: Bond): String {
-        return "f" + getBondList()[0].displayId + "(t)"
+    override fun getEffort(bond: Bond): Expr {
+        if (true) throw BadGraphException("Error: call to SourecOfFlow.getEffort()  which make no since and is clearly an error")
+        return Term()
     }
 
+    override fun getFlow(bond: Bond): Expr {
+        return Term().multiply(sToken)
+    }
+
+    override fun deriveEquation(): Equation {
+        if (true) throw BadGraphException("Error: Call to SourceOfFLow.deriveEquation which is not implemented.")
+
+        return Equation(Term(), Term())
+    }
 }
 
 open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
-    class Modulator(private val element1: Element, private val id: String){
-        fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
+    var tToken = Token()
+    var mToken = Token()
 
-        fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) "1/M$id" else "M$id"
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        tToken = Token(bondsList[0].displayId, bondsList[1].displayId , elementType.toAnnotatedString(), false, false, false, false)
+    }
+
+
+
+    class Modulator(private val element1: Element, val token: Token){
+        fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) Term().multiply(token) else Term().divide(token)
+
+        fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) Term().divide(token) else Term().multiply(token)
 
     }
 
@@ -547,29 +691,54 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         }
     }
 
-    override fun getEffort(bond: Bond): String {
-        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
+    override fun getEffort(bond: Bond): Expr {
+        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), mToken)
         val mod = modulator.getEffortModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
-        return mod + otherElement.getEffort(otherBond)
+        return mod.multiply(otherElement.getEffort(otherBond))
     }
 
-    override fun getFlow(bond: Bond): String {
-        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
+    override fun getFlow(bond: Bond): Expr {
+        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), mToken)
         val mod = modulator.getFlowModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
-        return mod + otherElement.getFlow(otherBond)
+        return mod.multiply(otherElement.getFlow(otherBond))
+    }
+
+    override fun deriveEquation(): Equation {
+        if (true) throw BadGraphException("Error: Call to Transformer.deriveEquation which is not implemented.")
+
+        return Equation(Term(), Term())
     }
 }
 
 class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
-    class Modulator(private val element1: Element, private val id: String){
-        fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) "M$id" else "1/M$id"
+    var gToken = Token()
 
-        fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) "1/M$id" else "M$id"
+    override fun createTokens() {
+        val bondsList = getBondList()
+        if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
+        gToken = Token(
+            bondsList[0].displayId,
+            bondsList[1].displayId,
+            elementType.toAnnotatedString(),
+            false,
+            false,
+            false,
+            false
+        )
+    }
+
+
+    class Modulator(private val element1: Element, private val token: Token) {
+        fun getEffortModulator(elementToMultiply: Element) =
+            if (elementToMultiply === element1) Term().multiply(token) else Term().divide(token)
+
+        fun getFlowModulator(elementToMultiply: Element) =
+            if (elementToMultiply === element1) Term().divide(token) else Term().multiply(token)
 
     }
 
@@ -577,16 +746,16 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error gyrator $displayId has only one bond.")
         val assignedBonds = getAssignedBonds()
-        if (assignedBonds.size == 2){
-            if ( (assignedBonds[0].effortElement === this &&  assignedBonds[1].effortElement !== this)
+        if (assignedBonds.size == 2) {
+            if ((assignedBonds[0].effortElement === this && assignedBonds[1].effortElement !== this)
                 ||
-                ( assignedBonds[0].effortElement !== this && assignedBonds[1].effortElement === this)
+                (assignedBonds[0].effortElement !== this && assignedBonds[1].effortElement === this)
             ) throw BadGraphException("Error: gyrator $displayId is being forces into conflicting causality.")
         } else {
             val assignedBond = assignedBonds[0]
-            val unassignedBond =  getUnassignedBonds()[0]
+            val unassignedBond = getUnassignedBonds()[0]
             val unassignedOther = getOtherElement(this, unassignedBond)
-            if (this === assignedBond.effortElement){
+            if (this === assignedBond.effortElement) {
                 unassignedBond.effortElement = this
             } else {
                 unassignedBond.effortElement = unassignedOther
@@ -595,21 +764,28 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
         }
     }
 
-    override fun getEffort(bond: Bond): String {
-        val modulator  = Transformer.Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
+    override fun getEffort(bond: Bond): Expr {
+        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), gToken)
         val mod = modulator.getEffortModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
-        return mod + otherElement.getFlow(otherBond)
+        return mod.multiply(otherElement.getFlow(otherBond))
     }
 
-    override fun getFlow(bond: Bond): String {
-        val modulator  = Transformer.Modulator(getOtherElement(this, getBondList()[0]), getBondList()[0].displayId)
+    override fun getFlow(bond: Bond): Expr {
+        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), gToken)
         val mod = modulator.getFlowModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
-        return mod + otherElement.getEffort(otherBond)
+        return mod.multiply(otherElement.getEffort(otherBond))
     }
 
+    override fun deriveEquation(): Equation {
+        if (true) throw BadGraphException("Error: Call to Gyrator.deriveEquation which is not implemented.")
+
+        return Equation(Term(), Term())
+    }
 }
+
+
 class ModulatedTransformer (bondGraph: BondGraph, id: Int,  elementType: ElementTypes, displayData: ElementDisplayData): Transformer(bondGraph, id, elementType, displayData)

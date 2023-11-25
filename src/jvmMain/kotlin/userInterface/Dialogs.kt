@@ -35,7 +35,6 @@ fun FrameWindowScope.fileDialog(
                                 file = file.substring(0,index)
                             }
                             file = file  + ".bdgh"
-                            println("file = $file")
                         }
                         onResult(File(directory).resolve(file).toPath())
                     } else {
@@ -60,7 +59,7 @@ fun saveFileDialog(
     onCancel: () -> Unit,
     onCloseRequest: () -> Unit,
 ) {
-    Dialog(visible = true, onCloseRequest = {println("closeRequest");onCloseRequest()}) {
+    Dialog(visible = true, onCloseRequest = {onCloseRequest()}) {
         // Draw a rectangle shape with rounded corners inside the dialog
         Card(
             modifier = Modifier

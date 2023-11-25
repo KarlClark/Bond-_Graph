@@ -38,6 +38,8 @@ object MyConstants {
     val myWhite = Color(250, 250, 250)
     val offColor = Color.LightGray
     val onColor = myGreen
+    val draggingColor = Color.Red
+    val notDraggingColor = Color.Black
     val graphBackground = Color(242, 215, 140)
     val resultsBackground = Color(206, 232, 246)
 }
@@ -286,16 +288,9 @@ fun windowBox() {
                              .weight(3.5f, true)
 
                      ) {
-                         bondGraph.resultsList.forEach {
+                         bondGraph.results.forEachResult {
                              Text(
                                  it, fontSize = MyConstants.resultsFontSize, modifier = Modifier
-                                     .padding(start = 10.dp, top = 5.dp)
-                             )
-                         }
-
-                         bondGraph.resultsListAnnotated.forEach {
-                             Text(
-                                 it,  modifier = Modifier
                                      .padding(start = 10.dp, top = 5.dp)
                              )
                          }

@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.sp
 var pathToBondGraphFile: Path? = null
 
 /* TODO
-    - rename count variable and move it and newBondId into BondGraph Class
     - grey out elements in sidebar when in bond mode
-    - change color of elements when dragging.
+    - dialog to prevent saving a blank bond graph
+    - simplify a bond graph
 
  */
 fun getDataFilePath(): Path{
@@ -43,9 +43,7 @@ fun getDataFilePath(): Path{
         Files.createDirectories(directoryPath)
     }
     val pathString = directory + separator + "filename.txt"
-    println("$pathString")
     val path =  Paths.get(pathString)
-    println("path = $path")
     return path
 }
 
@@ -66,7 +64,7 @@ fun main() = application {
         lateinit var  bondGraphData: String
         val state = remember { StateInfo() }
         val pathToDataFile = getDataFilePath()
-        var afterSaveAction by remember {mutableStateOf< (@Composable () -> Unit)?>({println("default")})}
+        var afterSaveAction by remember {mutableStateOf< (@Composable () -> Unit)?>(null)}
 
 
         //var xx by remember{ mutableStateOf(() -> unit = {})}
@@ -109,7 +107,7 @@ fun main() = application {
 
                         )
 
-                        DropdownMenu(expanded = expandMenu, onDismissRequest = { println("onDismissRequest"); expandMenu = false }) {
+                        DropdownMenu(expanded = expandMenu, onDismissRequest = {expandMenu = false }) {
                             DropdownMenuItem(onClick = { open = true; expandMenu = false}) { Text("Open", fontSize = MyConstants.menuItemFontSize) }
                             DropdownMenuItem(onClick = { save = true; expandMenu = false }) { Text("Save", fontSize = MyConstants.menuItemFontSize) }
                             DropdownMenuItem(onClick = { saveAs = true; expandMenu = false }) { Text("Save As", fontSize = MyConstants.menuItemFontSize) }
@@ -135,7 +133,6 @@ fun main() = application {
                 //, icon = (painterResource("one_by_one_pixel.jpg"))
 
                 , onKeyEvent = {
-                    println("Key Event,  isShiftPressed = ${it.isShiftPressed}")
                     if (it.isShiftPressed) {
                         isShifted = true
                     }
@@ -168,11 +165,9 @@ fun main() = application {
                     @Composable
                     fun processSaveAsDialog() {
                         fileDialog("Test String", false) {
-                            println("fileDialog selected path = $it")
                             saveAs = false
                             save = false
                             if (it != null) {
-                                println("pathstring = ${it.pathString}  filename = ${it.fileName}}")
                                 if (!pathToDataFile.exists()) {
                                     Files.createFile(pathToDataFile)
                                 }
@@ -188,10 +183,8 @@ fun main() = application {
                     @Composable
                     fun processSave() {
                         //save = false
-                        println("processSave, pathToBondGraphFile = $pathToBondGraphFile")
                         if (pathToBondGraphFile == null) {
                             processSaveAsDialog()
-                            println("processSave saveAsDialog processed")
                         } else {
                             pathToBondGraphFile?.writeText(bondGraph.toSerializedStrings())
                             bondGraph.graphHasChanged = false
@@ -209,9 +202,7 @@ fun main() = application {
                             fileDialog("Test String", true) {
                                 @Composable
                                 open = false
-                                println("fileDialog path = $it")
                                 if (it != null) {
-                                    println("pathstring = ${it.pathString}  filename = ${it.fileName}}")
                                     if (!pathToDataFile.exists()) {
                                         Files.createFile(pathToDataFile)
                                     }
@@ -230,13 +221,10 @@ fun main() = application {
                     }
 
                     if (save) {
-                        println("calling processSave()")
                         processSave()
                     }
 
                     if (processAfterSaveAction) {
-                        println("processAfterSaveAction afterSaveAction= $afterSaveAction")
-                        //afterSaveAction = {println("test")}
                         afterSaveAction?.invoke()
                         processAfterSaveAction = false
                     }
@@ -264,16 +252,13 @@ fun main() = application {
                             val data = path.readText()
                             pathToBondGraphFile = path
                             bondGraph.fromSerializedStrings(data)
-                            println("startUp, assigning graphHasChanged to false")
                             bondGraph.graphHasChanged = false
                         }
                     }
 
                     if (state.clearGraph) { // Clear the work area of the current bond graph drawing.
-                        println("if clearGraph  graphHasChanged = ${bondGraph.graphHasChanged}")
                         if (bondGraph.graphHasChanged) {
                             afterSaveAction = {
-                                println("afteSaveAction")
                                 bondGraph.clear()
                                 pathToBondGraphFile = null
                             }
@@ -291,32 +276,24 @@ fun main() = application {
 
                         saveFileDialog(
                             onSave = {
-                                println("save")
                                 save = true
                                 state.showSaveFileDialog = false
                             },
                             onDontSave = {
-                                println("Don't Save")
                                 bondGraph.graphHasChanged = false
                                 state.showSaveFileDialog = false
                                 processAfterSaveAction = true
                             },
                             onCancel = {
-                                println("Cancel")
                                 state.clearGraph = false
                                 state.showSaveFileDialog = false
                             },
                             onCloseRequest = {
-                                println("Close Request")
                                 state.clearGraph = false
                                 state.showSaveFileDialog = false
                             }
                         )
                     }
-
-                    /* val pathname = System.getProperties().getProperty("user.home")
-                println("${pathname}")*/
-
                 }
             }
         }
