@@ -44,7 +44,7 @@ class Token(
 
         val subscript = SpanStyle(
             baselineShift = BaselineShift.Subscript,
-            fontSize = 15.sp,
+            fontSize = 12.sp,
         )
 
         return buildAnnotatedString {

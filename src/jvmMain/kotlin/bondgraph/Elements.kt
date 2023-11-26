@@ -652,13 +652,14 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
 open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
-    var tToken = Token()
+    //var tToken = Token()
     var mToken = Token()
 
     override fun createTokens() {
         val bondsList = getBondList()
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
-        tToken = Token(bondsList[0].displayId, bondsList[1].displayId , elementType.toAnnotatedString(), false, false, false, false)
+        //tToken = Token(bondsList[0].displayId, bondsList[1].displayId , elementType.toAnnotatedString(), false, false, false, false)
+        mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
     }
 
 
@@ -716,20 +717,14 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
 class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
-    var gToken = Token()
+    //var gToken = Token()
+    var mToken = Token()
 
     override fun createTokens() {
         val bondsList = getBondList()
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
-        gToken = Token(
-            bondsList[0].displayId,
-            bondsList[1].displayId,
-            elementType.toAnnotatedString(),
-            false,
-            false,
-            false,
-            false
-        )
+        //gToken = Token(bondsList[0].displayId, bondsList[1].displayId, elementType.toAnnotatedString(), false, false, false, false )
+        mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
     }
 
 
@@ -765,7 +760,7 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
     override fun getEffort(bond: Bond): Expr {
-        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), gToken)
+        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), mToken)
         val mod = modulator.getEffortModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
@@ -773,7 +768,7 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
     override fun getFlow(bond: Bond): Expr {
-        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), gToken)
+        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), mToken)
         val mod = modulator.getFlowModulator(getOtherElement(this, bond))
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
