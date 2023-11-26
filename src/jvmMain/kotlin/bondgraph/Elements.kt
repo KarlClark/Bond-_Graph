@@ -529,6 +529,9 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
 class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     var rToken = Token()
+    var eToken = Token()
+    var fToken = Token()
+    var derivingEquation = false
 
     override fun createTokens() {
         val bondsList = getBondList()
@@ -536,6 +539,8 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
         val bond = bondsList[0]
 
         rToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+        eToken = Token(bond.displayId, "", AnnotatedString("e"), false, false, false, false)
+        fToken = Token(bond.displayId, "", AnnotatedString("f"), false, false, false, false)
     }
 
 
@@ -544,27 +549,44 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
         val bond = getBondList()[0]
         if (bond.effortElement === null) {
             val otherElement = getOtherElement(this, bond)
-            bond.effortElement = bond.element1
+            //bond.effortElement = bond.element1
+            bond.effortElement = otherElement
             otherElement.assignCausality()
         }
     }
 
     override fun getEffort(bond: Bond): Expr {
-        val thisBond = getBondList()[0]
-        val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
-        return Term().multiply(sFlow).multiply(rToken)
+        if (derivingEquation){
+            derivingEquation = false
+            return(eToken)
+        } else {
+            val thisBond = getBondList()[0]
+            val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
+            return Term().multiply(sFlow).multiply(rToken)
+        }
     }
 
     override fun getFlow(bond: Bond): Expr {
-        val thisBond = getBondList()[0]
-        val sEffort=  getOtherElement(this, thisBond).getEffort(thisBond)
-        return Term().multiply(sEffort).divide(rToken)
+        if (derivingEquation){
+            derivingEquation = false
+            return(fToken)
+        } else {
+            val thisBond = getBondList()[0]
+            val sEffort = getOtherElement(this, thisBond).getEffort(thisBond)
+            return Term().multiply(sEffort).divide(rToken)
+        }
     }
 
     override fun deriveEquation(): Equation {
-        if (true) throw BadGraphException("Error: Call to Resistor.deriveEquation which is not implemented.")
 
-        return Equation(Term(), Term())
+        derivingEquation = true
+        val bond = getBondList()[0]
+        val otherElement = getOtherElement(this, bond)
+        if (bond.effortElement === this){
+            return Equation(fToken, Term().multiply(otherElement.getEffort(bond)).divide(rToken))
+        } else {
+            return Equation(eToken, Term().multiply(otherElement.getFlow(bond)).multiply(rToken))
+        }
     }
 }
 

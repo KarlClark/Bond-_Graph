@@ -214,6 +214,7 @@ class BondGraph(var name: String) {
      */
     private var elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     var bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
+    val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
     val results = Results()
 
     var graphHasChanged = false
@@ -622,6 +623,7 @@ class BondGraph(var name: String) {
                    val elementList = getUnassignedResistors()
                    if (elementList.isNotEmpty()){
                        elementList[0].assignCausality()
+                       arbitrarilyAssignedResistors.add(elementList[0])
                        done = causalityComplete()
                    } else {
                        done = true
@@ -642,6 +644,7 @@ class BondGraph(var name: String) {
 
         val state = LocalStateInfo.current
 
+
         try {
 
             results.clear()
@@ -658,6 +661,12 @@ class BondGraph(var name: String) {
             elementsMap.forEach{it.value.createTokens()}
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
+
+            if (arbitrarilyAssignedResistors.size > 0){
+                arbitrarilyAssignedResistors.forEach { results.add(it.deriveEquation().toAnnotatedString()) }
+                state.showResults = true
+                return
+            }
 
             val elementsList = getIndependentStorageElements()
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
