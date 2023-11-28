@@ -277,7 +277,7 @@ class BondGraph(var name: String) {
         newElementId = elementsMap.values.maxOf{it.id} + 1
         newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
         results.clear()
-
+        state.showResults = false
         state.needsElementUpdate = true
     }
 
