@@ -1,5 +1,8 @@
 package bondgraph
 
+import algebra.Equation
+import algebra.Token
+import algebra.solve
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
@@ -13,7 +16,8 @@ import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
 
 
-class BadGraphException(message: String) : Exception(message)
+class BadGraphException (message: String) : Exception(message)
+class AlgebraException (message: String) : Exception(message)
 
 
 class Results() {
@@ -663,7 +667,12 @@ class BondGraph(var name: String) {
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
             if (arbitrarilyAssignedResistors.size > 0){
-                arbitrarilyAssignedResistors.forEach { results.add(it.deriveEquation().toAnnotatedString()) }
+                val equationsList = arrayListOf<Equation>()
+                val relativilySolvedList = arrayListOf<Equation>()
+                arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add(it.deriveEquation()) }
+                results.add(equationsList[0].toAnnotatedString())
+                equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
+                relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
                 state.showResults = true
                 return
             }

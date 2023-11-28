@@ -556,6 +556,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
     override fun getEffort(bond: Bond): Expr {
+        //println("$displayId getEffort derivingEquation = $derivingEquation")
         if (derivingEquation){
             derivingEquation = false
             return(eToken)
@@ -567,6 +568,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
     override fun getFlow(bond: Bond): Expr {
+        //println("$displayId getFlow derivingEquation = $derivingEquation")
         if (derivingEquation){
             derivingEquation = false
             return(fToken)
@@ -580,6 +582,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     override fun deriveEquation(): Equation {
 
         derivingEquation = true
+        println("deriveEquation for $displayId, derivingEquation =$derivingEquation  ")
         val bond = getBondList()[0]
         val otherElement = getOtherElement(this, bond)
         if (bond.effortElement === this){

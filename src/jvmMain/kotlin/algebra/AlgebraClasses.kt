@@ -6,6 +6,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.sp
 
+
+
 class Token(
     val bondId1: String = ""
     ,val bondId2: String = ""
@@ -26,11 +28,11 @@ class Token(
     }
 
     override fun multiply(expr: Expr): Expr {
-        return Term().multiply(expr).multiply(this)
+        return Term().multiply(this).multiply(expr)
     }
 
     override fun divide(expr: Expr): Expr {
-        return Term().multiply(expr).divide(this)
+        return Term().multiply(this).divide(expr)
     }
 
     override fun toAnnotatedString(exp: Int): AnnotatedString {
@@ -129,10 +131,16 @@ class Term():Expr {
 
     override fun multiply(expr: Expr): Expr {
 
+        println("multiply ${this.toAnnotatedString() } by ${expr.toAnnotatedString()}")
         when (expr) {
 
             is Token -> {
-                numerators.add(expr)
+
+                if ( ! cancelled(expr, denomintors)) {
+                    println("multiply canceled = false")
+                    numerators.add(expr)
+                }
+                //numerators.add(expr)
             }
 
             is Term -> {
@@ -149,10 +157,18 @@ class Term():Expr {
     }
 
     override fun divide(expr: Expr): Expr {
+
+        println("divide ${this.toAnnotatedString() } by ${expr.toAnnotatedString()}")
          when (expr) {
 
              is Token -> {
-                 denomintors.add(expr)
+
+                 if ( ! cancelled(expr, numerators)) {
+                     println("divide canceled = false")
+                     println("add ${expr.toAnnotatedString()} to denominators of $this")
+                     denomintors.add(expr)
+                 }
+                 //denomintors.add(expr)
              }
 
              is Term -> {
@@ -165,6 +181,10 @@ class Term():Expr {
              }
          }
         return this
+    }
+
+    fun getNumeratorTokens(): List<Token> {
+        return numerators.filter { it is Token }.map{ it as Token}
     }
 }
 
@@ -254,4 +274,6 @@ class Equation(var leftSide: Expr, var rightSide: Expr) {
             append (rightSide.toAnnotatedString())
         }
     }
+
+
 }
