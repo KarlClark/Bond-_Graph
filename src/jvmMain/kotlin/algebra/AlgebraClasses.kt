@@ -180,11 +180,24 @@ class Term():Expr {
                  denomintors.add(expr)
              }
          }
+
+        if (denomintors.size == 0 && numerators.size == 1) {
+            return numerators[0]
+        }
         return this
     }
 
     fun getNumeratorTokens(): List<Token> {
         return numerators.filter { it is Token }.map{ it as Token}
+    }
+
+    fun getDenominatorTokens(): List<Token> {
+        println("getDenominatorTokens")
+        println("numerators")
+        numerators.forEach { println("${it.toAnnotatedString()}  is Sum = ${it is Sum} is Term = ${it is Term}" ) }
+        println("denominaotrs")
+        denomintors.forEach { println("${it.toAnnotatedString()}") }
+        return denomintors.filter { it is Token }.map{ it as Token}
     }
 }
 

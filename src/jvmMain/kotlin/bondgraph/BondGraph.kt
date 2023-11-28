@@ -102,6 +102,10 @@ class BondSerializationData(val id: Int, val displayId: String, val elementId1: 
 @Serializable
 class BondGraphSerializationData(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializationData>)
 
+@Serializable
+class BondGraphSerializationData2(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializationData>, val arbitrarilyAssignedResistorsIds: List<Int>)
+
+
 class BondGraph(var name: String) {
 
     /*
@@ -232,17 +236,24 @@ class BondGraph(var name: String) {
 
         val elementData = elementsMap.values.map{ElementSerializationData.getData(it)}
         val bondData = bondsMap.values.map{BondSerializationData.getData(it)}
-        return Cbor.encodeToHexString( BondGraphSerializationData(elementData, bondData))
+        val arbitrarilyAssignedResistorsIds = arrayListOf<Int>()
+
+
+        arbitrarilyAssignedResistors.forEach { arbitrarilyAssignedResistorsIds.add(it.id) }
+        return Cbor.encodeToHexString( BondGraphSerializationData2(elementData, bondData, arbitrarilyAssignedResistorsIds))
         }
 
 @Composable
     fun fromSerializedStrings(serializedString: String) {
 
         val state = LocalStateInfo.current
-        val data:BondGraphSerializationData = Cbor.decodeFromHexString(serializedString)
+        val data:BondGraphSerializationData2 = Cbor.decodeFromHexString(serializedString)
 
         elementsMap.clear()
         bondsMap.clear()
+        arbitrarilyAssignedResistors.clear()
+        results.clear()
+
         for (elementDatum in data.elementData) {
             val element = ElementSerializationData.makeElement(this, elementDatum)
             key(element.id){elementsMap[element.id] = element}
@@ -257,13 +268,17 @@ class BondGraph(var name: String) {
             }
         }
 
-    elementsMap.values.forEach{it.createDisplayId()}
+        println("data.arbitrarilyAssignedResistorsIds.size = ${data.arbitrarilyAssignedResistorsIds.size}")
+        data.arbitrarilyAssignedResistorsIds.forEach{ elementsMap.get(it)
+            ?.let { it1 -> arbitrarilyAssignedResistors.add(it1) } }
 
-    newElementId = elementsMap.values.maxOf{it.id} + 1
-    newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
-    results.clear()
+        elementsMap.values.forEach{it.createDisplayId()}
 
-    state.needsElementUpdate = true
+        newElementId = elementsMap.values.maxOf{it.id} + 1
+        newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
+        results.clear()
+
+        state.needsElementUpdate = true
     }
 
     fun getNextElementId() = newElementId++
@@ -666,6 +681,7 @@ class BondGraph(var name: String) {
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
+            println("arbitrarilyAssignedResistors.size = ${arbitrarilyAssignedResistors.size }")
             if (arbitrarilyAssignedResistors.size > 0){
                 val equationsList = arrayListOf<Equation>()
                 val relativilySolvedList = arrayListOf<Equation>()

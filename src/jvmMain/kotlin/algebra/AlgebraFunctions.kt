@@ -20,18 +20,33 @@ fun solve (token: Token, equation: Equation): Equation {
     println("Solve")
     var leftSide = equation.leftSide
     var rightSide = equation.rightSide
+    var done = false
+    while (! done) {
+        if (rightSide is Term) {
 
-    if (rightSide is Term){
-        val tokensList = rightSide.getNumeratorTokens()
-        if (tokensList.contains(token)) throw AlgebraException("Error: right side of equation is a single term containing the variable to solve for.  We can't solve this.\n${leftSide.toAnnotatedString()} = ${rightSide.toAnnotatedString()}")
-        tokensList.forEach{
-            println("divide leftSide = ${leftSide.toAnnotatedString()} by ${it.toAnnotatedString()}")
-            leftSide = leftSide.divide(it)
-            println("divide rightSide = ${rightSide.toAnnotatedString()} by ${it.toAnnotatedString()}")
-            rightSide = rightSide.divide(it)
+            println("right side is a term = ${rightSide.toAnnotatedString()}")
 
-            println("solve leftside = ${leftSide.toAnnotatedString()}  rightSide = ${rightSide.toAnnotatedString()}")
+            val numeratorTokensList = rightSide.getNumeratorTokens()
+            val denominatorTokensList = rightSide.getDenominatorTokens()
+            if (numeratorTokensList.contains(token) || denominatorTokensList.contains(token)) throw AlgebraException("Error: right side of equation is a single term containing the variable to solve for." +
+                    "  We can't solve this.\n${leftSide.toAnnotatedString()} = ${rightSide.toAnnotatedString()}")
+
+            numeratorTokensList.forEach {
+                leftSide = leftSide.divide(it)
+                rightSide = rightSide.divide(it)
+            }
+            println("denominatorTokensList.size = ${denominatorTokensList.size}")
+            denominatorTokensList.forEach{println(it.toAnnotatedString())}
+            denominatorTokensList.forEach {
+                println("multiply both side by ${it.toAnnotatedString()}")
+                leftSide = leftSide.multiply(it)
+                rightSide = rightSide.multiply(it)
+            }
+            continue
         }
+
+        done = true
+        println("done = $done")
     }
 
     return Equation(leftSide, rightSide)
