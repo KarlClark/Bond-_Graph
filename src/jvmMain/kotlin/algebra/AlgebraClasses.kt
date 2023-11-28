@@ -149,7 +149,8 @@ class Term():Expr {
             }
 
             is Sum -> {
-                numerators.add(expr)
+                //numerators.add(expr)
+                return expr.multiply(this)
             }
         }
 
@@ -264,11 +265,17 @@ class Sum(): Expr {
     }
 
     override fun multiply(expr: Expr): Expr {
-        return Term().multiply(this).multiply(expr)
+        for (index in 0 .. plusTerms.size -1){
+            plusTerms[index] = plusTerms[index].multiply(expr)
+        }
+        return this
     }
 
     override fun divide(expr: Expr): Expr {
-        return Term().divide(this).divide(expr)
+        for (index in 0 .. minusTerms.size -1){
+            minusTerms[index] = minusTerms[index].multiply(expr)
+        }
+        return this
     }
 }
 
