@@ -193,12 +193,11 @@ class Term():Expr {
     }
 
     fun getDenominatorTokens(): List<Token> {
-        println("getDenominatorTokens")
-        println("numerators")
-        numerators.forEach { println("${it.toAnnotatedString()}  is Sum = ${it is Sum} is Term = ${it is Term}" ) }
-        println("denominaotrs")
-        denomintors.forEach { println("${it.toAnnotatedString()}") }
         return denomintors.filter { it is Token }.map{ it as Token}
+    }
+
+    fun getDemominatorExpressions() : List<Expr> {
+        return denomintors
     }
 }
 
@@ -268,14 +267,36 @@ class Sum(): Expr {
         for (index in 0 .. plusTerms.size -1){
             plusTerms[index] = plusTerms[index].multiply(expr)
         }
-        return this
-    }
 
-    override fun divide(expr: Expr): Expr {
         for (index in 0 .. minusTerms.size -1){
             minusTerms[index] = minusTerms[index].multiply(expr)
         }
         return this
+    }
+
+    override fun divide(expr: Expr): Expr {
+        for (index in 0 .. plusTerms.size -1){
+            plusTerms[index] = plusTerms[index].divide(expr)
+        }
+
+        for (index in 0 .. minusTerms.size -1){
+            minusTerms[index] = minusTerms[index].divide(expr)
+        }
+        return this
+    }
+
+    fun getAllExpressions(): List<Expr> {
+        val l: ArrayList<Expr> = arrayListOf()
+        l.addAll(plusTerms)
+        l.addAll(minusTerms)
+        return l
+    }
+    fun getPlusTerms(): List<Expr>{
+        return plusTerms
+    }
+
+    fun getMinusTerms(): List<Expr> {
+        return minusTerms
     }
 }
 
@@ -294,6 +315,4 @@ class Equation(var leftSide: Expr, var rightSide: Expr) {
             append (rightSide.toAnnotatedString())
         }
     }
-
-
 }

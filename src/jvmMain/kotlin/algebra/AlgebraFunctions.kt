@@ -14,15 +14,67 @@ fun cancelled (expr: Expr, exprList: MutableList<Expr>): Boolean {
     }
     return false
 }
+var count = 0
+fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
+
+    //if (count++ > 4) return false
+    /*if (expr is Token) {
+        println ("token = $token  expr = $expr")
+        return token === expr
+    }*/
+
+    if (expr is Term) {
+        val exprsList = expr.getDemominatorExpressions()
+
+        for (index in exprsList.indices){
+            println("Term ${expr.toAnnotatedString()} expr[$index] = ${exprsList[index].toAnnotatedString()}")
+            if (exprsList[index] is Token && token === exprsList[index]) {
+                println("here 1")
+                return true
+            }
+            if ( isTokenInDemoninator(token, exprsList[index])) {
+                println("here 2")
+                return true
+            }
+        }
+    }
+
+     if (expr is Sum){
+         val exprsList = expr.getAllExpressions()
+         for (index in exprsList.indices) {
+             println("Sum ${expr.toAnnotatedString()} expr[$index] = ${exprsList[index].toAnnotatedString()}")
+             if (exprsList[index] is Token && token === exprsList[index]) {
+                 println("here 3")
+                 return true
+             }
+             if (isTokenInDemoninator(token, exprsList[index])) {
+                 println("here 4")
+                 return true
+             }
+         }
+     }
+
+    return false
+}
+
+fun contains(token: Token, expr: Expr): Boolean {
+    return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
+}
 
 fun solve (token: Token, equation: Equation): Equation {
 
     println("Solve")
     var leftSide = equation.leftSide
     var rightSide = equation.rightSide
+
+    println("rightSide = ${rightSide.toAnnotatedString()}")
+    if (isTokenInDemoninator(token, leftSide) || isTokenInDemoninator(token, rightSide)) throw AlgebraException("Error: The token we are solving for occurs in the denominator of one of the terms.  " +
+            "These algebra routines can't solve this")
+    println("rightSide = ${rightSide.toAnnotatedString()}")
+
     var done = false
     while (! done) {
-        if (rightSide is Term) {
+        /*if (rightSide is Term) {
 
             println("right side is a term = ${rightSide.toAnnotatedString()}")
 
@@ -43,6 +95,26 @@ fun solve (token: Token, equation: Equation): Equation {
                 rightSide = rightSide.multiply(it)
             }
             continue
+        }*/
+
+        if (rightSide is Sum) {
+            val plusTerms = rightSide.plusTerms
+            val minusTerms = rightSide.minusTerms
+            //val matchingPlusterms = arrayListOf<Term>()
+            //val matchingMinusTerms = arrayListOf<Term>()
+            val matchingPlusTerms = plusTerms.filter { contains(token, it) }
+            val matchingMinusTerms = minusTerms.filter{ contains(token, it) }
+
+            matchingPlusTerms.forEach {
+                leftSide = leftSide.minus(it)
+                plusTerms.remove(it)
+            }
+
+            matchingMinusTerms.forEach {
+                leftSide = leftSide.add(it)
+                minusTerms.remove(it)
+            }
+
         }
 
         done = true

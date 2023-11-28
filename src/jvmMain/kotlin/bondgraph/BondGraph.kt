@@ -706,6 +706,11 @@ class BondGraph(var name: String) {
             results.add(e.message.toString())
             state.showResults = true
         }
+        catch (e: AlgebraException){
+            results.clear()
+            results.add(e.message.toString())
+            state.showResults = true
+        }
     }
 }
 
