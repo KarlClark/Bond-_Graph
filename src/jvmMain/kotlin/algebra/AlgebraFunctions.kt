@@ -1,6 +1,7 @@
 package algebra
 
 import bondgraph.AlgebraException
+import kotlinx.serialization.descriptors.listSerialDescriptor
 
 fun cancelled (expr: Expr, exprList: MutableList<Expr>): Boolean {
     if ( ! (expr is Token) ) return false
@@ -61,6 +62,50 @@ fun contains(token: Token, expr: Expr): Boolean {
     return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
 }
 
+fun commonDemoninator(terms: ArrayList<Expr>): Expr {
+    var denominators: ArrayList<ArrayList<Expr>> = arrayListOf()
+    var numerators: ArrayList<ArrayList<Expr>> = arrayListOf()
+
+    for (index in terms.indices){
+        println("processing term $index = ${terms[index].toAnnotatedString()}")
+        numerators.add( arrayListOf())
+        denominators.add (arrayListOf())
+        if (terms[index] is Token) {
+            numerators[index] = arrayListOf(terms[index])
+        } else {
+            numerators[index].addAll((terms[index] as Term).numerators)
+            denominators[index].addAll((terms[index] as Term).denomintors)
+        }
+    }
+
+    var commonDenominator = arrayListOf<Expr>()
+    for (index in denominators.indices){
+        commonDenominator.addAll(denominators[index])
+    }
+
+    for (numeratorIndex in numerators.indices) {
+        println("numeratorIndex = $numeratorIndex")
+        numerators[numeratorIndex].forEach { println("${it.toAnnotatedString()}") }
+        for (denominatorIndex in denominators.indices) {
+            println("denominatorIndex = $denominatorIndex")
+            denominators[denominatorIndex].forEach { println("${it.toAnnotatedString()}") }
+            if (numeratorIndex != denominatorIndex) {
+                numerators[numeratorIndex].addAll(denominators[denominatorIndex])
+            }
+        }
+    }
+    val dTerm = Term()
+    dTerm.denomintors.addAll(commonDenominator)
+    val sum = Sum()
+    numerators.forEach {
+        val term = Term()
+        term.numerators.addAll(it)
+        sum.add(term)
+    }
+    dTerm.numerators.add(sum)
+    return dTerm
+}
+
 fun solve (token: Token, equation: Equation): Equation {
 
     println("Solve")
@@ -115,6 +160,15 @@ fun solve (token: Token, equation: Equation): Equation {
                 minusTerms.remove(it)
             }
 
+            println("leftSIde is Term = ${leftSide is Term}  leftSide is Sum = ${leftSide is Sum}")
+            val termsList = arrayListOf<Expr>()
+            if (leftSide is Sum) {
+
+                termsList.addAll((leftSide as Sum).plusTerms)
+                termsList.addAll((leftSide as Sum).minusTerms)
+                val commonFracton = commonDemoninator(termsList)
+                println("commonFraction = ${commonFracton.toAnnotatedString()}")
+            }
         }
 
         done = true
