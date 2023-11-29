@@ -106,6 +106,66 @@ fun commonDemoninator(terms: ArrayList<Expr>): Expr {
     return dTerm
 }
 
+fun factorSum(token: Token, sum: Sum): Expr  {
+
+    val plusTerms = sum.plusTerms
+    val minusTerms = sum.minusTerms
+
+    for (term in plusTerms) {
+        if (term is Term){
+            if (term.numerators.contains(token)){
+                term.numerators.remove(token)
+            } else {
+                throw AlgebraException("Attempt to factor token out to a term that doesn't contain the token." +
+                        "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}")
+            }
+        } else {
+            throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
+        }
+    }
+
+    for (term in minusTerms) {
+        if (term is Term){
+            if (term.numerators.contains(token)){
+                term.numerators.remove(token)
+            } else {
+                throw AlgebraException("Attempt to factor token out to a term that doesn't contain the token." +
+                        "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}")
+            }
+        } else {
+            throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
+        }
+    }
+
+    return sum
+}
+
+fun facctor  (token: Token, expr: Expr): Expr {
+
+    if (expr is Token)throw AlgebraException ("Error: Attempt to facto a single token = ${token.toAnnotatedString()}")
+
+    if (expr is Term) {
+        if (expr.numerators.contains(token)) {
+            expr.numerators.remove(token)
+            return expr
+        } else {
+            if (expr.numerators.size == 1 && expr.numerators[0] is Sum){
+                val fact = factorSum(token, expr.numerators[0] as Sum)
+                val term = Term()
+                term.denomintors.addAll(expr.denomintors)
+                term.numerators.add(fact)
+                return term
+            }
+        }
+    }
+
+    if (expr is Sum) {
+        return factorSum(token, expr)
+    }
+     throw AlgebraException("Error don't know how to factor token = ${token.toAnnotatedString()} out of expression = ${expr.toAnnotatedString()}")
+
+}
+
 fun solve (token: Token, equation: Equation): Equation {
 
     println("Solve")
@@ -117,8 +177,7 @@ fun solve (token: Token, equation: Equation): Equation {
             "These algebra routines can't solve this")
     println("rightSide = ${rightSide.toAnnotatedString()}")
 
-    var done = false
-    while (! done) {
+
         /*if (rightSide is Term) {
 
             println("right side is a term = ${rightSide.toAnnotatedString()}")
@@ -162,18 +221,24 @@ fun solve (token: Token, equation: Equation): Equation {
 
             println("leftSIde is Term = ${leftSide is Term}  leftSide is Sum = ${leftSide is Sum}")
             val termsList = arrayListOf<Expr>()
+            var commonFraction: Expr = Term()
             if (leftSide is Sum) {
 
                 termsList.addAll((leftSide as Sum).plusTerms)
                 termsList.addAll((leftSide as Sum).minusTerms)
-                val commonFracton = commonDemoninator(termsList)
-                println("commonFraction = ${commonFracton.toAnnotatedString()}")
+                commonFraction = commonDemoninator(termsList)
+                println("commonFraction = ${commonFraction.toAnnotatedString()}")
+                val factored = facctor(token, commonFraction)
+                println("factored = ${factored.toAnnotatedString()} ,  leftSide = ${leftSide.toAnnotatedString()}")
+                rightSide = rightSide.divide(factored)
+                println("${token.toAnnotatedString()} = ${rightSide.toAnnotatedString()}")
+                return Equation(token, rightSide)
+
             }
+
+
         }
 
-        done = true
-        println("done = $done")
-    }
 
-    return Equation(leftSide, rightSide)
+    throw AlgebraException("Unknown error solving equation ${equation.toAnnotatedString()} for ${token.toAnnotatedString()}")
 }
