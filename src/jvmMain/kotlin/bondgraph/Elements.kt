@@ -532,6 +532,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     var eToken = Token()
     var fToken = Token()
     var derivingEquation = false
+    var substituteExprssion: Expr? = null
 
     override fun createTokens() {
         val bondsList = getBondList()
@@ -562,6 +563,11 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
             return(eToken)
         } else {
             val thisBond = getBondList()[0]
+
+            if (thisBond.effortElement !== this && substituteExprssion != null) {
+                return substituteExprssion as Expr
+            }
+
             val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
             return Term().multiply(sFlow).multiply(rToken)
         }
@@ -574,6 +580,11 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
             return(fToken)
         } else {
             val thisBond = getBondList()[0]
+
+            if (thisBond.effortElement === this && substituteExprssion != null) {
+                return substituteExprssion as Expr
+            }
+
             val sEffort = getOtherElement(this, thisBond).getEffort(thisBond)
             return Term().multiply(sEffort).divide(rToken)
         }
@@ -602,7 +613,7 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         val bond = bondsList[0]
 
-        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), true, false, false, false)
     }
 
     override fun assignCausality() {
@@ -643,7 +654,7 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         val bond = bondsList[0]
 
-        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
+        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), true, false, false, false)
     }
 
 

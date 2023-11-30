@@ -136,16 +136,18 @@ class Term():Expr {
 
             is Token -> {
 
-                if ( ! cancelled(expr, denomintors)) {
+               /* if ( ! cancelled(expr, denomintors)) {
                     println("multiply canceled = false")
                     numerators.add(expr)
-                }
-                //numerators.add(expr)
+                }*/
+                numerators.add(expr)
+                cancel(this)
             }
 
             is Term -> {
                 numerators.addAll(expr.numerators)
                 denomintors.addAll(expr.denomintors)
+                cancel(this)
             }
 
             is Sum -> {
@@ -164,17 +166,19 @@ class Term():Expr {
 
              is Token -> {
 
-                 if ( ! cancelled(expr, numerators)) {
+                 /*if ( ! cancelled(expr, numerators)) {
                      println("divide canceled = false")
                      println("add ${expr.toAnnotatedString()} to denominators of $this")
                      denomintors.add(expr)
-                 }
-                 //denomintors.add(expr)
+                 }*/
+                 denomintors.add(expr)
+                 cancel(this)
              }
 
              is Term -> {
                  numerators.addAll(expr.denomintors)
                  denomintors.addAll(expr.numerators)
+                 cancel(this)
              }
 
              is Sum -> {

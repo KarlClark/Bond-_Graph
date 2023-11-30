@@ -1,8 +1,6 @@
 package bondgraph
 
-import algebra.Equation
-import algebra.Token
-import algebra.solve
+import algebra.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.AnnotatedString
@@ -689,15 +687,22 @@ class BondGraph(var name: String) {
                 results.add(equationsList[0].toAnnotatedString())
                 equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
                 relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
-                state.showResults = true
-                return
+
+                (arbitrarilyAssignedResistors[0] as Resistor).substituteExprssion = equationsList[0].rightSide
+                //state.showResults = true
+               // return
             }
 
             val elementsList = getIndependentStorageElements()
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
 
             for (element in elementsList ) {
-                results.add(element.deriveEquation().toAnnotatedString())
+                val equation = element.deriveEquation()
+
+                results.add(equation.toAnnotatedString())
+                val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
+                results.add(newRightSide.toAnnotatedString())
+                println("${newRightSide.toAnnotatedString()}")
             }
             state.showResults = true
 

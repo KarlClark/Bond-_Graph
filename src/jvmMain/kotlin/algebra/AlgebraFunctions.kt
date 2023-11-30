@@ -1,19 +1,18 @@
 package algebra
 
 import bondgraph.AlgebraException
-import kotlinx.serialization.descriptors.listSerialDescriptor
 
-fun cancelled (expr: Expr, exprList: MutableList<Expr>): Boolean {
-    if ( ! (expr is Token) ) return false
-    val index = exprList.indexOf(expr)
-    print("cancelled expr = ${expr.toAnnotatedString()}")
-    exprList.forEach { print("  ${it.toAnnotatedString()}") }
-    println("  index = $index ")
-    if (index >= 0){
-        exprList.removeAt(index)
-        return true
+
+fun cancel(term: Term){
+    var numerators = arrayListOf<Expr>()
+
+    numerators.addAll(term.numerators)
+    numerators.forEach {
+        if (it in term.numerators && it in term.denomintors) {
+            term.numerators.remove(it)
+            term.denomintors.remove(it)
+        }
     }
-    return false
 }
 var count = 0
 fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
@@ -62,49 +61,95 @@ fun contains(token: Token, expr: Expr): Boolean {
     return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
 }
 
-fun commonDemoninator(terms: ArrayList<Expr>): Expr {
-    var denominators: ArrayList<ArrayList<Expr>> = arrayListOf()
-    var numerators: ArrayList<ArrayList<Expr>> = arrayListOf()
+fun putNumeratorsOverCommonDemoninator(expressions:List<Expr>, commonDenominator: List<Expr>): ArrayList<Expr>  {
 
-    for (index in terms.indices){
-        println("processing term $index = ${terms[index].toAnnotatedString()}")
-        numerators.add( arrayListOf())
-        denominators.add (arrayListOf())
-        if (terms[index] is Token) {
-            numerators[index] = arrayListOf(terms[index])
+    var copyOfCommonDenominator = arrayListOf<Expr>()
+    var numerators = arrayListOf<Expr>()
+
+    for (expr in expressions) {
+
+        println("expr = ${expr.toAnnotatedString()}")
+        var numerator = arrayListOf<Expr>()
+
+        if (expr is Token){
+            println("expr is a Token")
+            numerator.add(expr)
         } else {
-            numerators[index].addAll((terms[index] as Term).numerators)
-            denominators[index].addAll((terms[index] as Term).denomintors)
+            numerator.addAll((expr as Term).numerators)
         }
+
+        val t = Term(); t.numerators.addAll(numerator); println("numerator = ${t.toAnnotatedString()}")
+
+        copyOfCommonDenominator.clear()
+        copyOfCommonDenominator.addAll(commonDenominator)
+
+        if (expr is Token) {
+            numerator.addAll(commonDenominator)
+            val t = Term(); t.numerators.addAll(numerator); println("expr is token so add all commonDenominator numerator - ${t.toAnnotatedString()}")
+        } else {
+            for (dTerm in (expr as Term).denomintors) {
+                println("dTerm = ${dTerm.toAnnotatedString()}")
+                if ((expr as Term).denomintors.contains(dTerm)) {
+                    println("denominator contains dTerm")
+                    copyOfCommonDenominator.remove(dTerm)
+                }
+            }
+            numerator.addAll(copyOfCommonDenominator)
+            val t = Term(); t.numerators.addAll(numerator);println("numerator = ${t.toAnnotatedString()}")
+        }
+        val newTerm = Term()
+        newTerm.numerators.addAll(numerator)
+        numerators.add(newTerm)
     }
 
+    return numerators
+}
+
+fun commonDemoninator(sum: Sum): Expr {
     var commonDenominator = arrayListOf<Expr>()
-    for (index in denominators.indices){
-        commonDenominator.addAll(denominators[index])
-    }
+    var copyOfCommonDenominator = arrayListOf<Expr>()
+    var allTerms = arrayListOf<Expr>()
+    var plusNumerators = arrayListOf<Expr>()
+    var minusNumerators = arrayListOf<Expr>()
+    allTerms.addAll(sum.plusTerms)
+    allTerms.addAll(sum.minusTerms)
 
-    for (numeratorIndex in numerators.indices) {
-        println("numeratorIndex = $numeratorIndex")
-        numerators[numeratorIndex].forEach { println("${it.toAnnotatedString()}") }
-        for (denominatorIndex in denominators.indices) {
-            println("denominatorIndex = $denominatorIndex")
-            denominators[denominatorIndex].forEach { println("${it.toAnnotatedString()}") }
-            if (numeratorIndex != denominatorIndex) {
-                numerators[numeratorIndex].addAll(denominators[denominatorIndex])
+    println("commonDenominator starting sum is ${sum.toAnnotatedString()}")
+    for (term in allTerms){
+
+        copyOfCommonDenominator.clear()
+        copyOfCommonDenominator.addAll(commonDenominator)
+
+        if ( term is Term){
+            for (dTerm in (term as Term).denomintors) {
+                if (copyOfCommonDenominator.contains(dTerm)) {
+                    copyOfCommonDenominator.remove(dTerm)
+                } else {
+                    commonDenominator.add(dTerm)
+                }
             }
         }
     }
-    val dTerm = Term()
-    dTerm.denomintors.addAll(commonDenominator)
-    val sum = Sum()
-    numerators.forEach {
-        val term = Term()
-        term.numerators.addAll(it)
-        sum.add(term)
-    }
-    dTerm.numerators.add(sum)
-    return dTerm
+
+
+    val term= Term(); term.numerators.addAll(commonDenominator); println("commonDenominator is ${term.toAnnotatedString()}")
+
+    plusNumerators = putNumeratorsOverCommonDemoninator(sum.plusTerms, commonDenominator)
+    minusNumerators = putNumeratorsOverCommonDemoninator(sum.minusTerms, commonDenominator)
+
+
+    val newSum = Sum()
+    newSum.plusTerms.addAll(plusNumerators)
+    newSum.minusTerms.addAll(minusNumerators)
+
+    val newTerm = Term()
+    newTerm.numerators.add(newSum)
+    newTerm.denomintors.addAll(commonDenominator)
+
+    return newTerm
 }
+
+
 
 fun factorSum(token: Token, sum: Sum): Expr  {
 
@@ -140,7 +185,7 @@ fun factorSum(token: Token, sum: Sum): Expr  {
     return sum
 }
 
-fun facctor  (token: Token, expr: Expr): Expr {
+fun factor  (token: Token, expr: Expr): Expr {
 
     if (expr is Token)throw AlgebraException ("Error: Attempt to facto a single token = ${token.toAnnotatedString()}")
 
@@ -164,6 +209,59 @@ fun facctor  (token: Token, expr: Expr): Expr {
     }
      throw AlgebraException("Error don't know how to factor token = ${token.toAnnotatedString()} out of expression = ${expr.toAnnotatedString()}")
 
+}
+
+fun getKeyToken(term: Term): Token {
+    for (expr in term.numerators){
+        if (expr is Token && (expr.energyVar || expr.powerVar)) {
+            return expr
+            }
+    }
+    throw AlgebraException("Error: getKeyToken called on term with to power or energy variable = ${term.toAnnotatedString()}")
+}
+
+fun gatherLikeTerms(sum: Sum):Expr {
+   val termsMap = mutableMapOf<Token,Expr>()
+
+    for (term in sum.plusTerms ) {
+        val token = getKeyToken(term as Term)
+        if (termsMap.containsKey(token)) {
+            var expr = termsMap[token]
+            if (expr != null) {
+                expr = expr.add(term)
+                termsMap[token] = expr
+            }
+        } else {
+            termsMap[token] = term
+        }
+    }
+
+    for (term in sum.minusTerms){
+        val token = getKeyToken(term as Term)
+        if (termsMap.containsKey(token)) {
+            var expr = termsMap[token]
+            if (expr != null) {
+                expr = expr.minus(term)
+                termsMap[token] = expr
+            }
+        } else {
+            termsMap[token] = Sum().minus(term)
+        }
+    }
+
+    var localSum = Sum()
+    termsMap.values.forEach {
+        if (it is Term) {
+            localSum = localSum.add(it) as Sum
+        } else {
+            if (it is Sum && it.plusTerms.size + it.minusTerms.size > 1) {
+                localSum = localSum.add(commonDemoninator(it)) as Sum
+            } else {
+                localSum = localSum.add(it) as Sum
+            }
+        }
+    }
+    return localSum
 }
 
 fun solve (token: Token, equation: Equation): Equation {
@@ -224,11 +322,11 @@ fun solve (token: Token, equation: Equation): Equation {
             var commonFraction: Expr = Term()
             if (leftSide is Sum) {
 
-                termsList.addAll((leftSide as Sum).plusTerms)
-                termsList.addAll((leftSide as Sum).minusTerms)
-                commonFraction = commonDemoninator(termsList)
+                //termsList.addAll((leftSide as Sum).plusTerms)
+                //termsList.addAll((leftSide as Sum).minusTerms)
+                commonFraction = commonDemoninator(leftSide as Sum)
                 println("commonFraction = ${commonFraction.toAnnotatedString()}")
-                val factored = facctor(token, commonFraction)
+                val factored = factor(token, commonFraction)
                 println("factored = ${factored.toAnnotatedString()} ,  leftSide = ${leftSide.toAnnotatedString()}")
                 rightSide = rightSide.divide(factored)
                 println("${token.toAnnotatedString()} = ${rightSide.toAnnotatedString()}")
