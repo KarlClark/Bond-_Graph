@@ -61,7 +61,66 @@ fun contains(token: Token, expr: Expr): Boolean {
     return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
 }
 
-fun putNumeratorsOverCommonDemoninator(expressions:List<Expr>, commonDenominator: List<Expr>): ArrayList<Expr>  {
+fun expand(expr: Expr): Expr {
+
+    val termList = arrayListOf<Expr>()
+    val sumList = arrayListOf<Expr>()
+    val plusNumerators = arrayListOf<Expr>()
+    val minusNumerators = arrayListOf<Expr>()
+
+    println("Expand staring expression = ${expr.toAnnotatedString()}")
+    if (expr is Token || expr is Sum){
+        return expr
+    }
+
+    for (e in (expr as Term).numerators){
+        if (e is Token || e is Term) {
+            termList.add(e)
+        } else {
+            sumList.add(e)
+        }
+    }
+
+    if (sumList.size != 1) {
+        return expr
+    }
+
+    for (e in(sumList[0] as Sum).plusTerms){
+        if (e is Sum) {
+            return expr
+        }
+        val term = Term()
+        term.numerators.addAll(termList)
+        term.numerators.add(e)
+        plusNumerators.add(term)
+    }
+
+    for (e in(sumList[0] as Sum).minusTerms){
+        if (e is Sum) {
+            return expr
+        }
+        val term = Term()
+        term.numerators.addAll(termList)
+        term.numerators.add(e)
+        minusNumerators.add(term)
+    }
+
+    val sum = Sum()
+    sum.plusTerms.addAll(plusNumerators)
+    sum.minusTerms.addAll(minusNumerators)
+
+    if (expr is Term && expr.denomintors.size > 0) {
+        val term = Term()
+        term.numerators.add(sum)
+        term.denomintors.addAll(expr.denomintors)
+        println("expand final expression = ${term.toAnnotatedString()}")
+        return term
+    }
+    println("expand final expression = ${sum.toAnnotatedString()}")
+    return sum
+}
+
+fun putNumeratorsOverCommonDenominator(expressions:List<Expr>, commonDenominator: List<Expr>): ArrayList<Expr>  {
 
     var copyOfCommonDenominator = arrayListOf<Expr>()
     var numerators = arrayListOf<Expr>()
@@ -97,9 +156,11 @@ fun putNumeratorsOverCommonDemoninator(expressions:List<Expr>, commonDenominator
             numerator.addAll(copyOfCommonDenominator)
             val t = Term(); t.numerators.addAll(numerator);println("numerator = ${t.toAnnotatedString()}")
         }
-        val newTerm = Term()
+        var newTerm = Term()
+
         newTerm.numerators.addAll(numerator)
-        numerators.add(newTerm)
+        val newExpr = expand(newTerm)
+        numerators.add(newExpr)
     }
 
     return numerators
@@ -134,8 +195,8 @@ fun commonDemoninator(sum: Sum): Expr {
 
     val term= Term(); term.numerators.addAll(commonDenominator); println("commonDenominator is ${term.toAnnotatedString()}")
 
-    plusNumerators = putNumeratorsOverCommonDemoninator(sum.plusTerms, commonDenominator)
-    minusNumerators = putNumeratorsOverCommonDemoninator(sum.minusTerms, commonDenominator)
+    plusNumerators = putNumeratorsOverCommonDenominator(sum.plusTerms, commonDenominator)
+    minusNumerators = putNumeratorsOverCommonDenominator(sum.minusTerms, commonDenominator)
 
 
     val newSum = Sum()
