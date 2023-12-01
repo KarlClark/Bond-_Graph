@@ -252,55 +252,29 @@ fun expand(expr: Expr): Expr {
     return sum
 }
 
-fun putNumeratorsOverCommonDenominator(expressions:List<Expr>, commonDenominator: List<Expr>): ArrayList<Expr>  {
+fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator: List<Expr>): Expr {
 
-    var copyOfCommonDenominator = arrayListOf<Expr>()
-    var numerators = arrayListOf<Expr>()
+    val copyOfCommonDenominator = arrayListOf<Expr>()
 
-    for (expr in expressions) {
+    if (expr is Token || expr is Sum) {
+        val term = Term()
+        term.numerators.add(expr)
+        term.numerators.addAll(commonDenominator)
+        return term
+    }
 
-        println("expr = ${expr.toAnnotatedString()}")
-        var numerator = arrayListOf<Expr>()
-
-        if (expr is Token){
-            println("expr is a Token")
-            numerator.add(expr)
-        } else {
-            numerator.addAll((expr as Term).numerators)
-        }
-
-        val t = Term(); t.numerators.addAll(numerator); println("numerator = ${t.toAnnotatedString()}")
-
-        copyOfCommonDenominator.clear()
-        copyOfCommonDenominator.addAll(commonDenominator)
-
-        if (expr is Token) {
-            numerator.addAll(commonDenominator)
-            val t = Term(); t.numerators.addAll(numerator); println("expr is token so add all commonDenominator numerator - ${t.toAnnotatedString()}")
-        } else {
-            for (dTerm in (expr as Term).denomintors) {
-                println("dTerm = ${dTerm.toAnnotatedString()}")
-                if ((expr as Term).denomintors.contains(dTerm)) {
-                    println("denominator contains dTerm")
-                    copyOfCommonDenominator.remove(dTerm)
-                }
-            }
-            numerator.addAll(copyOfCommonDenominator)
-            val t = Term(); t.numerators.addAll(numerator);println("numerator = ${t.toAnnotatedString()}")
-        }
-        var newTerm = Term()
-
-        newTerm.numerators.addAll(numerator)
-        val newExpr = expand(newTerm)
-        if (newExpr is Sum) {
-            numerators.addAll(newExpr.plusTerms)
-            numerators.addAll(newExpr.minusTerms)
-        } else {
-            numerators.add(newExpr)
+    copyOfCommonDenominator.addAll(commonDenominator)
+    for (term in (expr as Term).denomintors) {
+        if (copyOfCommonDenominator.contains(term)) {
+            copyOfCommonDenominator.remove(term)
         }
     }
 
-    return numerators
+    val term = Term()
+    term.numerators.addAll(expr.numerators)
+    term.numerators.addAll(copyOfCommonDenominator)
+
+    return term
 }
 
 fun commonDemoninator(sum: Sum): Expr {
@@ -330,21 +304,21 @@ fun commonDemoninator(sum: Sum): Expr {
     }
 
 
-    val term= Term(); term.numerators.addAll(commonDenominator); println("commonDenominator is ${term.toAnnotatedString()}")
-
-    plusNumerators = putNumeratorsOverCommonDenominator(sum.plusTerms, commonDenominator)
-    minusNumerators = putNumeratorsOverCommonDenominator(sum.minusTerms, commonDenominator)
-
+    val t= Term(); t.numerators.addAll(commonDenominator); println("commonDenominator is ${t.toAnnotatedString()}")
 
     val newSum = Sum()
-    newSum.plusTerms.addAll(plusNumerators)
-    newSum.minusTerms.addAll(minusNumerators)
+    for (term in sum.plusTerms) {
+        newSum.add(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
+    }
+    for (term in sum.minusTerms){
+        newSum.minus(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
+    }
 
-    val newTerm = Term()
-    newTerm.numerators.add(newSum)
-    newTerm.denomintors.addAll(commonDenominator)
+    val term = Term()
+    term.numerators.add(newSum)
+    term.denomintors.addAll(commonDenominator)
 
-    return newTerm
+    return term
 }
 
 
