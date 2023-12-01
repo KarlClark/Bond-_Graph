@@ -697,12 +697,15 @@ class BondGraph(var name: String) {
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
 
             for (element in elementsList ) {
-                val equation = element.deriveEquation()
+                var equation = element.deriveEquation()
 
                 results.add(equation.toAnnotatedString())
                 val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
-                results.add(newRightSide.toAnnotatedString())
+                equation = Equation(equation.leftSide, newRightSide)
+                results.add(equation.toAnnotatedString())
                 println("${newRightSide.toAnnotatedString()}")
+                equation = simplefySums(equation)
+                results.add(equation.toAnnotatedString())
             }
             state.showResults = true
 

@@ -14,6 +14,138 @@ fun cancel(term: Term){
         }
     }
 }
+fun simplefySums(equation: Equation): Equation {
+
+    val plusTerms = arrayListOf<Expr>()
+    val minusTerms = arrayListOf<Expr>()
+    val newPlusTerms = arrayListOf<Expr>()
+    val newMinusTerms = arrayListOf<Expr>()
+
+    if (equation.rightSide is Token){
+        return equation
+    }
+    if (equation.rightSide is Term){
+        plusTerms.add(equation.rightSide)
+    } else {
+        plusTerms.addAll((equation.rightSide as Sum).plusTerms)
+        minusTerms.addAll((equation.rightSide as Sum).minusTerms)
+    }
+
+    for (term in plusTerms){
+        newPlusTerms.add(simplefySum(term))
+    }
+
+    for (term in minusTerms){
+        newMinusTerms.add(simplefySum(term))
+    }
+
+    val sum = Sum()
+    sum.plusTerms.addAll(newPlusTerms)
+    sum.minusTerms.addAll(minusTerms)
+    return Equation(equation.leftSide, sum)
+}
+
+fun getPlusTerms(sum: Sum): ArrayList<Expr> {
+    println("get plus terms ${sum.toAnnotatedString()}")
+    val plusTerms = arrayListOf<Expr>()
+    for (term in sum.plusTerms) {
+        println("plus term is ${term.toAnnotatedString()} ")
+        if (term is Sum) {
+            plusTerms.addAll(getPlusTerms(term))
+            println("term is Sum")
+            plusTerms.forEach { println("${it.toAnnotatedString()}") }
+        } else {
+            plusTerms.add(term)
+            println("term is Term")
+            plusTerms.forEach { println("${it.toAnnotatedString()}") }
+        }
+    }
+
+    return plusTerms
+}
+
+fun getMinusTerms(sum: Sum): ArrayList<Expr> {
+    val minusTerms = arrayListOf<Expr>()
+    println("get minus terms ${sum.toAnnotatedString()}")
+    for (term in sum.minusTerms) {
+        println("minus term is ${term.toAnnotatedString()} ")
+        if (term is Sum) {
+            minusTerms.addAll(getMinusTerms(term))
+            println("term is Sum")
+            minusTerms.forEach { println("${it.toAnnotatedString()}") }
+        } else {
+            minusTerms.add(term)
+            println("term is Term")
+            minusTerms.forEach { println("${it.toAnnotatedString()}") }
+        }
+    }
+
+    return minusTerms
+}
+fun simplefySum(expr: Expr ): Expr {
+
+    val plusTerms = arrayListOf<Expr>()
+    val minusTerms = arrayListOf<Expr>()
+    val copyOfPlusTerms = arrayListOf<Expr>()
+    val copyOfMinusTerms = arrayListOf<Expr>()
+
+    if (expr is Token) {
+        return expr
+    }
+
+    println("simplefy sum ${expr.toAnnotatedString()}")
+
+    if (expr is Term) {
+        println("simplefy sum expr is a Term")
+        if (expr.numerators.size == 1 && expr.numerators[0] is Sum) {
+            //plusTerms .addAll( (expr.numerators[0] as Sum).plusTerms)
+            plusTerms.addAll(getPlusTerms(expr.numerators[0] as Sum))
+           // minusTerms.addAll((expr.numerators[0] as Sum).minusTerms)
+            minusTerms.addAll(getMinusTerms(expr.numerators[0] as Sum))
+
+        } else {
+            return expr
+        }
+    } else {
+        println("simplefy sum expr is a Sum")
+        plusTerms.addAll(getPlusTerms(expr as Sum))
+        minusTerms.addAll(getMinusTerms(expr))
+    }
+    println("simplefy sum plusTerms")
+    plusTerms.forEach { println("${it.toAnnotatedString()}  ${it::class.simpleName}") }
+    println("simplefy sum minusTerms")
+    minusTerms.forEach { println("${it.toAnnotatedString()}  ${it::class.simpleName}") }
+
+    if (plusTerms.size == 0  || minusTerms.size == 0){
+        return expr
+    }
+
+    copyOfPlusTerms.addAll(plusTerms)
+
+    for (e1 in copyOfPlusTerms){
+        copyOfMinusTerms.clear()
+        copyOfMinusTerms.addAll(minusTerms)
+        for (e2 in copyOfMinusTerms){
+            if (e1.equals(e2)) {
+                plusTerms.remove(e1)
+                minusTerms.remove(e2)
+            }
+        }
+    }
+
+    val sum = Sum()
+    sum.plusTerms.addAll(plusTerms)
+    sum.minusTerms.addAll(minusTerms)
+
+    if (expr is Term) {
+        val term = Term()
+        term.numerators.add(sum)
+        term.denomintors.addAll(expr.denomintors)
+        return term
+    }
+
+    return sum
+}
 var count = 0
 fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
 
@@ -160,7 +292,12 @@ fun putNumeratorsOverCommonDenominator(expressions:List<Expr>, commonDenominator
 
         newTerm.numerators.addAll(numerator)
         val newExpr = expand(newTerm)
-        numerators.add(newExpr)
+        if (newExpr is Sum) {
+            numerators.addAll(newExpr.plusTerms)
+            numerators.addAll(newExpr.minusTerms)
+        } else {
+            numerators.add(newExpr)
+        }
     }
 
     return numerators

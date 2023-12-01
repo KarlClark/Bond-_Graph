@@ -6,6 +6,20 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.sp
 
+interface Expr{
+
+    fun add(expr: Expr): Expr
+
+    fun minus(expr: Expr): Expr
+
+    fun multiply(expr: Expr): Expr
+
+    fun divide(expr: Expr): Expr
+
+    fun toAnnotatedString(exp: Int = 0): AnnotatedString
+
+    fun equals(expr: Expr): Boolean
+}
 
 
 class Token(
@@ -33,6 +47,12 @@ class Token(
 
     override fun divide(expr: Expr): Expr {
         return Term().multiply(this).divide(expr)
+    }
+
+    override fun equals(expr: Expr): Boolean {
+
+        println("token equals $this ${this.toAnnotatedString()} =?  $expr  ${expr.toAnnotatedString()}")
+        return this === expr
     }
 
     override fun toAnnotatedString(exp: Int): AnnotatedString {
@@ -67,19 +87,6 @@ class Token(
             }
         }
     }
-}
-
-interface Expr{
-
-    fun add(expr: Expr): Expr
-
-    fun minus(expr: Expr): Expr
-
-    fun multiply(expr: Expr): Expr
-
-    fun divide(expr: Expr): Expr
-
-    fun toAnnotatedString(exp: Int = 0): AnnotatedString
 }
 
 class Term():Expr {
@@ -192,6 +199,66 @@ class Term():Expr {
         return this
     }
 
+    override fun equals(expr: Expr): Boolean {
+
+        val exprNumerators = arrayListOf<Expr>()
+        val exprDenominators = arrayListOf<Expr>()
+        val copy = arrayListOf<Expr>()
+        var foundOne = false
+
+        println("term equals ${this.toAnnotatedString()} =? ${expr.toAnnotatedString()}")
+
+        if ( ! (expr is Term)) {
+            println("term equals  expression is not a term")
+            return false
+        }
+
+        exprNumerators.addAll(expr.numerators)
+        exprDenominators.addAll(expr.denomintors)
+
+        if (exprNumerators.size != numerators.size || exprDenominators.size != denomintors.size) {
+            println("term equals not the same size numerators = ${exprNumerators.size}  denominators = ${exprDenominators.size}")
+            return false
+        }
+
+        for (e1 in numerators) {
+            foundOne = false
+            copy.clear()
+            copy.addAll(exprNumerators)
+            for (e2 in copy){
+                println("e1 = ${e1.toAnnotatedString()}  e2 = ${e2.toAnnotatedString()}")
+                if (e1.equals(e2)) {
+                    println("they are equal")
+                    foundOne = true
+                    exprNumerators.remove(e2)
+                    break
+                }
+            }
+            if ( ! foundOne){
+                println("didn't find one")
+                return false
+            }
+        }
+
+        for (e1 in denomintors) {
+            foundOne = false
+            copy.clear()
+            copy.addAll(exprDenominators)
+            for (e2 in copy){
+                if (e1.equals(e2)) {
+                    foundOne = true
+                    exprDenominators.remove(e2)
+                    break
+                }
+            }
+            if ( ! foundOne){
+                return false
+            }
+        }
+
+        return true
+    }
+
     fun getNumeratorTokens(): List<Token> {
         return numerators.filter { it is Token }.map{ it as Token}
     }
@@ -203,6 +270,8 @@ class Term():Expr {
     fun getDemominatorExpressions() : List<Expr> {
         return denomintors
     }
+
+
 }
 
 class Sum(): Expr {
@@ -287,6 +356,59 @@ class Sum(): Expr {
             minusTerms[index] = minusTerms[index].divide(expr)
         }
         return this
+    }
+
+    override fun equals(expr: Expr): Boolean {
+
+        val exprPlusTerms = arrayListOf<Expr>()
+        val exprMinusTerms = arrayListOf<Expr>()
+        val copy = arrayListOf<Expr>()
+        var foundOne = false
+
+        println("sum equals ${this.toAnnotatedString()} =? ${expr.toAnnotatedString()}")
+
+        if ( ! (expr is Sum)) {
+            return false
+            }
+
+        exprPlusTerms.addAll(expr.plusTerms)
+        exprMinusTerms.addAll(expr.minusTerms)
+
+        for (e1 in plusTerms) {
+            foundOne = false
+            copy.clear()
+            copy.addAll(exprPlusTerms)
+            for (e2 in copy) {
+                if (e1.equals(e2)){
+                    foundOne = true
+                    exprPlusTerms.remove(e2)
+                    break
+                }
+            }
+
+            if ( ! foundOne) {
+                return false
+            }
+        }
+
+        for (e1 in minusTerms) {
+            foundOne = false
+            copy.clear()
+            copy.addAll(exprMinusTerms)
+            for (e2 in copy) {
+                if (e1.equals(e2)){
+                    foundOne = true
+                    exprMinusTerms.remove(e2)
+                    break
+                }
+            }
+
+            if ( ! foundOne) {
+                return false
+            }
+        }
+
+        return true
     }
 
     fun getAllExpressions(): List<Expr> {
