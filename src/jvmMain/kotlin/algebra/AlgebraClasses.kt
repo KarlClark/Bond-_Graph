@@ -147,14 +147,13 @@ class Term():Expr {
                     println("multiply canceled = false")
                     numerators.add(expr)
                 }*/
+                println("expr is token")
                 numerators.add(expr)
-                cancel(this)
             }
 
             is Term -> {
                 numerators.addAll(expr.numerators)
                 denomintors.addAll(expr.denomintors)
-                cancel(this)
             }
 
             is Sum -> {
@@ -163,7 +162,9 @@ class Term():Expr {
             }
         }
 
-        return this
+        val e = cancel(this)
+        println("returning ${e.toAnnotatedString()}")
+        return e
     }
 
     override fun divide(expr: Expr): Expr {
@@ -179,13 +180,11 @@ class Term():Expr {
                      denomintors.add(expr)
                  }*/
                  denomintors.add(expr)
-                 cancel(this)
              }
 
              is Term -> {
                  numerators.addAll(expr.denomintors)
                  denomintors.addAll(expr.numerators)
-                 cancel(this)
              }
 
              is Sum -> {
@@ -196,7 +195,7 @@ class Term():Expr {
         if (denomintors.size == 0 && numerators.size == 1) {
             return numerators[0]
         }
-        return this
+        return cancel(this)
     }
 
     override fun equals(expr: Expr): Boolean {
@@ -271,6 +270,15 @@ class Term():Expr {
         return denomintors
     }
 
+    fun removeToken(token: Token): Expr {
+        numerators.remove(token)
+        //denomintors.remove(token)
+        if (numerators.size == 1 && denomintors.size == 0) {
+            return numerators[0]
+        } else {
+            return this
+        }
+    }
 
 }
 
