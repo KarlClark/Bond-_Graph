@@ -10,7 +10,7 @@ fun cancel(term: Term): Expr{
     println("cancel ${term.toAnnotatedString()}")
 
     numerators.addAll(term.numerators)
-    denominators.addAll(term.denomintors)
+    denominators.addAll(term.denominators)
 
     term.numerators.forEach {
         if (it in numerators && it in denominators) {
@@ -21,7 +21,7 @@ fun cancel(term: Term): Expr{
 
     val term = Term()
     term.numerators.addAll(numerators)
-    term.denomintors.addAll(denominators)
+    term.denominators.addAll(denominators)
     println ("returning term = ${term.toAnnotatedString()}")
     return term
 }
@@ -43,18 +43,90 @@ fun simplefySums(equation: Equation): Equation {
     }
 
     for (term in plusTerms){
-        newPlusTerms.add(simplefySum(term))
+        checkForHangingSums(simplefySum(term), newPlusTerms, newMinusTerms)
+        //newPlusTerms.add(simplefySum(term))
     }
 
     for (term in minusTerms){
-        newMinusTerms.add(simplefySum(term))
+        checkForHangingSums(simplefySum(term), newMinusTerms, newPlusTerms)
+        //newMinusTerms.add(simplefySum(term))
     }
 
     val sum = Sum()
     sum.plusTerms.addAll(newPlusTerms)
-    sum.minusTerms.addAll(minusTerms)
+    sum.minusTerms.addAll(newMinusTerms)
     return Equation(equation.leftSide, sum)
 }
+fun checkIfHangingSum(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTerm: Boolean): Boolean {
+
+    var localIsPlusTerm = isPlusTerm
+
+    println("checkIfHangingSum  source is ------------------------")
+    source.forEach { println(it.toAnnotatedString()) }
+
+    for (expr in source) {
+
+        println("processing expr = ${expr.toAnnotatedString()} ${expr::class.simpleName}")
+        if (expr is Sum) {
+            when {
+                expr.plusTerms.size == 1 && expr.minusTerms.size == 0 -> {
+                    println("hanging plus sum adding ${expr.plusTerms[0].toAnnotatedString()} to dest")
+                    dest.add(expr.plusTerms[0])
+                }
+                expr.plusTerms.size == 0 && expr.minusTerms.size == 1 -> {
+                    println("hanging minus sum adding ${expr.minusTerms[0].toAnnotatedString()} to dest")
+                    dest.add(expr.minusTerms[0])
+                    localIsPlusTerm = ! localIsPlusTerm
+                }
+                else -> {
+                    println("normal term adding ${expr.toAnnotatedString()} to dest")
+                    dest.add(expr)
+                }
+            }
+        } else {
+            println("not a sum adding {expr.toAnnotatedString()} to dest"  )
+            dest.add(expr)
+        }
+    }
+    println("localPlusTerm = ${localIsPlusTerm}")
+    return localIsPlusTerm
+}
+fun checkForHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms: ArrayList<Expr>) {
+
+    val numerators = arrayListOf<Expr>()
+    val denominators = arrayListOf<Expr>()
+    val newNumerators = arrayListOf<Expr>()
+    val newDenominators = arrayListOf<Expr>()
+    val plusTerms = arrayListOf<Expr>()
+    val minusTerms = arrayListOf<Expr>()
+    var isPlusTerm = true
+
+    println("checkForHangingSums expr = ${expr.toAnnotatedString()}")
+    if (expr is Sum || expr is Token) {
+        numerators.add(expr)
+    } else {
+        numerators.addAll((expr as Term).numerators)
+        denominators.addAll(expr.denominators)
+    }
+    isPlusTerm = checkIfHangingSum(numerators, newNumerators, true)
+    isPlusTerm = checkIfHangingSum(denominators,newDenominators, isPlusTerm)
+
+    println("checkForHangingSums numerators")
+    newNumerators.forEach { println(it.toAnnotatedString()) }
+    println("checkForHangingSums denominators")
+    newDenominators.forEach { println(it.toAnnotatedString()) }
+    val term = Term()
+    term.numerators.addAll(newNumerators)
+    term.denominators.addAll(newDenominators)
+    if (isPlusTerm) {
+        println("adding ${term.toAnnotatedString()} to newPlusTerms")
+        newPlusTerms.add(term)
+    } else {
+        println("adding ${term.toAnnotatedString()} to newMinusTerms")
+        newMinusTerms.add(term)
+    }
+}
+
 
 fun getPlusTerms(sum: Sum): ArrayList<Expr> {
     println("get plus terms ${sum.toAnnotatedString()}")
@@ -151,7 +223,7 @@ fun simplefySum(expr: Expr ): Expr {
     if (expr is Term) {
         val term = Term()
         term.numerators.add(sum)
-        term.denomintors.addAll(expr.denomintors)
+        term.denominators.addAll(expr.denominators)
         return term
     }
 
@@ -252,10 +324,10 @@ fun expand(expr: Expr): Expr {
     sum.plusTerms.addAll(plusNumerators)
     sum.minusTerms.addAll(minusNumerators)
 
-    if (expr is Term && expr.denomintors.size > 0) {
+    if (expr is Term && expr.denominators.size > 0) {
         val term = Term()
         term.numerators.add(sum)
-        term.denomintors.addAll(expr.denomintors)
+        term.denominators.addAll(expr.denominators)
         println("expand final expression = ${term.toAnnotatedString()}")
         return term
     }
@@ -293,7 +365,7 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     }
 
     copyOfCommonDenominator.addAll(commonDenominator)
-    for (term in (expr as Term).denomintors) {
+    for (term in (expr as Term).denominators) {
         if (copyOfCommonDenominator.contains(term)) {
             copyOfCommonDenominator.remove(term)
         }
@@ -322,7 +394,7 @@ fun commonDemoninator(sum: Sum): Expr {
         copyOfCommonDenominator.addAll(commonDenominator)
 
         if ( term is Term){
-            for (dTerm in (term as Term).denomintors) {
+            for (dTerm in (term as Term).denominators) {
                 if (copyOfCommonDenominator.contains(dTerm)) {
                     copyOfCommonDenominator.remove(dTerm)
                 } else {
@@ -345,7 +417,7 @@ fun commonDemoninator(sum: Sum): Expr {
 
     val term = Term()
     term.numerators.add(newSum)
-    term.denomintors.addAll(commonDenominator)
+    term.denominators.addAll(commonDenominator)
 
     return term
 }
@@ -405,7 +477,7 @@ fun factor  (token: Token, expr: Expr): Expr {
             if (expr.numerators.size == 1 && expr.numerators[0] is Sum){
                 val fact = factorSum(token, expr.numerators[0] as Sum)
                 val term = Term()
-                term.denomintors.addAll(expr.denomintors)
+                term.denominators.addAll(expr.denominators)
                 term.numerators.add(fact)
                 return term
             }

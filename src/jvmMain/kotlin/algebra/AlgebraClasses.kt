@@ -92,7 +92,7 @@ class Token(
 class Term():Expr {
 
     val numerators = arrayListOf<Expr>()
-    val denomintors = arrayListOf<Expr>()
+    val denominators = arrayListOf<Expr>()
 
     override fun toAnnotatedString(exp: Int): AnnotatedString {
         return buildAnnotatedString {
@@ -111,9 +111,9 @@ class Term():Expr {
                     }
                 }
             }
-             if (denomintors.size > 0){
+             if (denominators.size > 0){
                  append("/")
-                 denomintors.forEach {
+                 denominators.forEach {
                      when (it) {
                          is Token -> append(it.toAnnotatedString())
                          is Term -> append(it.toAnnotatedString())
@@ -153,7 +153,7 @@ class Term():Expr {
 
             is Term -> {
                 numerators.addAll(expr.numerators)
-                denomintors.addAll(expr.denomintors)
+                denominators.addAll(expr.denominators)
             }
 
             is Sum -> {
@@ -179,20 +179,20 @@ class Term():Expr {
                      println("add ${expr.toAnnotatedString()} to denominators of $this")
                      denomintors.add(expr)
                  }*/
-                 denomintors.add(expr)
+                 denominators.add(expr)
              }
 
              is Term -> {
-                 numerators.addAll(expr.denomintors)
-                 denomintors.addAll(expr.numerators)
+                 numerators.addAll(expr.denominators)
+                 denominators.addAll(expr.numerators)
              }
 
              is Sum -> {
-                 denomintors.add(expr)
+                 denominators.add(expr)
              }
          }
 
-        if (denomintors.size == 0 && numerators.size == 1) {
+        if (denominators.size == 0 && numerators.size == 1) {
             return numerators[0]
         }
         return cancel(this)
@@ -213,9 +213,9 @@ class Term():Expr {
         }
 
         exprNumerators.addAll(expr.numerators)
-        exprDenominators.addAll(expr.denomintors)
+        exprDenominators.addAll(expr.denominators)
 
-        if (exprNumerators.size != numerators.size || exprDenominators.size != denomintors.size) {
+        if (exprNumerators.size != numerators.size || exprDenominators.size != denominators.size) {
             println("term equals not the same size numerators = ${exprNumerators.size}  denominators = ${exprDenominators.size}")
             return false
         }
@@ -239,7 +239,7 @@ class Term():Expr {
             }
         }
 
-        for (e1 in denomintors) {
+        for (e1 in denominators) {
             foundOne = false
             copy.clear()
             copy.addAll(exprDenominators)
@@ -263,17 +263,17 @@ class Term():Expr {
     }
 
     fun getDenominatorTokens(): List<Token> {
-        return denomintors.filter { it is Token }.map{ it as Token}
+        return denominators.filter { it is Token }.map{ it as Token}
     }
 
     fun getDemominatorExpressions() : List<Expr> {
-        return denomintors
+        return denominators
     }
 
     fun removeToken(token: Token): Expr {
         numerators.remove(token)
         //denomintors.remove(token)
-        if (numerators.size == 1 && denomintors.size == 0) {
+        if (numerators.size == 1 && denominators.size == 0) {
             return numerators[0]
         } else {
             return this
@@ -432,6 +432,7 @@ class Sum(): Expr {
     fun getMinusTerms(): List<Expr> {
         return minusTerms
     }
+
 }
 
 class Equation(var leftSide: Expr, var rightSide: Expr) {
@@ -449,4 +450,5 @@ class Equation(var leftSide: Expr, var rightSide: Expr) {
             append (rightSide.toAnnotatedString())
         }
     }
+
 }
