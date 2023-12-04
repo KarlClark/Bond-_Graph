@@ -2,28 +2,105 @@ package algebra
 
 import bondgraph.AlgebraException
 
+fun expandTerm(term: Term): ArrayList<Expr> {
+
+    val newTerms = arrayListOf<Expr>()
+
+    if (term.denominators.size > 0 ){
+        return newTerms
+    }
+
+    term.numerators.forEach {
+        if (it is Term ) {
+            newTerms.addAll(expandTerm(it))
+        } else {
+            newTerms.add(it)
+        }
+    }
+    return newTerms
+}
 
 fun cancel(term: Term): Expr{
-    var numerators = arrayListOf<Expr>()
-    var denominators = arrayListOf<Expr>()
+    val numerators = arrayListOf<Expr>()
+    val denominators = arrayListOf<Expr>()
+    val copyOfNumerators = arrayListOf<Expr>()
 
     println("cancel ${term.toAnnotatedString()}")
 
-    numerators.addAll(term.numerators)
-    denominators.addAll(term.denominators)
+    /*numerators.addAll(term.numerators)
+    denominators.addAll(term.denominators)*/
 
     term.numerators.forEach {
+        if (it is Term) {
+            numerators.addAll(expandTerm(it))
+        } else {
+            numerators.add(it)
+        }
+    }
+
+    copyOfNumerators.addAll(numerators)
+
+    term.denominators.forEach {
+        if (it is Term) {
+            denominators.addAll(expandTerm(it))
+        } else {
+            denominators.add(it)
+        }
+    }
+
+    println("cancel numerators")
+    numerators.forEach { println(" ${it.toAnnotatedString()}  ${it::class.simpleName}" ) }
+    println("cancel denominators")
+    denominators.forEach { println(" ${it.toAnnotatedString()}  ${it::class.simpleName}" ) }
+
+
+    copyOfNumerators.forEach {
+        println ("${it.toAnnotatedString()} in numerators = ${it in numerators}  in denominators = ${it in denominators}")
         if (it in numerators && it in denominators) {
             numerators.remove(it)
             denominators.remove(it)
         }
     }
 
-    val term = Term()
-    term.numerators.addAll(numerators)
-    term.denominators.addAll(denominators)
+    val newTerm = Term()
+    newTerm.numerators.addAll(numerators)
+    newTerm.denominators.addAll(denominators)
     println ("returning term = ${term.toAnnotatedString()}")
-    return term
+    return newTerm
+}
+
+fun cancel(equation: Equation): Equation {
+    val newPlusTerms = arrayListOf<Expr>()
+    val newMinusTerms = arrayListOf<Expr>()
+
+    if (equation.rightSide is Token){
+        return equation
+    }
+
+    if (equation.rightSide is Term) {
+        return Equation(equation.leftSide, cancel(equation.rightSide as Term))
+    }
+    for (expr in (equation.rightSide as Sum).plusTerms) {
+        if (expr is Term) {
+            newPlusTerms.add(cancel(expr as Term))
+        } else {
+            newPlusTerms.add(expr)
+        }
+    }
+
+    for (expr in (equation.rightSide as Sum).minusTerms) {
+        if (expr is Term) {
+            newMinusTerms.add(cancel(expr as Term))
+        } else {
+            newMinusTerms.add(expr)
+        }
+    }
+
+    val sum = Sum()
+    sum.plusTerms.addAll(newPlusTerms)
+    sum.minusTerms.addAll(newMinusTerms)
+
+    return Equation(equation.leftSide, sum)
 }
 fun simplefySums(equation: Equation): Equation {
 
@@ -276,7 +353,7 @@ fun contains(token: Token, expr: Expr): Boolean {
     return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
 }
 
-fun expand(expr: Expr): Expr {
+fun expandSum(expr: Expr): Expr {
 
     val termList = arrayListOf<Expr>()
     val sumList = arrayListOf<Expr>()
@@ -361,7 +438,7 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
         val term = Term()
         term.numerators.add(expr)
         term.numerators.addAll(commonDenominator)
-        return expand(term)
+        return expandSum(term)
     }
 
     copyOfCommonDenominator.addAll(commonDenominator)
@@ -375,7 +452,7 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     term.numerators.addAll(expr.numerators)
     term.numerators.addAll(copyOfCommonDenominator)
 
-    return expand(term)
+    return expandSum(term)
 }
 
 fun commonDemoninator(sum: Sum): Expr {
@@ -602,9 +679,9 @@ fun solve (token: Token, equation: Equation): Equation {
             var commonFraction: Expr = Term()
 
             println ("Solve-------  leftSide")
-            (leftSide as Sum).plusTerms.forEach {v ->
+            /*(leftSide as Sum).plusTerms.forEach {v ->
                 println("${v.toAnnotatedString()}  ${v::class.simpleName}")
-            }
+            }*/
 
             if (leftSide is Sum) {
 
