@@ -1,7 +1,19 @@
 package algebra
 
 import bondgraph.AlgebraException
+/*
+A Term may be made up of other Terms.  For example a Term could consist of a Token and a another Term.
+If the Token represents x and the other Term represents yz the whole Term represents xyz.  Most of
+the time this is fine but causes a problem when we want to cancel like factors in the numerator and
+denominator of a fraction (also a Term) If the numerator is made up of the above Term and the denominator
+was say abz all made up of all Tokens, then we can't see the z in the numerator to cancel it. So this
+function takes a Term (that is not a fraction) and expands it to an arraylist of Tokens and Sums.
 
+Note: A Sum can also mask a single Token.  But we don't deal with that here since a Sum can also be
+controlling the sign of the whole Term.  These Sums crop up when simplifying a Sum like (a + b -a).
+After simplifying we are left with a Sum with just one Token b. The simplifySums function resolves
+these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
+ */
 fun expandTerm(term: Term): ArrayList<Expr> {
 
     val newTerms = arrayListOf<Expr>()
@@ -10,8 +22,10 @@ fun expandTerm(term: Term): ArrayList<Expr> {
         return newTerms
     }
 
+    // Add everything in the numerators to the new list. If you find another Term expand it too.
     term.numerators.forEach {
         if (it is Term ) {
+            // If we find another Term call ourself recursively to expand it also.
             newTerms.addAll(expandTerm(it))
         } else {
             newTerms.add(it)
@@ -19,7 +33,11 @@ fun expandTerm(term: Term): ArrayList<Expr> {
     }
     return newTerms
 }
-
+/*
+This function cancels like factors in the numerator and denominator of a fraction. Basically, create
+lists of all the Tokens and Sums in the numerator and denominator and then get rid of any that occur
+in both lists.
+ */
 fun cancel(term: Term): Expr{
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
@@ -27,9 +45,10 @@ fun cancel(term: Term): Expr{
 
     println("cancel ${term.toAnnotatedString()}")
 
-    /*numerators.addAll(term.numerators)
-    denominators.addAll(term.denominators)*/
-
+/*
+ Go through items in the numerator and denominators of the Term. Store all the Tokens and Sums
+ in separate lists.  Expand any Terms that are found and add their Tokens and Sums to the lists.
+ */
     term.numerators.forEach {
         if (it is Term) {
             numerators.addAll(expandTerm(it))
@@ -37,8 +56,6 @@ fun cancel(term: Term): Expr{
             numerators.add(it)
         }
     }
-
-    copyOfNumerators.addAll(numerators)
 
     term.denominators.forEach {
         if (it is Term) {
@@ -48,20 +65,30 @@ fun cancel(term: Term): Expr{
         }
     }
 
+    copyOfNumerators.addAll(numerators)
+
     println("cancel numerators")
     numerators.forEach { println(" ${it.toAnnotatedString()}  ${it::class.simpleName}" ) }
     println("cancel denominators")
     denominators.forEach { println(" ${it.toAnnotatedString()}  ${it::class.simpleName}" ) }
 
-
-    copyOfNumerators.forEach {
-        println ("${it.toAnnotatedString()} in numerators = ${it in numerators}  in denominators = ${it in denominators}")
-        if (it in numerators && it in denominators) {
-            numerators.remove(it)
-            denominators.remove(it)
+    /*
+    Iterate over copyOfNumerators because you can't modify a list you are iterating over. For every
+    expression in numerators see if it exists in deonminators. If so delete it from both lists. Use
+    our own .equals() functions because different objects may be equal as far as we are concerned
+    i.e. (a + b) would equal (b + a).  Make sure to delete the correct object from the appropriate list.
+     */
+    copyOfNumerators.forEach {expr ->
+        val denominator = denominators.find{d -> expr.equals(d)}
+        println("numerator = ${expr.toAnnotatedString()}")
+        println("denominator = ${denominator?.toAnnotatedString() ?: null}")
+        if (denominator != null) {
+            numerators.remove(expr)
+            denominators.remove(denominator)
         }
     }
 
+    // Create a new Term from the left over numerators and denominators.
     val newTerm = Term()
     newTerm.numerators.addAll(numerators)
     newTerm.denominators.addAll(denominators)
@@ -176,7 +203,7 @@ fun checkForHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms
     val newDenominators = arrayListOf<Expr>()
     val plusTerms = arrayListOf<Expr>()
     val minusTerms = arrayListOf<Expr>()
-    var isPlusTerm = true
+    var isPlusTerm: Boolean
 
     println("checkForHangingSums expr = ${expr.toAnnotatedString()}")
     if (expr is Sum || expr is Token) {
