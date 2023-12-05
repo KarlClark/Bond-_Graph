@@ -95,7 +95,27 @@ fun cancel(term: Term): Expr{
     println ("returning term = ${term.toAnnotatedString()}")
     return newTerm
 }
+/*
+ Iterate over a given list of Expr, and create a new list of the Exprs where cancel has be called on every Expr
+ that is a Term
+ */
+fun callCancelOnList(source: ArrayList<Expr>): ArrayList<Expr>{
 
+    val newList = arrayListOf<Expr>()
+
+    for (expr in source) {
+        if (expr is Term) {
+            newList.add(cancel(expr))
+        } else {
+            newList.add(expr)
+        }
+    }
+    return newList
+}
+/*
+The right side of an equation is either a Term or a Sum of Terms. Return a new equation where cancel
+has been called on every Term on the right side.
+ */
 fun cancel(equation: Equation): Equation {
     val newPlusTerms = arrayListOf<Expr>()
     val newMinusTerms = arrayListOf<Expr>()
@@ -107,22 +127,11 @@ fun cancel(equation: Equation): Equation {
     if (equation.rightSide is Term) {
         return Equation(equation.leftSide, cancel(equation.rightSide as Term))
     }
-    for (expr in (equation.rightSide as Sum).plusTerms) {
-        if (expr is Term) {
-            newPlusTerms.add(cancel(expr as Term))
-        } else {
-            newPlusTerms.add(expr)
-        }
-    }
+    // Call cancel on all the plus terms and then on all the minus terms.
+    newPlusTerms.addAll(callCancelOnList((equation.rightSide as Sum).plusTerms))
+    newMinusTerms.addAll(callCancelOnList((equation.rightSide as Sum).minusTerms))
 
-    for (expr in (equation.rightSide as Sum).minusTerms) {
-        if (expr is Term) {
-            newMinusTerms.add(cancel(expr as Term))
-        } else {
-            newMinusTerms.add(expr)
-        }
-    }
-
+    // create new Sum with the canceled terms.
     val sum = Sum()
     sum.plusTerms.addAll(newPlusTerms)
     sum.minusTerms.addAll(newMinusTerms)
