@@ -9,10 +9,10 @@ denominator of a fraction (also a Term) If the numerator is made up of the above
 was say abz all made up of all Tokens, then we can't see the z in the numerator to cancel it. So this
 function takes a Term (that is not a fraction) and expands it to an arraylist of Tokens and Sums.
 
-Note: A Sum can also mask a single Token.  But we don't deal with that here since a Sum can also be
-controlling the sign of the whole Term.  These Sums crop up when simplifying a Sum like (a + b -a).
-After simplifying we are left with a Sum with just one Token b. The simplifySums function resolves
-these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
+Note: A Sum can also mask a single Token.  I call these hanging sums. But we don't deal with that here
+since a Sum can also be controlling the sign of the whole Term.  These Sums crop up when simplifying
+a Sum like (a + b -a). After simplifying we are left with a Sum with just one Token b. The simplifySums
+function resolves these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
  */
 fun expandTerm(term: Term): ArrayList<Expr> {
 
@@ -138,16 +138,25 @@ fun cancel(equation: Equation): Equation {
 
     return Equation(equation.leftSide, sum)
 }
-fun simplefySums(equation: Equation): Equation {
+
+/*
+The following function simplifies the Sums in all the terms of the right side
+of the given Equation. Simplifying a Sum means taking something like this
+(a + b  -a + c) and turning it into something like this (b + c)
+ */
+fun simplifySums(equation: Equation): Equation {
 
     val plusTerms = arrayListOf<Expr>()
     val minusTerms = arrayListOf<Expr>()
     val newPlusTerms = arrayListOf<Expr>()
     val newMinusTerms = arrayListOf<Expr>()
 
+    // No Sum to simplify.
     if (equation.rightSide is Token){
         return equation
     }
+
+    // Build lists of plus and minus terms.
     if (equation.rightSide is Term){
         plusTerms.add(equation.rightSide)
     } else {
@@ -155,48 +164,88 @@ fun simplefySums(equation: Equation): Equation {
         minusTerms.addAll((equation.rightSide as Sum).minusTerms)
     }
 
+    /*
+     Call simplifySum an all the Terms in our lists, building new list of
+     the simplified terms.  A couple of things to note.
+
+     The checkForHangingSums function modifies its input lists.
+
+     The lists are reversed in the call in the second loop.  This is because
+     a plus factor from the minus terms stays in the minus terms.  But a negative
+     factor from the minus terms -(-a) belongs in the plus terms.
+     */
     for (term in plusTerms){
-        checkForHangingSums(simplefySum(term), newPlusTerms, newMinusTerms)
-        //newPlusTerms.add(simplefySum(term))
+        resolveHangingSums(simplifySum(term), newPlusTerms, newMinusTerms)
     }
-
     for (term in minusTerms){
-        checkForHangingSums(simplefySum(term), newMinusTerms, newPlusTerms)
-        //newMinusTerms.add(simplefySum(term))
+        resolveHangingSums(simplifySum(term), newMinusTerms, newPlusTerms)
     }
 
+    // Create a new Sum from the new lists.
     val sum = Sum()
     sum.plusTerms.addAll(newPlusTerms)
     sum.minusTerms.addAll(newMinusTerms)
+
+    // If sum is a positive hanging sum then resolve it.
+    if (sum.plusTerms.size == 1 && sum.minusTerms.size == 0){
+        val term = Term()
+        term.numerators.add(sum.plusTerms[0])
+        return Equation(equation.leftSide, term)
+    }
+
     return Equation(equation.leftSide, sum)
 }
-fun checkIfHangingSum(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTerm: Boolean): Boolean {
+
+/*
+    The next two functions deal with what I call hanging sums.  When you simplify a Sum like Sum(a + b - a)
+    you are left with a Sum that has just one factor in it Sum(b).  Internally a hanging Sum is a Sum that
+    contains just one Term or Token in either its plusTerms list or its minusTerms list and nothing it the
+    other list. This sum should be reduced to a Term or a Token.  The reason hanging sums are a problem is
+    if you have an expression ab/cb you would like to be able to cancel the b.  But if the expression is
+    constructed as aSum(b)/cb you can't see the b in the numerator to do the cancelling. Simplifying
+    expressions with hanging sums is tricky because you may have a situation like Sum(a - b - a) that was
+    reduced to Sum(-b).  This Sum may now be setting the sign for an entire expression. If you have an
+    expression aSum(-b)/xy when you simplify this to ab/xy you need to move the entire expression into
+    the minusTerms of whatever Sum it is part of or create a new Sum(-(ab/xy)).
+
+    This first resolveHangingSums function takes a source list of Expressions and builds a new list that is
+    the same as the source list except any hanging sums have been resolved to their base Term or Token. The
+    source list will be the numerators or denominators of some other expression.  The caller needs
+    to keep track if the sign of the expression has changed because of negative Sum.  So the caller
+    provides an initial value for the isPlusTerm flag.  Every time this function finds a negative hanging
+    sum it toggles this flag and returns it when it is finished.
+ */
+fun resloveHangingSums(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTerm: Boolean): Boolean {
 
     var localIsPlusTerm = isPlusTerm
 
     println("checkIfHangingSum  source is ------------------------")
     source.forEach { println(it.toAnnotatedString()) }
 
+    // Check every expression in the list to see if it is a hanging sum
     for (expr in source) {
-
         println("processing expr = ${expr.toAnnotatedString()} ${expr::class.simpleName}")
         if (expr is Sum) {
             when {
                 expr.plusTerms.size == 1 && expr.minusTerms.size == 0 -> {
+                    // positive hanging sum
                     println("hanging plus sum adding ${expr.plusTerms[0].toAnnotatedString()} to dest")
                     dest.add(expr.plusTerms[0])
                 }
                 expr.plusTerms.size == 0 && expr.minusTerms.size == 1 -> {
+                    // negative hanging sum
                     println("hanging minus sum adding ${expr.minusTerms[0].toAnnotatedString()} to dest")
                     dest.add(expr.minusTerms[0])
                     localIsPlusTerm = ! localIsPlusTerm
                 }
                 else -> {
+                    // normal sum
                     println("normal term adding ${expr.toAnnotatedString()} to dest")
                     dest.add(expr)
                 }
             }
         } else {
+            // an expression that is not a sum
             println("not a sum adding {expr.toAnnotatedString()} to dest"  )
             dest.add(expr)
         }
@@ -204,30 +253,41 @@ fun checkIfHangingSum(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTerm
     println("localPlusTerm = ${localIsPlusTerm}")
     return localIsPlusTerm
 }
-fun checkForHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms: ArrayList<Expr>) {
+
+/*
+    Examine the given expression and resolve any hanging terms.  If the Expression is a fractions then
+    resolve all hanging sums in both the numerator and denominator.  If the resolved expression is
+    positive add it to the newPlusTerms list, otherwise add it to the newMinusTerms list.
+ */
+fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms: ArrayList<Expr>) {
 
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
     val newNumerators = arrayListOf<Expr>()
     val newDenominators = arrayListOf<Expr>()
-    val plusTerms = arrayListOf<Expr>()
-    val minusTerms = arrayListOf<Expr>()
     var isPlusTerm: Boolean
 
+    //Build lists for the terms in the numerator and denominator.
     println("checkForHangingSums expr = ${expr.toAnnotatedString()}")
     if (expr is Sum || expr is Token) {
+        // no denominator, just one expression to add
         numerators.add(expr)
     } else {
         numerators.addAll((expr as Term).numerators)
         denominators.addAll(expr.denominators)
     }
-    isPlusTerm = checkIfHangingSum(numerators, newNumerators, true)
-    isPlusTerm = checkIfHangingSum(denominators,newDenominators, isPlusTerm)
+
+    // Resolve hanging sums in both list keeping track of the sign of the expression.
+    isPlusTerm = resloveHangingSums(numerators, newNumerators, true)
+    isPlusTerm = resloveHangingSums(denominators,newDenominators, isPlusTerm)
 
     println("checkForHangingSums numerators")
     newNumerators.forEach { println(it.toAnnotatedString()) }
     println("checkForHangingSums denominators")
     newDenominators.forEach { println(it.toAnnotatedString()) }
+
+    // Create a new term from the new resolved numerators and denominators and add it to
+    // either the newPlusTerms list or the new minusTermsList.
     val term = Term()
     term.numerators.addAll(newNumerators)
     term.denominators.addAll(newDenominators)
@@ -241,97 +301,136 @@ fun checkForHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms
 }
 
 
-fun getPlusTerms(sum: Sum): ArrayList<Expr> {
-    println("get plus terms ${sum.toAnnotatedString()}")
-    val plusTerms = arrayListOf<Expr>()
-    for (term in sum.plusTerms) {
-        println("plus term is ${term.toAnnotatedString()} ")
-        if (term is Sum) {
-            plusTerms.addAll(getPlusTerms(term))
-            println("term is Sum")
-            plusTerms.forEach { println("${it.toAnnotatedString()}") }
-        } else {
-            plusTerms.add(term)
-            println("term is Term")
-            plusTerms.forEach { println("${it.toAnnotatedString()}") }
-        }
-    }
+/*
+    The next two functions are used for expanding Sums. This means to get rid of nested Sums in a Sum. For
+    example Sum( a + Sum( b + c) will be expanded to Sum(a + b + c)
+    In the following functions the Sum class is used as a convenient data class to hold two lists, one
+    of plus terms, and one of minus terms.
+ */
 
-    return plusTerms
-}
-
-fun getMinusTerms(sum: Sum): ArrayList<Expr> {
-    val minusTerms = arrayListOf<Expr>()
-    println("get minus terms ${sum.toAnnotatedString()}")
-    for (term in sum.minusTerms) {
-        println("minus term is ${term.toAnnotatedString()} ")
-        if (term is Sum) {
-            minusTerms.addAll(getMinusTerms(term))
-            println("term is Sum")
-            minusTerms.forEach { println("${it.toAnnotatedString()}") }
-        } else {
-            minusTerms.add(term)
-            println("term is Term")
-            minusTerms.forEach { println("${it.toAnnotatedString()}") }
-        }
-    }
-
-    return minusTerms
-}
-fun simplefySum(expr: Expr ): Expr {
+/*
+    This functions expands a Sum by looking for Sums in its plus term list and in its minus term list.
+    Note that expandSum(Sum) calls expandSum(List) which may call expandSum(Sum) recursively.
+ */
+fun expandSum(sum: Sum): Sum {
 
     val plusTerms = arrayListOf<Expr>()
     val minusTerms = arrayListOf<Expr>()
-    val copyOfPlusTerms = arrayListOf<Expr>()
-    val copyOfMinusTerms = arrayListOf<Expr>()
 
-    if (expr is Token) {
-        return expr
-    }
+    var newSum: Sum
 
-    println("simplefy sum ${expr.toAnnotatedString()}")
+    /*
+    Expand the plus terms and the minus terms.
+    Note that expanding the plus terms may produce plus terms and minus terms.
+    Same with the minus terms.
+    Note: the plus terms list produced from the minus terms should be added to
+    our minus terms list and vice versa.
+    */
+    newSum = expandSum(sum.plusTerms)
+    plusTerms.addAll(newSum.plusTerms)
+    minusTerms.addAll(newSum.minusTerms)
 
-    if (expr is Term) {
-        println("simplefy sum expr is a Term")
-        if (expr.numerators.size == 1 && expr.numerators[0] is Sum) {
-            //plusTerms .addAll( (expr.numerators[0] as Sum).plusTerms)
-            plusTerms.addAll(getPlusTerms(expr.numerators[0] as Sum))
-           // minusTerms.addAll((expr.numerators[0] as Sum).minusTerms)
-            minusTerms.addAll(getMinusTerms(expr.numerators[0] as Sum))
+    newSum = expandSum(sum.minusTerms)
+    plusTerms.addAll(newSum.minusTerms)
+    minusTerms.addAll(newSum.plusTerms)
+
+    newSum = Sum()
+    newSum.plusTerms.addAll(plusTerms)
+    newSum.minusTerms.addAll(minusTerms)
+
+    return newSum
+}
+
+/*
+    Check every expression in the given list and expand any Sums found.  Since expanding a
+    Sum will produce two list, one for plus terms and one for minus terms we use a Sum instance
+    to return the two lists.
+ */
+fun expandSum (source: ArrayList<Expr>): Sum {
+
+    val plusTerms = arrayListOf<Expr>()
+    val minusTerms = arrayListOf<Expr>()
+
+    for (expr in source){
+        if (expr is Sum){
+            // Recursive call to expandSum(Sum)
+            var sum : Sum = expandSum(expr)
+            plusTerms.addAll(sum.plusTerms)
+            minusTerms.addAll(sum.minusTerms)
 
         } else {
-            return expr
-        }
-    } else {
-        println("simplefy sum expr is a Sum")
-        plusTerms.addAll(getPlusTerms(expr as Sum))
-        minusTerms.addAll(getMinusTerms(expr))
-    }
-    println("simplefy sum plusTerms")
-    plusTerms.forEach { println("${it.toAnnotatedString()}  ${it::class.simpleName}") }
-    println("simplefy sum minusTerms")
-    minusTerms.forEach { println("${it.toAnnotatedString()}  ${it::class.simpleName}") }
-
-    if (plusTerms.size == 0  || minusTerms.size == 0){
-        return expr
-    }
-
-    copyOfPlusTerms.addAll(plusTerms)
-
-    for (e1 in copyOfPlusTerms){
-        copyOfMinusTerms.clear()
-        copyOfMinusTerms.addAll(minusTerms)
-        for (e2 in copyOfMinusTerms){
-            if (e1.equals(e2)) {
-                plusTerms.remove(e1)
-                minusTerms.remove(e2)
-            }
+            plusTerms.add(expr)
         }
     }
 
     val sum = Sum()
     sum.plusTerms.addAll(plusTerms)
     sum.minusTerms.addAll(minusTerms)
+    return sum
+}
+
+/*
+    The following function simplifies a Sum.  To simplify a sum means to take something
+    like (a + b + c -a) and change it to (b + c).  If the given expression is fraction
+    with a single Sum in the numerator then return the fraction with the numerator simplified.
+ */
+fun simplifySum(expr: Expr ): Expr {
+
+    val copyOfPlusTerms = arrayListOf<Expr>()
+    val copyOfMinusTerms = arrayListOf<Expr>()
+    var sum: Sum
+
+    if (expr is Token) {
+        // nothing to simplify
+        return expr
+    }
+
+    println("simplefy sum ${expr.toAnnotatedString()}")
+
+    // before we can simplify we must expand the Sum.
+    if (expr is Term) {
+        println("simplify sum expr is a Term")
+        if (expr.numerators.size == 1 && expr.numerators[0] is Sum) {
+            sum = expandSum(expr.numerators[0] as Sum)
+        } else {
+            // We may want to extend this function to handle Term x Sum
+            // i.e ab(a + b  + c -a) could be ab(b + c) But hanging sums
+            // would complicate this.
+            return expr
+        }
+    } else {
+        println("simplify sum expr is a Sum")
+        sum = expandSum(expr as Sum)
+
+    }
+
+    if (sum.plusTerms.size == 0  || sum.minusTerms.size == 0){
+        // Nothing to add or subtract
+        return expr
+    }
+
+    // Need copy because we can't modify list we are iterating over.
+    copyOfPlusTerms.addAll(sum.plusTerms)
+
+    /*
+    For each term in the plus terms list see if there is a matching term
+    in the minus term list.  If there is, remove the term from both lists.
+    Make a new copy of the minus terms list on each iteration because a
+    term might occur twice in the plus terms but only once in the minus
+    terms. Use our Expr.equals() function for comparisons.  Be sure to
+    remove the correct objects from the correct list since they may not
+    be equal from an object point of view.
+    */
+    for (e1 in copyOfPlusTerms){
+        copyOfMinusTerms.clear()
+        copyOfMinusTerms.addAll(sum.minusTerms)
+        for (e2 in copyOfMinusTerms){
+            if (e1.equals(e2)) {
+                sum.plusTerms.remove(e1)
+                sum.minusTerms.remove(e2)
+            }
+        }
+    }
 
     if (expr is Term) {
         val term = Term()
@@ -342,14 +441,8 @@ fun simplefySum(expr: Expr ): Expr {
 
     return sum
 }
-var count = 0
-fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
 
-    //if (count++ > 4) return false
-    /*if (expr is Token) {
-        println ("token = $token  expr = $expr")
-        return token === expr
-    }*/
+fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
 
     if (expr is Term) {
         val exprsList = expr.getDemominatorExpressions()
@@ -389,9 +482,10 @@ fun contains(token: Token, expr: Expr): Boolean {
     return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
 }
 
-fun expandSum(expr: Expr): Expr {
+fun expandProductOfSumAndTerm(expr: Expr): Expr {
 
     val termList = arrayListOf<Expr>()
+
     val sumList = arrayListOf<Expr>()
     val plusNumerators = arrayListOf<Expr>()
     val minusNumerators = arrayListOf<Expr>()
@@ -474,7 +568,7 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
         val term = Term()
         term.numerators.add(expr)
         term.numerators.addAll(commonDenominator)
-        return expandSum(term)
+        return expandProductOfSumAndTerm(term)
     }
 
     copyOfCommonDenominator.addAll(commonDenominator)
@@ -488,7 +582,7 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     term.numerators.addAll(expr.numerators)
     term.numerators.addAll(copyOfCommonDenominator)
 
-    return expandSum(term)
+    return expandProductOfSumAndTerm(term)
 }
 
 fun commonDemoninator(sum: Sum): Expr {

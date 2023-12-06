@@ -704,7 +704,7 @@ class BondGraph(var name: String) {
                 equation = Equation(equation.leftSide, newRightSide)
                 results.add(equation.toAnnotatedString())
                 println("${newRightSide.toAnnotatedString()}")
-                equation = simplefySums(equation)
+                equation = simplifySums(equation)
                 results.add(equation.toAnnotatedString())
                 equation = cancel(equation)
                 results.add(equation.toAnnotatedString())
