@@ -442,33 +442,34 @@ fun simplifySum(expr: Expr ): Expr {
     return sum
 }
 
-fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
+/*
+    This function checks to see if the Token occurs anywhere in the denominator
+    of the expression.  This program solves equations for certain Tokens.  It
+    currently can't solve an equation if the Token occurs in a denominator.
+ */
+fun isTokenInDenominator(token: Token, expr: Expr): Boolean {
 
+    /*
+    If the expression is a term then check every expression in its denominator.  If
+    this new expression is a token, and it matches the input token then return true.
+    If it not a token then call ourself recursively.
+     */
     if (expr is Term) {
-        val exprsList = expr.getDemominatorExpressions()
-
-        for (index in exprsList.indices){
-            println("Term ${expr.toAnnotatedString()} expr[$index] = ${exprsList[index].toAnnotatedString()}")
-            if (exprsList[index] is Token && token === exprsList[index]) {
-                println("here 1")
+        for (ex in expr.denominators){
+            if (ex is Token && ex === token) {
                 return true
             }
-            if ( isTokenInDemoninator(token, exprsList[index])) {
-                println("here 2")
+            if ( isTokenInDenominator(token, ex)) {
                 return true
             }
         }
     }
 
+    // If expression is a Sum then call ourself recursively on every term  in the Sum.
      if (expr is Sum){
          val exprsList = expr.getAllExpressions()
-         for (index in exprsList.indices) {
-             println("Sum ${expr.toAnnotatedString()} expr[$index] = ${exprsList[index].toAnnotatedString()}")
-             if (exprsList[index] is Token && token === exprsList[index]) {
-                 println("here 3")
-                 return true
-             }
-             if (isTokenInDemoninator(token, exprsList[index])) {
+         for (ex in exprsList) {
+             if (isTokenInDenominator(token, ex)) {
                  println("here 4")
                  return true
              }
@@ -478,23 +479,43 @@ fun isTokenInDemoninator(token: Token, expr: Expr): Boolean {
     return false
 }
 
+/*
+    Check t see if the token occurs in the numerator of the expression.
+ */
 fun contains(token: Token, expr: Expr): Boolean {
     return if (expr is Term) expr.getNumeratorTokens().contains(token) else false
 }
 
+/*
+    The following function expands the product or a Term and a Sum.
+    i.e ab(x + y)  to (abx + aby)
+    If expr is a fraction, the expand the numerator.
+ */
 fun expandProductOfSumAndTerm(expr: Expr): Expr {
 
     val termList = arrayListOf<Expr>()
-
     val sumList = arrayListOf<Expr>()
     val plusNumerators = arrayListOf<Expr>()
     val minusNumerators = arrayListOf<Expr>()
 
+    // create a Term that is the product of expr and all the Terms in the termList
+    fun productTerm(expr: Expr): Expr{
+        val term = Term()
+        term.numerators.addAll(termList)
+        term.numerators.add(expr)
+        return term
+    }
+
     println("Expand staring expression = ${expr.toAnnotatedString()}")
+
     if (expr is Token || expr is Sum){
+        // nothing to expand
         return expr
     }
 
+
+
+    // break expr apart into a list of Terms and a list o Sums.
     for (e in (expr as Term).numerators){
         if (e is Token || e is Term) {
             termList.add(e)
@@ -504,33 +525,25 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
     }
 
     if (sumList.size != 1) {
+        // This function can't handle multiplying two or more sums together.
         return expr
     }
 
-    for (e in(sumList[0] as Sum).plusTerms){
-        if (e is Sum) {
-            return expr
-        }
-        val term = Term()
-        term.numerators.addAll(termList)
-        term.numerators.add(e)
-        plusNumerators.add(term)
-    }
+    // Expand any nested sums
+    var sum = expandSum(sumList[0] as Sum)
 
-    for (e in(sumList[0] as Sum).minusTerms){
-        if (e is Sum) {
-            return expr
-        }
-        val term = Term()
-        term.numerators.addAll(termList)
-        term.numerators.add(e)
-        minusNumerators.add(term)
-    }
+    // multiply each Term in the Sum by the Terms outside the Sum and
+    // store the new terms in the plusNumerators and minusNumerators lists.
+    sum.plusTerms.forEach { plusNumerators.add(productTerm(it)) }
+    sum.minusTerms.forEach { minusNumerators.add(productTerm(it)) }
 
-    val sum = Sum()
+    // Create a new expanded Sum from the plus and minus lists.
+    sum = Sum()
     sum.plusTerms.addAll(plusNumerators)
     sum.minusTerms.addAll(minusNumerators)
 
+    // If the original expression was a fraction return a new fraction
+    // with the expanded Sum over the original denominator.
     if (expr is Term && expr.denominators.size > 0) {
         val term = Term()
         term.numerators.add(sum)
@@ -539,6 +552,7 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
         return term
     }
     println("expand final expression = ${sum.toAnnotatedString()}")
+    // Otherwise return the expanded Sum.
     return sum
 }
 
@@ -758,7 +772,7 @@ fun solve (token: Token, equation: Equation): Equation {
     var rightSide = equation.rightSide
 
     println("rightSide = ${rightSide.toAnnotatedString()}")
-    if (isTokenInDemoninator(token, leftSide) || isTokenInDemoninator(token, rightSide)) throw AlgebraException("Error: The token we are solving for occurs in the denominator of one of the terms.  " +
+    if (isTokenInDenominator(token, leftSide) || isTokenInDenominator(token, rightSide)) throw AlgebraException("Error: The token we are solving for occurs in the denominator of one of the terms.  " +
             "These algebra routines can't solve this")
     println("rightSide = ${rightSide.toAnnotatedString()}")
 
