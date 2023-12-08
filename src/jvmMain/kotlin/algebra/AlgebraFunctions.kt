@@ -602,11 +602,9 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     // to multiply the numerator by.    
     copyOfCommonDenominator.addAll(commonDenominator)
     for (term in (expr as Term).denominators) {
-        println("Calling contains ###########################################")
         if (copyOfCommonDenominator.containsExpr(term)) {
             copyOfCommonDenominator.remove(term)
         }
-        println("done calling contains $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
     }
 
     // Create the new numerator and return the expanded form of it.
@@ -617,23 +615,39 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     return expandProductOfSumAndTerm(term)
 }
 
+/*
+Calculates a common denominator for all the terms in the sum.  Then replaces the sum
+by an equivalent term whose denominator is the common denominator. The common
+denominator is made by multiplying the terms in the denominators together.  If a term
+appears in more than one denominator it only needs to appear once in the common denominator.
+But if it appears say twice in a particular denominator then it needs to appear twice in
+the common denominator. Exapmple  a/xy + b/xef + c/zeef  common denominator = xyefze x and f
+only need to be included once, but e must be included twice.  The new term would be
+(aefze + byze + cxy)/xyefze
+ */
 fun commonDenominator(sum: Sum): Expr {
     val commonDenominator = arrayListOf<Expr>()
     val copyOfCommonDenominator = arrayListOf<Expr>()
     val allTerms = arrayListOf<Expr>()
-    var plusNumerators = arrayListOf<Expr>()
-    var minusNumerators = arrayListOf<Expr>()
+
     allTerms.addAll(sum.plusTerms)
     allTerms.addAll(sum.minusTerms)
 
     println("commonDenominator starting sum is ${sum.toAnnotatedString()}")
+    /*
+    For each term in the sum add the terms in its denominator to the common denominator.
+    To make sure a denominator term is only added once, make a copy of the common denominator each
+    time through the loop.  Check to see if the denominator term in is in the copy before adding it
+    to the common denominator.  But if it is already in the copy, then remove it from the
+    copy.  Then if the denominator term comes up again in the same sum term it will get added.
+     */
     for (term in allTerms){
 
         copyOfCommonDenominator.clear()
         copyOfCommonDenominator.addAll(commonDenominator)
 
         if ( term is Term){
-            for (dTerm in (term as Term).denominators) {
+            for (dTerm in (term).denominators) {
                 if (copyOfCommonDenominator.containsExpr(dTerm)) {
                     copyOfCommonDenominator.remove(dTerm)
                 } else {
@@ -646,6 +660,8 @@ fun commonDenominator(sum: Sum): Expr {
 
     val t= Term(); t.numerators.addAll(commonDenominator); println("commonDenominator is ${t.toAnnotatedString()}")
 
+    // Calculate new numerators for each term in the original sum based on the common denominator. Place
+    // them all in a new sum.
     val newSum = Sum()
     for (term in sum.plusTerms) {
         newSum.add(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
@@ -654,6 +670,7 @@ fun commonDenominator(sum: Sum): Expr {
         newSum.minus(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
     }
 
+    // Return a term that is the new sum divided by the common denominator.
     val term = Term()
     term.numerators.add(newSum)
     term.denominators.addAll(commonDenominator)
