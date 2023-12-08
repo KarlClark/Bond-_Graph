@@ -1,6 +1,11 @@
 package algebra
 
 import bondgraph.AlgebraException
+
+fun List<Expr>.containsExpr(expr: Expr): Boolean {
+    return this.any{expr.equals(it)}
+}
+
 /*
 A Term may be made up of other Terms.  For example a Term could consist of a Token and a another Term.
 If the Token represents x and the other Term represents yz the whole Term represents xyz.  Most of
@@ -598,7 +603,7 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     copyOfCommonDenominator.addAll(commonDenominator)
     for (term in (expr as Term).denominators) {
         println("Calling contains ###########################################")
-        if (copyOfCommonDenominator.contains(term)) {
+        if (copyOfCommonDenominator.containsExpr(term)) {
             copyOfCommonDenominator.remove(term)
         }
         println("done calling contains $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
@@ -629,7 +634,7 @@ fun commonDenominator(sum: Sum): Expr {
 
         if ( term is Term){
             for (dTerm in (term as Term).denominators) {
-                if (copyOfCommonDenominator.contains(dTerm)) {
+                if (copyOfCommonDenominator.containsExpr(dTerm)) {
                     copyOfCommonDenominator.remove(dTerm)
                 } else {
                     commonDenominator.add(dTerm)

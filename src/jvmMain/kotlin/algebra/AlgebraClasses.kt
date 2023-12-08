@@ -207,7 +207,12 @@ class Term():Expr {
 
         println("term equals ${this.toAnnotatedString()} =? ${expr.toAnnotatedString()}")
 
-        if ( ! (expr is Term)) {
+        if (this === expr){
+            println("they are the same object")
+            return true
+        }
+
+        if (expr !is Term) {
             println("term equals  expression is not a term")
             return false
         }
@@ -374,6 +379,11 @@ class Sum(): Expr {
         var foundOne = false
 
         println("sum equals ${this.toAnnotatedString()} =? ${expr.toAnnotatedString()}")
+
+        if (this === expr ) {
+            println("they are the same object")
+            return true
+        }
 
         if ( ! (expr is Sum)) {
             return false
