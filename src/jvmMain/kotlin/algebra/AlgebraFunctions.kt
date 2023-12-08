@@ -678,8 +678,10 @@ fun commonDenominator(sum: Sum): Expr {
     return term
 }
 
-
-
+/*
+    Remove the token from each term in the sum
+    Example: factor a from (am + asm + ax) yields (m + sm + x)
+ */
 fun factorSum(token: Token, sum: Sum): Expr  {
 
     val plusTerms = sum.plusTerms
@@ -687,33 +689,27 @@ fun factorSum(token: Token, sum: Sum): Expr  {
     val newPlusTerms = arrayListOf<Expr>()
     val newMinusTerms = arrayListOf<Expr>()
 
+    // remove the token from the terms in the source list, and put the
+    // new terms in the dest list.
+    fun removeToken(source: ArrayList<Expr>, dest: ArrayList<Expr>) {
+        for (term in source){
+            if (term is Term){
+                if (term.numerators.contains(token)){
+                    dest.add(term.removeToken(token))
 
-    for (term in plusTerms) {
-        if (term is Term){
-            if (term.numerators.contains(token)){
-                newPlusTerms.add(term.removeToken(token))
-
+                } else {
+                    throw AlgebraException("Attempt to factor token out to a term that doesn't contain the token." +
+                            "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}")
+                }
             } else {
-                throw AlgebraException("Attempt to factor token out to a term that doesn't contain the token." +
-                        "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}")
+                throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
             }
-        } else {
-            throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
         }
     }
 
-    for (term in minusTerms) {
-        if (term is Term){
-            if (term.numerators.contains(token)){
-                newMinusTerms.add(term.removeToken(token))
-            } else {
-                throw AlgebraException("Attempt to factor token out to a term that doesn't contain the token." +
-                        "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}")
-            }
-        } else {
-            throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
-        }
-    }
+    // remove the token from the plus and minus terms.
+    removeToken(plusTerms, newPlusTerms)
+    removeToken(minusTerms, newMinusTerms)
 
     val newSum = Sum()
     newSum.plusTerms.addAll(newPlusTerms)
@@ -727,14 +723,14 @@ fun factor  (token: Token, expr: Expr): Expr {
 
     if (expr is Term) {
         if (expr.numerators.contains(token)) {
-            val e =expr.removeToken(token)
+            val e = expr.removeToken(token)
             return e
         } else {
             if (expr.numerators.size == 1 && expr.numerators[0] is Sum){
                 val fact = factorSum(token, expr.numerators[0] as Sum)
                 val term = Term()
-                term.denominators.addAll(expr.denominators)
                 term.numerators.add(fact)
+                term.denominators.addAll(expr.denominators)
                 return term
             }
         }
