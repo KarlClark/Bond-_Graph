@@ -716,10 +716,16 @@ fun factorSum(token: Token, sum: Sum): Expr  {
     newSum.minusTerms.addAll(newMinusTerms)
     return newSum
 }
-
+/*
+    Remove token from the expression.  Several cases,
+    factor a from axy -> xy
+    factor a from axy/ef -> xy/ef
+    factor a from  (axy + amn) -> (xy + mn)
+    factor a from (axy + amn)/ef -> (xy + mn)/ef
+ */
 fun factor  (token: Token, expr: Expr): Expr {
 
-    if (expr is Token)throw AlgebraException ("Error: Attempt to facto a single token = ${token.toAnnotatedString()}")
+    if (expr is Token)throw AlgebraException ("Error: Attempt to factor a single token = ${token.toAnnotatedString()}")
 
     if (expr is Term) {
         if (expr.numerators.contains(token)) {
@@ -727,6 +733,7 @@ fun factor  (token: Token, expr: Expr): Expr {
             return e
         } else {
             if (expr.numerators.size == 1 && expr.numerators[0] is Sum){
+                // Single sum in numerator
                 val fact = factorSum(token, expr.numerators[0] as Sum)
                 val term = Term()
                 term.numerators.add(fact)
@@ -743,7 +750,15 @@ fun factor  (token: Token, expr: Expr): Expr {
 
 }
 
-fun getKeyToken(term: Term): Token {
+/*
+    The state token represents the sate variable in the term, a
+    source variable or displacement on a capacitor, a momentum on
+    and inertia or the derivative of a displacement or momentum.
+    Everything else in the term is coefficient of the state
+    variable.  So this function looks at term and figures out
+    which token is the state variablke.
+ */
+fun getStateToken(term: Term): Token {
     for (expr in term.numerators){
         if (expr is Token && (expr.energyVar || expr.powerVar)) {
             return expr
@@ -752,43 +767,56 @@ fun getKeyToken(term: Term): Token {
     throw AlgebraException("Error: getKeyToken called on term with to power or energy variable = ${term.toAnnotatedString()}")
 }
 
+/*
+    Each term in the sum is basically a coefficient times a state variable.  There may be
+    several terms for any given state variable.  This function creates a new sum where there
+    is just one term for each state variable.  This involves finding all the terms for a
+    particular state variable, calculating a common denominator for the terms and then
+    creating new numerators based on the common denominator.
+    Example  p1R1/R2 + q7R3/(R1 + R2) + p1(R5)/R3 - q7R4)/R6 becomes
+             (P1R1R3 + P1R5R2)/R2R3 + (q7R3R6 -q7R4(R1 = R2))/R6(R1 + R2)
+    This function does not factor out the state variable.  This is done in a separate step.
+ */
 fun gatherLikeTerms(sum: Sum):Expr {
    val termsMap = mutableMapOf<Token,Expr>()
 
-    for (term in sum.plusTerms ) {
-        val token = getKeyToken(term as Term)
-        if (termsMap.containsKey(token)) {
-            var expr = termsMap[token]
-            if (expr != null) {
-                expr = expr.add(term)
-                termsMap[token] = expr
+    // Add/subtract each term in the array list to the appropriate sum in
+    // in the termsMap. If the isPlusTerm flag is true then add the
+    // term to the sum otherwise subtract it.  See the comment below.
+    fun groupTerms(source: ArrayList<Expr>, isPlusTerm: Boolean) {
+        for (term in source){
+            val token = getStateToken(term as Term)
+            if (termsMap.containsKey(token)) {
+                //key already exist to add/subtract this term from the sum
+                var expr = termsMap[token]
+                if (expr != null) {
+                    expr = if (isPlusTerm) expr.add(term) else expr.minus(term)
+                    termsMap[token] = expr
+                }
+            } else {
+                // new key so create new entry.
+                termsMap[token] = if (isPlusTerm) term else Sum().minus(term)
             }
-        } else {
-            termsMap[token] = term
         }
     }
+    // First create a map where the keys are the state tokens, and the
+    // values are a sum of all the terms that that state variable occurs
+    // in. Example key p  value (pR3/R2 + pR5/R3 )
+    groupTerms(sum.plusTerms, true)
+    groupTerms(sum.minusTerms, false)
 
-    for (term in sum.minusTerms){
-        val token = getKeyToken(term as Term)
-        if (termsMap.containsKey(token)) {
-            var expr = termsMap[token]
-            if (expr != null) {
-                expr = expr.minus(term)
-                termsMap[token] = expr
-            }
-        } else {
-            termsMap[token] = Sum().minus(term)
-        }
-    }
-
+    // Create the new sum.
     var localSum = Sum()
     termsMap.values.forEach {
         if (it is Term) {
+            // just one term for this state variable so just add it to the sum.
             localSum = localSum.add(it) as Sum
         } else {
             if (it is Sum && it.plusTerms.size + it.minusTerms.size > 1) {
+                // sum with several terms.  Must create a new term with a common denominator
                 localSum = localSum.add(commonDenominator(it)) as Sum
             } else {
+                // This is a sum with a single negative term.
                 localSum = localSum.add(it) as Sum
             }
         }

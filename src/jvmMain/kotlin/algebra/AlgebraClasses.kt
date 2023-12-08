@@ -26,7 +26,7 @@ class Token(
     val bondId1: String = ""
     ,val bondId2: String = ""
     ,val name: AnnotatedString = AnnotatedString("")
-    ,val powerVar: Boolean = false
+    ,val powerVar: Boolean = false  // source of effort and source of flow tokens
     ,val energyVar: Boolean = false // Displacement on a capacitor or momentum on an inertia
     ,val independent: Boolean = false
     ,val differential: Boolean = false): Expr {
