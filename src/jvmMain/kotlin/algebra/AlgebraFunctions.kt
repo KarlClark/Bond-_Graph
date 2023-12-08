@@ -556,10 +556,17 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
     return sum
 }
 
+/*
+    Take the expression and convert it to a equivalent expression with a denominator
+    equal to the common denominator.  This os done by multiplying the numerator by all
+    the terms in the common denominator that are not in the expression's denominator.
+    example expression ab/xy  common denominator xymn  new expression abmn/xymn. This
+    function just calculates and returns the numerator part 
+ */
 fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator: List<Expr>): Expr {
 
     val copyOfCommonDenominator = arrayListOf<Expr>()
-
+/*
     println("convert to common denominator")
     commonDenominator.forEach {
 
@@ -572,26 +579,32 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
                 println("${term.toAnnotatedString()}  ${term::class.simpleName}")
             }
         }
-    }
+    }*/
 
 
 
 
     if (expr is Token || expr is Sum) {
-
+        // no denominator. Multiply the entire expression by the common denominator
         val term = Term()
         term.numerators.add(expr)
         term.numerators.addAll(commonDenominator)
         return expandProductOfSumAndTerm(term)
     }
-
+    
+    // Make a copy of the common denominator.  Then remove each term in the expression's 
+    // denominator from the copy of the common denominator.  What's left is what we need
+    // to multiply the numerator by.    
     copyOfCommonDenominator.addAll(commonDenominator)
     for (term in (expr as Term).denominators) {
+        println("Calling contains ###########################################")
         if (copyOfCommonDenominator.contains(term)) {
             copyOfCommonDenominator.remove(term)
         }
+        println("done calling contains $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
     }
 
+    // Create the new numerator and return the expanded form of it.
     val term = Term()
     term.numerators.addAll(expr.numerators)
     term.numerators.addAll(copyOfCommonDenominator)
@@ -599,10 +612,10 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
     return expandProductOfSumAndTerm(term)
 }
 
-fun commonDemoninator(sum: Sum): Expr {
-    var commonDenominator = arrayListOf<Expr>()
-    var copyOfCommonDenominator = arrayListOf<Expr>()
-    var allTerms = arrayListOf<Expr>()
+fun commonDenominator(sum: Sum): Expr {
+    val commonDenominator = arrayListOf<Expr>()
+    val copyOfCommonDenominator = arrayListOf<Expr>()
+    val allTerms = arrayListOf<Expr>()
     var plusNumerators = arrayListOf<Expr>()
     var minusNumerators = arrayListOf<Expr>()
     allTerms.addAll(sum.plusTerms)
@@ -756,7 +769,7 @@ fun gatherLikeTerms(sum: Sum):Expr {
             localSum = localSum.add(it) as Sum
         } else {
             if (it is Sum && it.plusTerms.size + it.minusTerms.size > 1) {
-                localSum = localSum.add(commonDemoninator(it)) as Sum
+                localSum = localSum.add(commonDenominator(it)) as Sum
             } else {
                 localSum = localSum.add(it) as Sum
             }
@@ -831,7 +844,7 @@ fun solve (token: Token, equation: Equation): Equation {
 
                 //termsList.addAll((leftSide as Sum).plusTerms)
                 //termsList.addAll((leftSide as Sum).minusTerms)
-                commonFraction = commonDemoninator(leftSide as Sum)
+                commonFraction = commonDenominator(leftSide as Sum)
                 println("commonFactor = ${commonFraction.toAnnotatedString()}")
 
                 (commonFraction as Term).numerators.forEach {
