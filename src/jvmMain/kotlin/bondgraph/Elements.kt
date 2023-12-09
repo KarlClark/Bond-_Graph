@@ -370,7 +370,7 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
         val sum = Sum()
         for (otherBond in otherBonds ) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            if (sameDirection(thisElement, bond, otherBond)) sum.minus(otherElement.getEffort(otherBond)) else sum.add(otherElement.getEffort(otherBond))
+            if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getEffort(otherBond)) else sum.add(otherElement.getEffort(otherBond))
         }
         return sum
     }
@@ -421,7 +421,7 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         val sum = Sum()
         for (otherBond in otherBonds) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            if (sameDirection(thisElement, bond, otherBond)) sum.minus(otherElement.getFlow(otherBond)) else sum.add(otherElement.getFlow(otherBond))
+            if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getFlow(otherBond)) else sum.add(otherElement.getFlow(otherBond))
         }
         return sum
     }

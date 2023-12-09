@@ -667,7 +667,7 @@ fun commonDenominator(sum: Sum): Expr {
         newSum.add(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
     }
     for (term in sum.minusTerms){
-        newSum.minus(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
+        newSum.subtract(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
     }
 
     // Return a term that is the new sum divided by the common denominator.
@@ -790,12 +790,12 @@ fun gatherLikeTerms(sum: Sum):Expr {
                 //key already exist to add/subtract this term from the sum
                 var expr = termsMap[token]
                 if (expr != null) {
-                    expr = if (isPlusTerm) expr.add(term) else expr.minus(term)
+                    expr = if (isPlusTerm) expr.add(term) else expr.subtract(term)
                     termsMap[token] = expr
                 }
             } else {
                 // new key so create new entry.
-                termsMap[token] = if (isPlusTerm) term else Sum().minus(term)
+                termsMap[token] = if (isPlusTerm) term else Sum().subtract(term)
             }
         }
     }
@@ -858,7 +858,7 @@ fun solve (token: Token, equation: Equation): Equation {
 
             // Subtract plus terms from both sides of equation.
             matchingPlusTerms.forEach {
-                leftSide = leftSide.minus(it)
+                leftSide = leftSide.subtract(it)
                 plusTerms.remove(it)
             }
 

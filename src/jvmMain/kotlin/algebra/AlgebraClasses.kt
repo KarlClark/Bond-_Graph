@@ -10,7 +10,7 @@ interface Expr{
 
     fun add(expr: Expr): Expr
 
-    fun minus(expr: Expr): Expr
+    fun subtract(expr: Expr): Expr
 
     fun multiply(expr: Expr): Expr
 
@@ -37,8 +37,8 @@ class Token(
         return Sum().add(expr).add(this)
     }
 
-    override fun minus(expr: Expr): Expr {
-        return Sum().minus(this).minus(expr)
+    override fun subtract(expr: Expr): Expr {
+        return Sum().subtract(this).subtract(expr)
     }
 
     override fun multiply(expr: Expr): Expr {
@@ -132,8 +132,8 @@ class Term():Expr {
         return Sum().add(this).add(expr)
     }
 
-    override fun minus(expr: Expr): Expr {
-        return Sum().add(this).minus(expr)
+    override fun subtract(expr: Expr): Expr {
+        return Sum().add(this).subtract(expr)
     }
 
     override fun multiply(expr: Expr): Expr {
@@ -330,7 +330,7 @@ class Sum(): Expr {
     }
 
 
-    override fun minus(expr: Expr): Expr {
+    override fun subtract(expr: Expr): Expr {
         when (expr) {
 
             is Token -> {
