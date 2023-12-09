@@ -824,106 +824,68 @@ fun gatherLikeTerms(sum: Sum):Expr {
     return localSum
 }
 
+/*
+    This function can solve a specific form of an algebraic equation for the variable represented by token.
+    The form is as follows:
+    1. The left side is a single term containing the token as one of the factors, usually just the token.
+    2. The right side has one or more terms containing the token and at least one other term or constant.
+    3. The token can not appear in the denominator of any term.
+    4. The token cannot be a parameter of a function, such as log, sin or exp.
+    5. The token can't appear in the product of two sums i.e. (x + a)(x + b) which is of course the same
+       as appearing in an exp function since there would ba an x squared.
+    This function follows the brute force method of solving such an equation.
+    1. Add/subtract terms containing the token so that they eliminated on the right side of the equation
+       and appear on the left side.
+    2. Calculate a common denominator for the terms on the left side.
+    3. Calculate a sum based on the numerators of the left side and the common denominator creating a new fraction
+       with this sum divided by the common denominator.  See comments in commonDenominator function.
+    4. Factor the token out of the sum in the numerator of this fraction.
+    5. Divide both sides of the equation by this fraction, leaving just the token on the left.
+ */
 fun solve (token: Token, equation: Equation): Equation {
 
     println("Solve")
     var leftSide = equation.leftSide
     var rightSide = equation.rightSide
 
-    println("rightSide = ${rightSide.toAnnotatedString()}")
     if (isTokenInDenominator(token, leftSide) || isTokenInDenominator(token, rightSide)) throw AlgebraException("Error: The token we are solving for occurs in the denominator of one of the terms.  " +
             "These algebra routines can't solve this")
-    println("rightSide = ${rightSide.toAnnotatedString()}")
-
-
-        /*if (rightSide is Term) {
-
-            println("right side is a term = ${rightSide.toAnnotatedString()}")
-
-            val numeratorTokensList = rightSide.getNumeratorTokens()
-            val denominatorTokensList = rightSide.getDenominatorTokens()
-            if (numeratorTokensList.contains(token) || denominatorTokensList.contains(token)) throw AlgebraException("Error: right side of equation is a single term containing the variable to solve for." +
-                    "  We can't solve this.\n${leftSide.toAnnotatedString()} = ${rightSide.toAnnotatedString()}")
-
-            numeratorTokensList.forEach {
-                leftSide = leftSide.divide(it)
-                rightSide = rightSide.divide(it)
-            }
-            println("denominatorTokensList.size = ${denominatorTokensList.size}")
-            denominatorTokensList.forEach{println(it.toAnnotatedString())}
-            denominatorTokensList.forEach {
-                println("multiply both side by ${it.toAnnotatedString()}")
-                leftSide = leftSide.multiply(it)
-                rightSide = rightSide.multiply(it)
-            }
-            continue
-        }*/
-
         if (rightSide is Sum) {
             val plusTerms = rightSide.plusTerms
             val minusTerms = rightSide.minusTerms
-            //val matchingPlusterms = arrayListOf<Term>()
-            //val matchingMinusTerms = arrayListOf<Term>()
             val matchingPlusTerms = plusTerms.filter { contains(token, it) }
             val matchingMinusTerms = minusTerms.filter{ contains(token, it) }
 
+            // Subtract plus terms from both sides of equation.
             matchingPlusTerms.forEach {
                 leftSide = leftSide.minus(it)
                 plusTerms.remove(it)
             }
 
+            // Add minus terms to both sides of equation
             matchingMinusTerms.forEach {
                 leftSide = leftSide.add(it)
                 minusTerms.remove(it)
             }
 
             println("leftSIde is Term = ${leftSide is Term}  leftSide is Sum = ${leftSide is Sum}")
-            val termsList = arrayListOf<Expr>()
-            var commonFraction: Expr = Term()
 
-            println ("Solve-------  leftSide")
-            /*(leftSide as Sum).plusTerms.forEach {v ->
-                println("${v.toAnnotatedString()}  ${v::class.simpleName}")
-            }*/
+            var commonFraction: Expr
 
             if (leftSide is Sum) {
 
-                //termsList.addAll((leftSide as Sum).plusTerms)
-                //termsList.addAll((leftSide as Sum).minusTerms)
+                // Calculate common denominator for left side, and create
+                // single term on left side.  See comments in commonDenominator function.
                 commonFraction = commonDenominator(leftSide as Sum)
-                println("commonFactor = ${commonFraction.toAnnotatedString()}")
 
-                (commonFraction as Term).numerators.forEach {
-                    println("${it.toAnnotatedString()} ${it::class.simpleName}")
-                    if (it is Sum){
-                        (it as Sum).plusTerms.forEach{
-                            v -> println("${v.toAnnotatedString()}  ${v::class.simpleName}")
-                            if (v is Term) {
-                                v.numerators.forEach { v2 -> println("${v2.toAnnotatedString()}  ${v2::class.simpleName}") }
-                            }
-                        }
-                    }
-                }
-                println("commonFraction = ${commonFraction.toAnnotatedString()}")
+                // Factor token out of the numerator on the fraction
                 val factored = factor(token, commonFraction)
-                println("factored = ${factored.toAnnotatedString()} ,  leftSide = ${leftSide.toAnnotatedString()}")
 
-                (factored as Term).numerators.forEach {
-                    if (it is Sum) {
-                        it.plusTerms.forEach { v1 ->
-                            println("${v1.toAnnotatedString()}  ${v1::class.simpleName}")
-                            if (v1 is Term) {
-                                v1.numerators.forEach { v2 ->
-                                    println("${v2.toAnnotatedString()}  ${v2::class.simpleName}")
-                                }
-                            }
-                        }
-                    }
-                }
-
-
+                // Divide the right side by the fraction.  We don't bother dividing the left side
+                // since we know only the token will be left.
                 rightSide = rightSide.divide(factored)
-                println("${token.toAnnotatedString()} = ${rightSide.toAnnotatedString()}")
+
+                // Return new equation with token on the left side and the new right side.
                 return Equation(token, rightSide)
 
             }
