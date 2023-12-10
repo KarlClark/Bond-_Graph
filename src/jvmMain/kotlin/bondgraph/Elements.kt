@@ -492,7 +492,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
         if (bond.effortElement == null) throw BadGraphException("Error: Attempt to create tokens on an element with no causality set. Has createdTokens been called before augmntation?")
 
         iToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
-        pToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement !== this,false,)
+        pToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement === this,false,)
         pDotToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement !== this, true)
     }
 
@@ -608,7 +608,7 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         val bond = bondsList[0]
 
-        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), true, false, false, false)
+        sToken = Token(bond.displayId, "", AnnotatedString("e"), true, false, false, false)
     }
 
     override fun assignCausality() {
@@ -649,7 +649,7 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         val bond = bondsList[0]
 
-        sToken = Token(bond.displayId, "", elementType.toAnnotatedString(), true, false, false, false)
+        sToken = Token(bond.displayId, "", AnnotatedString("f"), true, false, false, false)
     }
 
 

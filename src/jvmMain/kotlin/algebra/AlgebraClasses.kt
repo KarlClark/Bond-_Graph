@@ -30,8 +30,8 @@ import androidx.compose.ui.unit.sp
     follow the following rules:
     1. Don't allow fractions that multiply or divide other fractions.  Take something like R3/(R5/R6) and turn it
        into R3R6/R5.  Basically maintain one level of numerators and denominators.
-    2. sums in the denominators of terms are left as sum, but sums in numerators are expanded.
-       Example R3(I4 + R5)/R2(C6 + R7)  would become (R3I4 + R3R5)/R2(C6 + R7) i.e. numerator expanded.  This is just
+    2. Products of a term and a sum are expanded.
+       Example R3(I4 + R5)/R2R6  would become (R3I4/R2R6 + R3R5/R2(R6) i.e. numerator expanded.  This is just
        because the algebra functions wind up needing this form more often that the other. Occasionally, we have to
        factor out the R3 to produce the first form.
 
@@ -116,11 +116,16 @@ class Token(
             if (differential) {
                 append("\u0307") // put a dot over the previous character.
             }
+
             pushStyle(subscript)
             append(bondId1)
             if ( ! bondId2.equals("")) {
                 append(",")
                 append(bondId2)
+            }
+            pop()
+            if ((name.text == "e") || name.text == "f") {
+                append ("(t)")
             }
             if (exp > 0) {
                 pushStyle(superScript)
@@ -209,6 +214,16 @@ class Term():Expr {
                 term.denominators.addAll(newDenominators)
                 val e = expr.multiply(term)
                 return e
+
+                /*println("term multiply ${this.toAnnotatedString()} X ${expr.toAnnotatedString()}")
+                var term = Term()
+                term.numerators.addAll(newNumerators)
+                val e = expr.multiply(term)
+                term = Term()
+                term.numerators.add(e)
+                term.denominators.addAll(newDenominators)
+                //val e = expr.multiply(term)
+                return term*/
             }
         }
 
