@@ -1,5 +1,6 @@
 package userInterface
 
+import algebra.testCases
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
 var pathToBondGraphFile: Path? = null
+val runTestCases = true
 
 /* TODO
     - grey out elements in sidebar when in bond mode
@@ -68,7 +70,7 @@ fun main() = application {
 
 
         //var xx by remember{ mutableStateOf(() -> unit = {})}
-
+        if (runTestCases) testCases()
 
         CompositionLocalProvider(
             LocalStateInfo provides state

@@ -5,7 +5,39 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.sp
+/*
+    This program can perform a limited amount of symbolic algebra, enough to generate and solve basic
+    equations produced from bond graphs.  This capability is made up of 4 classes, Equation, Token, Term and Sum,
+    the expression (Expr) interface and a bunch of functions. Briefly:
 
+    Equation: is trivial class containing two expressions, one for the left side of the equation and one for the right side.
+
+    Token: the basic building block of an expression. They represent the entities used in bond graph equations, such
+           as momentum, capacitance, resistance etc. For example in the expression q1(R1 + R2) q1, R1 and R2 would
+           all be represented by tokens. Tokens are created by the element classes.  For example a capacitor object
+           would create tokens for its capacitance, the displacement on its bond and the derivative of the displacement.
+           An element  object creates its tokens once and uses the same ones every time it is called on to supply them
+           for equation generation. So tokens can be compared on the object level i.e. t1 === t2.
+
+    Term:  A term keeps lists of expressions that are multiplied or divided into each other.  Example C1R2/R3(R4 + R5)
+
+    Sum:   A sum keeps lists of expressions that are added or subtracted from each other. Example (C2 + I3R2 + I4/R3R3)
+
+    From the examples we see that terms can contain sums, and sums may contain terms.
+
+    The Token, Term and Sum classes implement the Expr interface.  They each provide functions for how to add, subtract,
+    multiply and divide itself by another expression.  Specific details are commented below, but in general we try to
+    follow the following rules:
+    1. Don't allow fractions that multiply or divide other fractions.  Take something like R3/(R5/R6) and turn it
+       into R3R6/R5.  Basically maintain one level of numerators and denominators.
+    2. sums in the denominators of terms are left as sum, but sums in numerators are expanded.
+       Example R3(I4 + R5)/R2(C6 + R7)  would become (R3I4 + R3R5)/R2(C6 + R7) i.e. numerator expanded.  This is just
+       because the algebra functions wind up needing this form more often that the other. Occasionally, we have to
+       factor out the R3 to produce the first form.
+
+    Expr's must also implement equals(Expr).  This is because we want different objects to possibly be equal.
+    Example  (a + b) = (b + a)  or ab = ba.
+ */
 interface Expr{
 
     fun add(expr: Expr): Expr
@@ -21,7 +53,12 @@ interface Expr{
     fun equals(expr: Expr): Boolean
 }
 
-
+/*
+    A token represents a bond graph that would appear in an equation, such as momentum, resistance,
+    capacitance etc.  A token is associated with at least one bond. The modulus on a transformer or
+    gyrator is associated with two bonds. The class contains various flag to describe the nature of
+    the token that are needed for generating and displaying equations.
+ */
 class Token(
     val bondId1: String = ""
     ,val bondId2: String = ""
@@ -29,16 +66,20 @@ class Token(
     ,val powerVar: Boolean = false  // source of effort and source of flow tokens
     ,val energyVar: Boolean = false // Displacement on a capacitor or momentum on an inertia
     ,val independent: Boolean = false
-    ,val differential: Boolean = false): Expr {
+    ,val differential: Boolean = false
+    ): Expr {
 
-    val uniqueId = name.text + bondId1
+    //val uniqueId = name.text + bondId1
 
+
+    // The add, subtract, multiply and divide functions for this class are easy.  Just create the
+    // appropriate type of expression and then use functions from the expression.
     override fun add(expr: Expr): Expr {
         return Sum().add(expr).add(this)
     }
 
     override fun subtract(expr: Expr): Expr {
-        return Sum().subtract(this).subtract(expr)
+        return Sum().add(this).subtract(expr)
     }
 
     override fun multiply(expr: Expr): Expr {
@@ -49,9 +90,9 @@ class Token(
         return Term().multiply(this).divide(expr)
     }
 
+    // An element object create only copy of each of its tokens so they can be compared at the object level.
     override fun equals(expr: Expr): Boolean {
 
-        println("token equals $this ${this.toAnnotatedString()} =?  $expr  ${expr.toAnnotatedString()}")
         return this === expr
     }
 
@@ -73,7 +114,7 @@ class Token(
             pushStyle(normalStyle)
             append(name)
             if (differential) {
-                append("\u0307")
+                append("\u0307") // put a dot over the previous character.
             }
             pushStyle(subscript)
             append(bondId1)
@@ -89,6 +130,11 @@ class Token(
     }
 }
 
+/*
+    A term is made up of numerator and a denominator.  The numerator and denominator are both made up of
+    a list of expressions that are multiply together. So the numerator list R1, C1, and the denominator list
+    I4, R2, R3 represents R1C1/I4R2R3
+ */
 class Term():Expr {
 
     val numerators = arrayListOf<Expr>()
@@ -138,64 +184,72 @@ class Term():Expr {
 
     override fun multiply(expr: Expr): Expr {
 
-        println("multiply ${this.toAnnotatedString() } by ${expr.toAnnotatedString()}")
+        val newNumerators = arrayListOf<Expr>()
+        val newDenominators = arrayListOf<Expr>()
+
+        newNumerators.addAll(numerators)
+        newDenominators.addAll(denominators)
+
         when (expr) {
 
             is Token -> {
-
-               /* if ( ! cancelled(expr, denomintors)) {
-                    println("multiply canceled = false")
-                    numerators.add(expr)
-                }*/
-                println("expr is token")
-                numerators.add(expr)
+                newNumerators.add(expr)
             }
 
             is Term -> {
-                numerators.addAll(expr.numerators)
-                denominators.addAll(expr.denominators)
+                // given a/b x x/y we want ax/by  not a(x/y)/b
+                newNumerators.addAll(expr.numerators)
+                newDenominators.addAll(expr.denominators)
             }
 
             is Sum -> {
-                //numerators.add(expr)
-                return expr.multiply(this)
+                //
+                val term = Term()
+                term.numerators.addAll(newNumerators)
+                term.denominators.addAll(newDenominators)
+                val e = expr.multiply(term)
+                return e
             }
         }
 
-        val e = cancel(this)
-        println("returning ${e.toAnnotatedString()}")
-        return e
+        val term = Term()
+        term.numerators.addAll(newNumerators)
+        term.denominators.addAll(newDenominators)
+        return cancel(term)
     }
 
     override fun divide(expr: Expr): Expr {
 
-        println("divide ${this.toAnnotatedString() } by ${expr.toAnnotatedString()}")
+        val newNumerators = arrayListOf<Expr>()
+        val newDenominators = arrayListOf<Expr>()
+
+        newNumerators.addAll(numerators)
+        newDenominators.addAll(denominators)
+
          when (expr) {
 
              is Token -> {
-
-                 /*if ( ! cancelled(expr, numerators)) {
-                     println("divide canceled = false")
-                     println("add ${expr.toAnnotatedString()} to denominators of $this")
-                     denomintors.add(expr)
-                 }*/
-                 denominators.add(expr)
+                 newDenominators.add(expr)
              }
 
              is Term -> {
-                 numerators.addAll(expr.denominators)
-                 denominators.addAll(expr.numerators)
+                 newNumerators.addAll(expr.denominators)
+                 newDenominators.addAll(expr.numerators)
              }
 
              is Sum -> {
-                 denominators.add(expr)
+                 newDenominators.add(expr)
              }
          }
 
-        if (denominators.size == 0 && numerators.size == 1) {
-            return numerators[0]
+        if (newDenominators.size == 0 && newNumerators.size == 1) {
+            return newNumerators[0]
         }
-        return cancel(this)
+
+        val term = Term()
+        term.numerators.addAll(newNumerators)
+        term.denominators.addAll(newDenominators)
+        return cancel(term)
     }
 
     override fun equals(expr: Expr): Boolean {
@@ -205,15 +259,12 @@ class Term():Expr {
         val copy = arrayListOf<Expr>()
         var foundOne = false
 
-        println("term equals ${this.toAnnotatedString()} =? ${expr.toAnnotatedString()}")
 
         if (this === expr){
-            println("they are the same object")
             return true
         }
 
         if (expr !is Term) {
-            println("term equals  expression is not a term")
             return false
         }
 
@@ -221,7 +272,6 @@ class Term():Expr {
         exprDenominators.addAll(expr.denominators)
 
         if (exprNumerators.size != numerators.size || exprDenominators.size != denominators.size) {
-            println("term equals not the same size numerators = ${exprNumerators.size}  denominators = ${exprDenominators.size}")
             return false
         }
 
@@ -230,16 +280,13 @@ class Term():Expr {
             copy.clear()
             copy.addAll(exprNumerators)
             for (e2 in copy){
-                println("e1 = ${e1.toAnnotatedString()}  e2 = ${e2.toAnnotatedString()}")
                 if (e1.equals(e2)) {
-                    println("they are equal")
                     foundOne = true
                     exprNumerators.remove(e2)
                     break
                 }
             }
             if ( ! foundOne){
-                println("didn't find one")
                 return false
             }
         }
@@ -311,64 +358,109 @@ class Sum(): Expr {
     }
 
     override fun add(expr: Expr): Expr {
+
+        val newPlusTerms = arrayListOf<Expr>()
+        val newMinusTerms = arrayListOf<Expr>()
+
+        newPlusTerms.addAll(plusTerms)
+        newMinusTerms.addAll(minusTerms)
+
         when (expr) {
 
             is Token -> {
-                plusTerms.add(expr)
+                newPlusTerms.add(expr)
             }
 
             is Term -> {
-                plusTerms.add(expr)
+                newPlusTerms.add(expr)
             }
 
             is Sum -> {
-                plusTerms.addAll(expr.plusTerms)
-                minusTerms.addAll(expr.minusTerms)
+                newPlusTerms.addAll(expr.plusTerms)
+                newMinusTerms.addAll(expr.minusTerms)
             }
         }
-        return this
+
+        val sum = Sum()
+        sum.plusTerms.addAll(newPlusTerms)
+        sum.minusTerms.addAll(newMinusTerms)
+        return sum
     }
 
 
     override fun subtract(expr: Expr): Expr {
+
+        val newPlusTerms = arrayListOf<Expr>()
+        val newMinusTerms = arrayListOf<Expr>()
+
+        newPlusTerms.addAll(plusTerms)
+        newMinusTerms.addAll(minusTerms)
+
         when (expr) {
 
             is Token -> {
-                minusTerms.add(expr)
+                newMinusTerms.add(expr)
             }
 
             is Term -> {
-                minusTerms.add(expr)
+                newMinusTerms.add(expr)
             }
 
             is Sum -> {
-                plusTerms.addAll(expr.minusTerms)
-                minusTerms.addAll(expr.plusTerms)
+                newPlusTerms.addAll(expr.minusTerms)
+                newMinusTerms.addAll(expr.plusTerms)
             }
         }
-        return(this)
+
+        val sum = Sum()
+        sum.plusTerms.addAll(newPlusTerms)
+        sum.minusTerms.addAll(newMinusTerms)
+        return sum
     }
 
     override fun multiply(expr: Expr): Expr {
-        for (index in 0 .. plusTerms.size -1){
-            plusTerms[index] = plusTerms[index].multiply(expr)
+
+        val newPlusTerms = arrayListOf<Expr>()
+        val newMinusTerms = arrayListOf<Expr>()
+
+        newPlusTerms.addAll(plusTerms)
+        newMinusTerms.addAll(minusTerms)
+
+
+        for (index in 0 .. newPlusTerms.size -1){
+            newPlusTerms[index] = newPlusTerms[index].multiply(expr)
         }
 
-        for (index in 0 .. minusTerms.size -1){
-            minusTerms[index] = minusTerms[index].multiply(expr)
+        for (index in 0 .. newMinusTerms.size -1){
+            newMinusTerms[index] = newMinusTerms[index].multiply(expr)
         }
-        return this
+
+        val sum = Sum()
+        sum.plusTerms.addAll(newPlusTerms)
+        sum.minusTerms.addAll(newMinusTerms)
+        return sum
     }
 
     override fun divide(expr: Expr): Expr {
-        for (index in 0 .. plusTerms.size -1){
-            plusTerms[index] = plusTerms[index].divide(expr)
+
+        val newPlusTerms = arrayListOf<Expr>()
+        val newMinusTerms = arrayListOf<Expr>()
+
+        newPlusTerms.addAll(plusTerms)
+        newMinusTerms.addAll(minusTerms)
+
+        for (index in 0 .. newPlusTerms.size -1){
+            newPlusTerms[index] = newPlusTerms[index].divide(expr)
         }
 
         for (index in 0 .. minusTerms.size -1){
-            minusTerms[index] = minusTerms[index].divide(expr)
+            newMinusTerms[index] = newMinusTerms[index].divide(expr)
         }
-        return this
+
+        val sum = Sum()
+        sum.plusTerms.addAll(newPlusTerms)
+        sum.minusTerms.addAll(newMinusTerms)
+        return sum
     }
 
     override fun equals(expr: Expr): Boolean {
@@ -378,10 +470,8 @@ class Sum(): Expr {
         val copy = arrayListOf<Expr>()
         var foundOne = false
 
-        println("sum equals ${this.toAnnotatedString()} =? ${expr.toAnnotatedString()}")
 
         if (this === expr ) {
-            println("they are the same object")
             return true
         }
 

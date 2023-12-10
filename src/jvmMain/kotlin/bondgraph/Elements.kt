@@ -8,9 +8,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import userInterface.MyConstants
-import kotlin.reflect.KClass
 
 /*
 An enum  for the different elements used in a bond graph, with the
@@ -367,10 +365,10 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
         val thisElement = this
 
 
-        val sum = Sum()
+        var sum: Expr = Sum()
         for (otherBond in otherBonds ) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getEffort(otherBond)) else sum.add(otherElement.getEffort(otherBond))
+            if (sameDirection(thisElement, bond, otherBond)) sum = sum.subtract(otherElement.getEffort(otherBond)) else sum = sum.add(otherElement.getEffort(otherBond))
         }
         return sum
     }
@@ -418,10 +416,10 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         val otherBonds = getOtherBonds(bond)
         val thisElement = this
 
-        val sum = Sum()
+        var sum: Expr = Sum()
         for (otherBond in otherBonds) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getFlow(otherBond)) else sum.add(otherElement.getFlow(otherBond))
+            if (sameDirection(thisElement, bond, otherBond)) sum = sum.subtract(otherElement.getFlow(otherBond)) else sum = sum.add(otherElement.getFlow(otherBond))
         }
         return sum
     }
@@ -557,7 +555,6 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
     override fun getEffort(bond: Bond): Expr {
-        //println("$displayId getEffort derivingEquation = $derivingEquation")
         if (derivingEquation){
             derivingEquation = false
             return(eToken)
@@ -574,7 +571,6 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
     override fun getFlow(bond: Bond): Expr {
-        //println("$displayId getFlow derivingEquation = $derivingEquation")
         if (derivingEquation){
             derivingEquation = false
             return(fToken)
@@ -593,7 +589,6 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     override fun deriveEquation(): Equation {
 
         derivingEquation = true
-        println("deriveEquation for $displayId, derivingEquation =$derivingEquation  ")
         val bond = getBondList()[0]
         val otherElement = getOtherElement(this, bond)
         if (bond.effortElement === this){

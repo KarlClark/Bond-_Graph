@@ -688,7 +688,7 @@ class BondGraph(var name: String) {
                 equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
                 relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
 
-                (arbitrarilyAssignedResistors[0] as Resistor).substituteExprssion = equationsList[0].rightSide
+                (arbitrarilyAssignedResistors[0] as Resistor).substituteExprssion = relativilySolvedList[0].rightSide
                 //state.showResults = true
                // return
             }

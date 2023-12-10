@@ -1,11 +1,38 @@
 package algebra
 
+import androidx.compose.ui.text.AnnotatedString
 import bondgraph.AlgebraException
 
 fun List<Expr>.containsExpr(expr: Expr): Boolean {
     return this.any{expr.equals(it)}
 }
+fun testCases(){
+    val at = Token("1", "", AnnotatedString("A"))
+    val bt = Token("1", "", AnnotatedString("B"))
+    val ct = Token("1", "", AnnotatedString("C"))
+    val xt = Token("1", "", AnnotatedString("X"))
+    val yt = Token("1", "", AnnotatedString("Y"))
+    val zt = Token("1", "", AnnotatedString("Z"))
 
+    var term1 = Term()
+    var term2 = Term()
+    var sum1 = Sum()
+    var sum2 = Sum()
+    var expr1: Expr
+    var expr2: Expr
+    var expr3: Expr
+    println("Test cases &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+    println(Term().multiply(xt).divide(yt).toAnnotatedString())
+    println("-------------------------------------------------------------")
+    expr1 = sum1.add(at).add(bt)
+    expr2 = term1.multiply(xt).divide(yt)
+    expr3 = expr1.multiply(expr2)
+    println ("result ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    println("${expr1.toAnnotatedString()} x ${expr2.toAnnotatedString()} = ${expr3.toAnnotatedString()}  ${expr3::class.simpleName}")
+    expr3 = expr2.multiply(expr1)
+    println ("result ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    println("${expr2.toAnnotatedString()} x ${expr1.toAnnotatedString()} = ${expr3.toAnnotatedString()}  ${expr3::class.simpleName}")
+}
 /*
 A Term may be made up of other Terms.  For example a Term could consist of a Token and a another Term.
 If the Token represents x and the other Term represents yz the whole Term represents xyz.  Most of
@@ -48,8 +75,6 @@ fun cancel(term: Term): Expr{
     val denominators = arrayListOf<Expr>()
     val copyOfNumerators = arrayListOf<Expr>()
 
-    println("cancel ${term.toAnnotatedString()}")
-
 /*
  Go through items in the numerator and denominators of the Term. Store all the Tokens and Sums
  in separate lists.  Expand any Terms that are found and add their Tokens and Sums to the lists.
@@ -72,10 +97,6 @@ fun cancel(term: Term): Expr{
 
     copyOfNumerators.addAll(numerators)
 
-    println("cancel numerators")
-    numerators.forEach { println(" ${it.toAnnotatedString()}  ${it::class.simpleName}" ) }
-    println("cancel denominators")
-    denominators.forEach { println(" ${it.toAnnotatedString()}  ${it::class.simpleName}" ) }
 
     /*
     Iterate over copyOfNumerators because you can't modify a list you are iterating over. For every
@@ -85,8 +106,6 @@ fun cancel(term: Term): Expr{
      */
     copyOfNumerators.forEach {expr ->
         val denominator = denominators.find{d -> expr.equals(d)}
-        println("numerator = ${expr.toAnnotatedString()}")
-        println("denominator = ${denominator?.toAnnotatedString() ?: null}")
         if (denominator != null) {
             numerators.remove(expr)
             denominators.remove(denominator)
@@ -97,7 +116,6 @@ fun cancel(term: Term): Expr{
     val newTerm = Term()
     newTerm.numerators.addAll(numerators)
     newTerm.denominators.addAll(denominators)
-    println ("returning term = ${term.toAnnotatedString()}")
     return newTerm
 }
 /*
@@ -224,38 +242,30 @@ fun resloveHangingSums(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTer
 
     var localIsPlusTerm = isPlusTerm
 
-    println("checkIfHangingSum  source is ------------------------")
-    source.forEach { println(it.toAnnotatedString()) }
 
     // Check every expression in the list to see if it is a hanging sum
     for (expr in source) {
-        println("processing expr = ${expr.toAnnotatedString()} ${expr::class.simpleName}")
         if (expr is Sum) {
             when {
                 expr.plusTerms.size == 1 && expr.minusTerms.size == 0 -> {
                     // positive hanging sum
-                    println("hanging plus sum adding ${expr.plusTerms[0].toAnnotatedString()} to dest")
                     dest.add(expr.plusTerms[0])
                 }
                 expr.plusTerms.size == 0 && expr.minusTerms.size == 1 -> {
                     // negative hanging sum
-                    println("hanging minus sum adding ${expr.minusTerms[0].toAnnotatedString()} to dest")
                     dest.add(expr.minusTerms[0])
                     localIsPlusTerm = ! localIsPlusTerm
                 }
                 else -> {
                     // normal sum
-                    println("normal term adding ${expr.toAnnotatedString()} to dest")
                     dest.add(expr)
                 }
             }
         } else {
             // an expression that is not a sum
-            println("not a sum adding {expr.toAnnotatedString()} to dest"  )
             dest.add(expr)
         }
     }
-    println("localPlusTerm = ${localIsPlusTerm}")
     return localIsPlusTerm
 }
 
@@ -273,7 +283,6 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     var isPlusTerm: Boolean
 
     //Build lists for the terms in the numerator and denominator.
-    println("checkForHangingSums expr = ${expr.toAnnotatedString()}")
     if (expr is Sum || expr is Token) {
         // no denominator, just one expression to add
         numerators.add(expr)
@@ -286,10 +295,6 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     isPlusTerm = resloveHangingSums(numerators, newNumerators, true)
     isPlusTerm = resloveHangingSums(denominators,newDenominators, isPlusTerm)
 
-    println("checkForHangingSums numerators")
-    newNumerators.forEach { println(it.toAnnotatedString()) }
-    println("checkForHangingSums denominators")
-    newDenominators.forEach { println(it.toAnnotatedString()) }
 
     // Create a new term from the new resolved numerators and denominators and add it to
     // either the newPlusTerms list or the new minusTermsList.
@@ -297,10 +302,8 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     term.numerators.addAll(newNumerators)
     term.denominators.addAll(newDenominators)
     if (isPlusTerm) {
-        println("adding ${term.toAnnotatedString()} to newPlusTerms")
         newPlusTerms.add(term)
     } else {
-        println("adding ${term.toAnnotatedString()} to newMinusTerms")
         newMinusTerms.add(term)
     }
 }
@@ -390,11 +393,9 @@ fun simplifySum(expr: Expr ): Expr {
         return expr
     }
 
-    println("simplefy sum ${expr.toAnnotatedString()}")
 
     // before we can simplify we must expand the Sum.
     if (expr is Term) {
-        println("simplify sum expr is a Term")
         if (expr.numerators.size == 1 && expr.numerators[0] is Sum) {
             sum = expandSum(expr.numerators[0] as Sum)
         } else {
@@ -404,7 +405,6 @@ fun simplifySum(expr: Expr ): Expr {
             return expr
         }
     } else {
-        println("simplify sum expr is a Sum")
         sum = expandSum(expr as Sum)
 
     }
@@ -475,7 +475,6 @@ fun isTokenInDenominator(token: Token, expr: Expr): Boolean {
          val exprsList = expr.getAllExpressions()
          for (ex in exprsList) {
              if (isTokenInDenominator(token, ex)) {
-                 println("here 4")
                  return true
              }
          }
@@ -511,7 +510,6 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
         return term
     }
 
-    println("Expand staring expression = ${expr.toAnnotatedString()}")
 
     if (expr is Token || expr is Sum){
         // nothing to expand
@@ -553,10 +551,8 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
         val term = Term()
         term.numerators.add(sum)
         term.denominators.addAll(expr.denominators)
-        println("expand final expression = ${term.toAnnotatedString()}")
         return term
     }
-    println("expand final expression = ${sum.toAnnotatedString()}")
     // Otherwise return the expanded Sum.
     return sum
 }
@@ -571,23 +567,6 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
 fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator: List<Expr>): Expr {
 
     val copyOfCommonDenominator = arrayListOf<Expr>()
-/*
-    println("convert to common denominator")
-    commonDenominator.forEach {
-
-        println("${it.toAnnotatedString()} ${it::class.simpleName}")
-        if (it is Sum) {
-            for (term in (it as Sum).plusTerms){
-                println("${term.toAnnotatedString()}  ${term::class.simpleName}")
-            }
-            for (term in (it as Sum).minusTerms){
-                println("${term.toAnnotatedString()}  ${term::class.simpleName}")
-            }
-        }
-    }*/
-
-
-
 
     if (expr is Token || expr is Sum) {
         // no denominator. Multiply the entire expression by the common denominator
@@ -633,7 +612,6 @@ fun commonDenominator(sum: Sum): Expr {
     allTerms.addAll(sum.plusTerms)
     allTerms.addAll(sum.minusTerms)
 
-    println("commonDenominator starting sum is ${sum.toAnnotatedString()}")
     /*
     For each term in the sum add the terms in its denominator to the common denominator.
     To make sure a denominator term is only added once, make a copy of the common denominator each
@@ -658,16 +636,15 @@ fun commonDenominator(sum: Sum): Expr {
     }
 
 
-    val t= Term(); t.numerators.addAll(commonDenominator); println("commonDenominator is ${t.toAnnotatedString()}")
 
     // Calculate new numerators for each term in the original sum based on the common denominator. Place
     // them all in a new sum.
-    val newSum = Sum()
+    var newSum:Expr  = Sum()
     for (term in sum.plusTerms) {
-        newSum.add(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
+        newSum = newSum.add(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
     }
     for (term in sum.minusTerms){
-        newSum.subtract(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
+        newSum = newSum.subtract(convertExpressionNumeratorToCommonDenominator(term, commonDenominator))
     }
 
     // Return a term that is the new sum divided by the common denominator.
