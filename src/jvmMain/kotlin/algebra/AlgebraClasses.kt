@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.sp
     1. Don't allow fractions that multiply or divide other fractions.  Take something like R3/(R5/R6) and turn it
        into R3R6/R5.  Basically maintain one level of numerators and denominators.
     2. Products of a term and a sum are expanded.
-       Example R3(I4 + R5)/R2R6  would become (R3I4/R2R6 + R3R5/R2(R6) i.e. numerator expanded.  This is just
-       because the algebra functions wind up needing this form more often that the other. Occasionally, we have to
+       Example R3(I4 + R5)/R2R6  would become (R3I4/R2R6 + R3R5/R2R6) i.e. numerator expanded.  This is because
+       looking for like terms is easier when they are already broken out like this. Occasionally, we have to
        factor out the R3 to produce the first form.
 
     Expr's must also implement equals(Expr).  This is because we want different objects to possibly be equal.
@@ -202,28 +202,18 @@ class Term():Expr {
             }
 
             is Term -> {
-                // given a/b x x/y we want ax/by  not a(x/y)/b
+                // given a/b X x/y we want ax/by  not a(x/y)/b
                 newNumerators.addAll(expr.numerators)
                 newDenominators.addAll(expr.denominators)
             }
 
             is Sum -> {
-                //
+                // If sum looks like (a + b) we want a Sum (this X a + this X b) not a Term this( a + b)
+                // We can get this by calling the Sum multiply function.
                 val term = Term()
                 term.numerators.addAll(newNumerators)
                 term.denominators.addAll(newDenominators)
-                val e = expr.multiply(term)
-                return e
-
-                /*println("term multiply ${this.toAnnotatedString()} X ${expr.toAnnotatedString()}")
-                var term = Term()
-                term.numerators.addAll(newNumerators)
-                val e = expr.multiply(term)
-                term = Term()
-                term.numerators.add(e)
-                term.denominators.addAll(newDenominators)
-                //val e = expr.multiply(term)
-                return term*/
+                return expr.multiply(term)  // Calling Sum.multiply since expr is Sum
             }
         }
 
@@ -248,6 +238,7 @@ class Term():Expr {
              }
 
              is Term -> {
+                 // Since we are dividing add numerators to the denominator and denominators to the numerator.
                  newNumerators.addAll(expr.denominators)
                  newDenominators.addAll(expr.numerators)
              }
@@ -258,71 +249,79 @@ class Term():Expr {
          }
 
         if (newDenominators.size == 0 && newNumerators.size == 1) {
+            // Don't create a term that is just holding one other expression. Just return the expression.
             return newNumerators[0]
         }
 
+        // Create a new term and call cancel on it.
         val term = Term()
         term.numerators.addAll(newNumerators)
         term.denominators.addAll(newDenominators)
         return cancel(term)
     }
 
+    /*
+     Check to see of this object is equal to expr.  This is a basic test.  We compare the expressions in the
+     then numerator and denominator of both terms to see if they are the same. They don't have to be in the order.
+     However we don't expand any expressions.  If one term contains the two tokens ax and the other term contains
+     a term(ax) this function won't find it.
+     */
     override fun equals(expr: Expr): Boolean {
 
         val exprNumerators = arrayListOf<Expr>()
         val exprDenominators = arrayListOf<Expr>()
-        val copy = arrayListOf<Expr>()
-        var foundOne = false
 
+        // Function for comparing two lists. For each element in the first list see if it exists in the second list.
+        // The order doesn't matter.  Remove elements in the second list as they are found in case an element
+        // occurs twice in the first list but only once in the second list.
+        fun compareLists(list1: ArrayList<Expr>, list2: ArrayList<Expr>): Boolean {
+            val copyList2 = arrayListOf<Expr>()
+            var foundOne: Boolean
+
+            for (e1 in list1){
+                foundOne = false
+                copyList2.clear()
+                copyList2.addAll(list2)
+                for (e2 in copyList2) {
+                    if (e1.equals(e2)) {
+                        foundOne = true
+                        list2.remove(e2)
+                        break
+                    }
+                }
+                if (! foundOne) {
+                    return false
+                }
+            }
+            return true
+        }
 
         if (this === expr){
+            // Try this first since it is quick
             return true
         }
 
         if (expr !is Term) {
+            // can't be = to this if it isn't the same type of object.
             return false
         }
 
         exprNumerators.addAll(expr.numerators)
         exprDenominators.addAll(expr.denominators)
 
+        // If both expressions don't contain the same number of elements they can't be equal.
         if (exprNumerators.size != numerators.size || exprDenominators.size != denominators.size) {
             return false
         }
 
-        for (e1 in numerators) {
-            foundOne = false
-            copy.clear()
-            copy.addAll(exprNumerators)
-            for (e2 in copy){
-                if (e1.equals(e2)) {
-                    foundOne = true
-                    exprNumerators.remove(e2)
-                    break
-                }
-            }
-            if ( ! foundOne){
-                return false
+        // Done with quick easy checks.  Compare expressions term by term.
+        if (compareLists(numerators, exprNumerators)) {
+            if (compareLists(denominators, exprDenominators)) {
+                return true
             }
         }
 
-        for (e1 in denominators) {
-            foundOne = false
-            copy.clear()
-            copy.addAll(exprDenominators)
-            for (e2 in copy){
-                if (e1.equals(e2)) {
-                    foundOne = true
-                    exprDenominators.remove(e2)
-                    break
-                }
-            }
-            if ( ! foundOne){
-                return false
-            }
-        }
-
-        return true
+        return false
     }
 
     fun getNumeratorTokens(): List<Token> {
