@@ -5,6 +5,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.sp
+import kotlin.math.exp
+
 /*
     This program can perform a limited amount of symbolic algebra, enough to generate and solve basic
     equations produced from bond graphs.  This capability is made up of 4 classes, Equation, Token, Term and Sum,
@@ -38,6 +40,33 @@ import androidx.compose.ui.unit.sp
     Expr's must also implement equals(Expr).  This is because we want different objects to possibly be equal.
     Example  (a + b) = (b + a)  or ab = ba.
  */
+
+
+// Function for comparing two lists. For each element in the first list see if it exists in the second list.
+// The order doesn't matter.  Remove elements in the second list as they are found in case an element
+// occurs twice in the first list but only once in the second list.
+fun compareLists(list1: ArrayList<Expr>, list2: ArrayList<Expr>): Boolean {
+    val copyList2 = arrayListOf<Expr>()
+    var foundOne: Boolean
+
+    for (e1 in list1){
+        foundOne = false
+        copyList2.clear()
+        copyList2.addAll(list2)
+        for (e2 in copyList2) {
+            if (e1.equals(e2)) {
+                foundOne = true
+                list2.remove(e2)
+                break
+            }
+        }
+        if (! foundOne) {
+            return false
+        }
+    }
+    return true
+}
+
 interface Expr{
 
     fun add(expr: Expr): Expr
@@ -263,38 +292,14 @@ class Term():Expr {
     /*
      Check to see of this object is equal to expr.  This is a basic test.  We compare the expressions in the
      then numerator and denominator of both terms to see if they are the same. They don't have to be in the order.
-     However we don't expand any expressions.  If one term contains the two tokens ax and the other term contains
-     a term(ax) this function won't find it.
+     However, we don't expand any expressions.  If one term contains the two tokens 'ax' and the other term contains
+     a term 'term(ax)' this function won't find it.
      */
     override fun equals(expr: Expr): Boolean {
 
         val exprNumerators = arrayListOf<Expr>()
         val exprDenominators = arrayListOf<Expr>()
 
-        // Function for comparing two lists. For each element in the first list see if it exists in the second list.
-        // The order doesn't matter.  Remove elements in the second list as they are found in case an element
-        // occurs twice in the first list but only once in the second list.
-        fun compareLists(list1: ArrayList<Expr>, list2: ArrayList<Expr>): Boolean {
-            val copyList2 = arrayListOf<Expr>()
-            var foundOne: Boolean
-
-            for (e1 in list1){
-                foundOne = false
-                copyList2.clear()
-                copyList2.addAll(list2)
-                for (e2 in copyList2) {
-                    if (e1.equals(e2)) {
-                        foundOne = true
-                        list2.remove(e2)
-                        break
-                    }
-                }
-                if (! foundOne) {
-                    return false
-                }
-            }
-            return true
-        }
 
         if (this === expr){
             // Try this first since it is quick
@@ -328,17 +333,9 @@ class Term():Expr {
         return numerators.filter { it is Token }.map{ it as Token}
     }
 
-    fun getDenominatorTokens(): List<Token> {
-        return denominators.filter { it is Token }.map{ it as Token}
-    }
-
-    fun getDemominatorExpressions() : List<Expr> {
-        return denominators
-    }
-
+    // Remove the token from the numerator of this term.  We use this function for factoring.
     fun removeToken(token: Token): Expr {
         numerators.remove(token)
-        //denomintors.remove(token)
         if (numerators.size == 1 && denominators.size == 0) {
             return numerators[0]
         } else {
@@ -347,7 +344,11 @@ class Term():Expr {
     }
 
 }
-
+/*
+    The Sum class is used for adding and subtracting expressions.  A Sum maintains two lists, one of
+    expressions that should be added to the Sum and one of expressions that should be subtracted
+    from the Sum.
+ */
 class Sum(): Expr {
 
     val plusTerms = arrayListOf<Expr>()
@@ -371,6 +372,10 @@ class Sum(): Expr {
         }
     }
 
+    /*
+        Pretty self explanatory. If expression is a token or term add it to the plusTerms list.  If it
+        is a sum add the sum's plus term to the plusTerms list and its minus terms to the minusTerms list.
+     */
     override fun add(expr: Expr): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
@@ -402,6 +407,7 @@ class Sum(): Expr {
     }
 
 
+    // Same as add above only add expression to minusTerms list
     override fun subtract(expr: Expr): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
@@ -432,6 +438,7 @@ class Sum(): Expr {
         return sum
     }
 
+    // We want to keep the sum expanded so multiply each term in the sum by the expression.
     override fun multiply(expr: Expr): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
@@ -455,6 +462,7 @@ class Sum(): Expr {
         return sum
     }
 
+    // We want to keep the sum expanded so divide each term in the sum by the expression.
     override fun divide(expr: Expr): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
@@ -477,6 +485,12 @@ class Sum(): Expr {
         return sum
     }
 
+    /*
+    Check to see of this object is equal to expr.  This is a basic test.  We compare the expressions in the
+    plusTerms and minusTerms of both sums to see if they are the same. They don't have to be in the order.
+    However, we don't expand any expressions.  If one sum contains the two  ( a = b + c) and the other term contains
+    a term (a + sum(b + c) this function won't find it.
+    */
     override fun equals(expr: Expr): Boolean {
 
         val exprPlusTerms = arrayListOf<Expr>()
@@ -485,10 +499,12 @@ class Sum(): Expr {
         var foundOne = false
 
 
+        // Quickest easiest test first
         if (this === expr ) {
             return true
         }
 
+        // If expr is not the same type of object it can't be equal
         if ( ! (expr is Sum)) {
             return false
             }
@@ -496,41 +512,19 @@ class Sum(): Expr {
         exprPlusTerms.addAll(expr.plusTerms)
         exprMinusTerms.addAll(expr.minusTerms)
 
-        for (e1 in plusTerms) {
-            foundOne = false
-            copy.clear()
-            copy.addAll(exprPlusTerms)
-            for (e2 in copy) {
-                if (e1.equals(e2)){
-                    foundOne = true
-                    exprPlusTerms.remove(e2)
-                    break
-                }
-            }
+        // If this and expression don't have the same number of terms, they can't be equal.
+        if (plusTerms.size != exprPlusTerms.size || minusTerms.size != exprMinusTerms.size) {
+            return false
+        }
 
-            if ( ! foundOne) {
-                return false
+        // Done with easy check, have to compare term by term.
+        if (compareLists(plusTerms, exprPlusTerms)) {
+            if (compareLists(minusTerms, exprMinusTerms)) {
+                return true
             }
         }
 
-        for (e1 in minusTerms) {
-            foundOne = false
-            copy.clear()
-            copy.addAll(exprMinusTerms)
-            for (e2 in copy) {
-                if (e1.equals(e2)){
-                    foundOne = true
-                    exprMinusTerms.remove(e2)
-                    break
-                }
-            }
-
-            if ( ! foundOne) {
-                return false
-            }
-        }
-
-        return true
+        return false
     }
 
     fun getAllExpressions(): List<Expr> {
@@ -539,14 +533,6 @@ class Sum(): Expr {
         l.addAll(minusTerms)
         return l
     }
-    fun getPlusTerms(): List<Expr>{
-        return plusTerms
-    }
-
-    fun getMinusTerms(): List<Expr> {
-        return minusTerms
-    }
-
 }
 
 class Equation(var leftSide: Expr, var rightSide: Expr) {
