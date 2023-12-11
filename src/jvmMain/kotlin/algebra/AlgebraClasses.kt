@@ -535,6 +535,9 @@ class Sum(): Expr {
     }
 }
 
+/*
+Simple data class.  Holds one expression for the left side of the equation and another for the right side.
+ */
 class Equation(var leftSide: Expr, var rightSide: Expr) {
 
     companion object {

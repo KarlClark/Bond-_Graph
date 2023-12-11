@@ -592,6 +592,7 @@ class BondGraph(var name: String) {
            if (sources.isEmpty()) {
                throw BadGraphException("Error: graph has no sources.")
            }
+
            // Starting with one of the sources, count all the elements reachable from that point. If this count doesn't
            // equal the number of elements in the whole graph, then there are elements that are not connected to the graph.
            val element1 = sources[0]?.getBondList()?.get(0)?.element1

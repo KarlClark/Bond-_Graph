@@ -83,6 +83,7 @@ enum class ElementTypes {
             toAnnotatedString()
         }
         val INVALID = AnnotatedString("INVALID", style)
+
         fun toEnum(value: AnnotatedString): ElementTypes {
             return when (value) {
                 _0 -> ZERO_JUNCTION
@@ -125,6 +126,13 @@ Element contains an ElementDisplayData instance as one of its properties.
  */
 class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
 
+/*
+    A data class that holds data for a element that can be serialized and saved to a file.  It also contains two functions.
+
+    getData(element):ElementSerializationDat  can be used to generate an instance of the class for specific element
+
+    makeElement(bondgraph, ElementSerializationData): Element  can be used to re-construct an element based on the data
+ */
 @Serializable
 class ElementSerializationData(val id: Int, val type: ElementTypes,  val displayDatId: Int,  val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
     companion object {
@@ -165,11 +173,16 @@ class ElementSerializationData(val id: Int, val type: ElementTypes,  val display
 }
 
 abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
+
     var displayId: @Contextual AnnotatedString = AnnotatedString(id.toString())
-    
+
+    // A list of all the bonds attached to this element
     val bondsMap = linkedMapOf<Int, Bond>()
 
     companion object {
+
+        // Every bond is attached to two elements. Given a bond and one of the elements attached to it, return the
+        // other element.
         fun getOtherElement(element: Element, bond: Bond) = if (element === bond.element1) bond.element2 else bond.element1
 
         fun  getElementClass(elementType: ElementTypes) =
@@ -188,26 +201,52 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
                 ElementTypes.INVALID_TYPE -> null
             }
     }
+
+    // Convert bondsMap to a list
     fun getBondList(): List<Bond> = ArrayList(bondsMap.values)
 
-
+    /*
+    Return any other elements this element is attached to other than the given element. To do
+    this first create a list of all this element's bonds that are not attached to the given
+    element.  Then return a list of the other element attached to each of those bonds.
+     */
     private fun getOtherElements(element: Element): List<Element>{
         return bondsMap.filter{(_,v) -> v.element1 != element && v.element2 != element}
             .map{(_,v) -> if (v.element1 === this) v.element2 else v.element1}
     }
 
+    /*
+    Return a list of this element's bonds that have been assigned causality. Causality
+    has been assigned if the effort element for the bond is non null.
+     */
     fun getAssignedBonds(): List<Bond> = getBondList().filter{it.effortElement != null}
 
+    /*
+   Return a list of this element's bonds that have not been assigned causality. Causality
+   has been assigned if the effort element for the bond is non null.
+    */
     fun getUnassignedBonds(): List<Bond> = getBondList().filter{it.effortElement == null}
 
 
+    // Get a list of bond attached to this element that doesn't include the given bond.
     fun getOtherBonds(bond: Bond): List<Bond> = getBondList().filter{ it !==  bond}
 
+    /*
+    Used when summing efforts or flows on zero and one junctions. Returns true of both
+    bond arrows point toward the junction or both arrows pont away from the junction.
+     */
     fun sameDirection(element: Element, bond1: Bond, bond2: Bond): Boolean =
         ((bond1.powerToElement === element &&  bond2.powerToElement === element) ||
         (bond1.powerToElement !== element &&  bond2.powerToElement !== element) )
 
 
+    /*
+    Display id is a unique id for identifying an element in a text field or error message.
+    This is generic implementation that will be overridden by most subclasses.  If an id
+    is provided it is just converted to a AnnotatedString. Otherwise, it builds an
+    AnnotatedString based on the element type and the ids of the bonds it's attached to
+    that looks like TF-1,2
+     */
     open fun createDisplayId(id: String = ""){
         if (id != "") {
             displayId = AnnotatedString(id)
@@ -229,29 +268,54 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
         }
     }
 
+    /*
+    Token refers to the Token class defined in the algebra classes file. Each element type overrides
+    this method to create the tokens it needs for equation derivation.  An element doesn't have the
+    information needed to create its tokens until after the bond graph has been augmented. So the
+    BondGraph instance will call createTokens on all elements after augmentation and before equation
+    derivation.
+     */
     abstract fun createTokens()
 
+    // Add a bond to this elements bondsList.  Several subtypes will override this basic version.
     open fun addBond(bond: Bond) {
         bondsMap[bond.id] = bond
     }
 
-    open fun assignCausality(){}
+    /*
+    Each element has its own rules for assigning causality. This function will be called eventually on
+    each element in a bond graph during the augmentation process.
+     */
+    abstract fun assignCausality()
 
 
+    /*
+    This function is called recursively to count all the elemenes in a bond graph reachable from
+    some starting element. The function is given an element and a starting count. It adds 1
+    for to the count for the given element, and then call itself again on all other elements
+    attached to the given elements and adds in those counts.
+     */
     open fun countElements(element: Element, count: Int): Int{
+        // List of other elements attached to this element
         val elementList = getOtherElements(element)
 
+        // add one for this element
         var cnt = 1
+
+        // add counts from the other elements attached to this element. Cnt
+        // grows as it is used as the seed in successive calls.
         elementList.forEach{cnt = it.countElements(this, cnt)}
 
+        // add our accumulated count to the origin count and return.
         return count + cnt
     }
 
+    // Remove the bond from this element's bondsMap
     fun removeBond(id: Int) {
         bondsMap.remove(id)
     }
 
-    open fun implement(){}
+    //open fun implement(){}
 
     abstract fun deriveEquation(): Equation
 
@@ -368,7 +432,7 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
         var sum: Expr = Sum()
         for (otherBond in otherBonds ) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            if (sameDirection(thisElement, bond, otherBond)) sum = sum.subtract(otherElement.getEffort(otherBond)) else sum = sum.add(otherElement.getEffort(otherBond))
+            sum = if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getEffort(otherBond)) else sum.add(otherElement.getEffort(otherBond))
         }
         return sum
     }
@@ -419,7 +483,7 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
         var sum: Expr = Sum()
         for (otherBond in otherBonds) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            if (sameDirection(thisElement, bond, otherBond)) sum = sum.subtract(otherElement.getFlow(otherBond)) else sum = sum.add(otherElement.getFlow(otherBond))
+            sum = if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getFlow(otherBond)) else sum.add(otherElement.getFlow(otherBond))
         }
         return sum
     }
