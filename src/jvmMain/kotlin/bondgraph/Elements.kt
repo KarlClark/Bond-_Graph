@@ -317,7 +317,7 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
 
     //open fun implement(){}
 
-    abstract fun deriveEquation(): Equation
+
 
     abstract fun getFlow(bond: Bond): Expr
 
@@ -327,7 +327,7 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
 
 abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
-    override abstract fun deriveEquation(): Equation
+    abstract fun deriveEquation(): Equation
 
     override abstract fun getEffort(bond: Bond): Expr
 
@@ -354,8 +354,6 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     }
 }
 abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
-
-    override abstract fun deriveEquation(): Equation
 
     override abstract fun getEffort(bond: Bond): Expr
 
@@ -412,9 +410,6 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
     }
 
     override fun createTokens() {}
-    override fun deriveEquation(): Equation {
-        return Equation.empty()
-    }
 
     override fun getFlow(bond: Bond): Expr {
         val bondsList = getBondList()
@@ -463,10 +458,6 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
     }
 
     override fun createTokens() {}
-
-    override fun deriveEquation(): Equation {
-        return Equation.empty()
-    }
 
     override fun getEffort(bond: Bond): Expr {
         val bondsList = getBondList()
@@ -802,12 +793,6 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         val otherElement = getOtherElement(this, otherBond)
         return mod.multiply(otherElement.getFlow(otherBond))
     }
-
-    override fun deriveEquation(): Equation {
-        if (true) throw BadGraphException("Error: Call to Transformer.deriveEquation which is not implemented.")
-
-        return Equation(Term(), Term())
-    }
 }
 
 class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
@@ -868,12 +853,6 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
         return mod.multiply(otherElement.getEffort(otherBond))
-    }
-
-    override fun deriveEquation(): Equation {
-        if (true) throw BadGraphException("Error: Call to Gyrator.deriveEquation which is not implemented.")
-
-        return Equation(Term(), Term())
     }
 }
 

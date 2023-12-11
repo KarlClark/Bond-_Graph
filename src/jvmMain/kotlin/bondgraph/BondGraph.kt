@@ -684,7 +684,7 @@ class BondGraph(var name: String) {
             if (arbitrarilyAssignedResistors.size > 0){
                 val equationsList = arrayListOf<Equation>()
                 val relativilySolvedList = arrayListOf<Equation>()
-                arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add(it.deriveEquation()) }
+                arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add((it as Resistor).deriveEquation()) }
                 results.add(equationsList[0].toAnnotatedString())
                 equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
                 relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
@@ -698,7 +698,7 @@ class BondGraph(var name: String) {
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")
 
             for (element in elementsList ) {
-                var equation = element.deriveEquation()
+                var equation = (element as OnePort).deriveEquation()
 
                 results.add(equation.toAnnotatedString())
                 val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
