@@ -381,6 +381,7 @@ class BondGraph(var name: String) {
         val state = LocalStateInfo.current
         elementsMap.clear()
         bondsMap.clear()
+        arbitrarilyAssignedResistors.clear()
         newElementId = 0
         newBondId = 0
         state.needsElementUpdate = true
@@ -636,6 +637,8 @@ class BondGraph(var name: String) {
            // If causality is still incomplete then continue
            // using R elements.
            done = causalityComplete()
+
+           println("done = $done")
            while ( ! done ){
                if (! done){
                    val elementList = getUnassignedResistors()
@@ -701,14 +704,17 @@ class BondGraph(var name: String) {
                 var equation = (element as OnePort).deriveEquation()
 
                 results.add(equation.toAnnotatedString())
-                val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
-                equation = Equation(equation.leftSide, newRightSide)
-                results.add(equation.toAnnotatedString())
-                println("${newRightSide.toAnnotatedString()}")
-                equation = simplifySums(equation)
-                results.add(equation.toAnnotatedString())
-                equation = cancel(equation)
-                results.add(equation.toAnnotatedString())
+                println("derive equation for element ${element.displayId}  -> ${equation.toAnnotatedString()}")
+                if (arbitrarilyAssignedResistors.size > 0) {
+                    val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
+                    equation = Equation(equation.leftSide, newRightSide)
+                    results.add(equation.toAnnotatedString())
+                    println("${newRightSide.toAnnotatedString()}")
+                    equation = simplifySums(equation)
+                    results.add(equation.toAnnotatedString())
+                    equation = cancel(equation)
+                    results.add(equation.toAnnotatedString())
+                }
             }
             state.showResults = true
 

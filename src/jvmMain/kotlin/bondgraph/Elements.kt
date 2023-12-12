@@ -329,6 +329,7 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     abstract fun deriveEquation(): Equation
 
+    // All elements must be able to express their constitutive laws for efforts and flows using the algebra classes.
     override abstract fun getEffort(bond: Bond): Expr
 
     override abstract fun getFlow(bond: Bond): Expr
@@ -517,7 +518,7 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
 
     override fun getEffort(bond: Bond): Expr {
 
-        if (cToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called but tokens have not been created.  Has createdTokens been called?")
+        if (cToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on ${displayId }but tokens have not been created.  Has createdTokens been called?")
 
         return Term().multiply(qToken).divide(cToken)
     }
@@ -525,7 +526,7 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
     override fun deriveEquation(): Equation {
         val bond = getBondList()[0]
 
-        if (qDotToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called but tokens have not been created.  Has createdTokens been called?")
+        if (qDotToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on $displayId but tokens have not been created.  Has createdTokens been called?")
         return Equation(qDotToken, getOtherElement(this, bond).getFlow(bond))
 
     }
@@ -569,7 +570,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
 
     override fun getFlow(bond: Bond): Expr {
 
-        if (iToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called but tokens have not been created.  Has createdTokens been called?")
+        if (iToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on ${displayId }but tokens have not been created.  Has createdTokens been called?")
         return Term().multiply(pToken).divide(iToken)
     }
 
