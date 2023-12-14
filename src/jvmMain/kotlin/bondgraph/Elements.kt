@@ -2,6 +2,8 @@ package bondgraph
 
 import algebra.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -124,7 +126,7 @@ pretty obvious, the width and height are the size of the text, and the centerLoc
 the center of text.  This information is needed for drawing bonds to the element.  Every instance of
 Element contains an ElementDisplayData instance as one of its properties.
  */
-class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset)
+class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset, var color: Color = Black)
 
 /*
     A data class that holds data for a element that can be serialized and saved to a file.  It also contains two functions.
@@ -134,7 +136,8 @@ class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: 
     makeElement(bondgraph, ElementSerializationData): Element  can be used to re-construct an element based on the data
  */
 @Serializable
-class ElementSerializationData(val id: Int, val type: ElementTypes,  val displayDatId: Int,  val locx: Float, val locy: Float, val width: Float, val height: Float, val cenx: Float, val ceny: Float) {
+class ElementSerializationData(val id: Int, val type: ElementTypes,  val displayDatId: Int,  val locx: Float, val locy: Float,
+                               val width: Float, val height: Float, val cenx: Float, val ceny: Float, val red: Float, val green: Float, val blue: Float) {
     companion object {
         fun getData(element: Element): ElementSerializationData {
 
@@ -148,7 +151,11 @@ class ElementSerializationData(val id: Int, val type: ElementTypes,  val display
                     displayData.width,
                     displayData.height,
                     displayData.centerLocation.x,
-                    displayData.centerLocation.y
+                    displayData.centerLocation.y,
+                    displayData.color.red,
+                    displayData.color.green,
+                    displayData.color.blue
+
                 )
             }
         }
@@ -162,7 +169,7 @@ class ElementSerializationData(val id: Int, val type: ElementTypes,  val display
                         bondgraph,
                         id,
                         elementType,
-                        ElementDisplayData(displayDatId, elementType.toAnnotatedString(), Offset(locx, locy), width, height, Offset(cenx, ceny))
+                        ElementDisplayData(displayDatId, elementType.toAnnotatedString(), Offset(locx, locy), width, height, Offset(cenx, ceny), Color(red, green, blue))
                     )
                 } else {
                     throw BadGraphException("Error in function makeElement, invalid ElementType = $elementType, derived from string ${data.type}")

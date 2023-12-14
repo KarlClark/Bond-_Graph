@@ -251,10 +251,12 @@ fun main() = application {
                         if (pathToDataFile.exists()) {
                             val pathString = pathToDataFile.readText()
                             val path = Paths.get(pathString)
-                            val data = path.readText()
-                            pathToBondGraphFile = path
-                            bondGraph.fromSerializedStrings(data)
-                            bondGraph.graphHasChanged = false
+                            if (path.exists()) {
+                                val data = path.readText()
+                                pathToBondGraphFile = path
+                                bondGraph.fromSerializedStrings(data)
+                                bondGraph.graphHasChanged = false
+                            }
                         }
                     }
 
