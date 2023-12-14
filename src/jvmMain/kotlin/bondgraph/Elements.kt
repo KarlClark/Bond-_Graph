@@ -277,14 +277,17 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
      */
     abstract fun createTokens()
 
-    // Add a bond to this elements bondsList.  Several subtypes will override this basic version.
+    // Add a bond to this elements bondsList.  Several subtypes will override this basic version. Element.addBond
+    // should only be called by functions in the bond graph class as part as part of adding a bond to the bond graph.
     open fun addBond(bond: Bond) {
         bondsMap[bond.id] = bond
     }
 
     /*
-    Each element has its own rules for assigning causality. This function will be called eventually on
-    each element in a bond graph during the augmentation process.
+    Each element has its own rules for assigning causality on its bonds so, the they all must
+    override this function.  If an element assigns causality on one of its bonds, then it must
+    call this function on the other element attached to the bond.  This is how causality is
+    propagated through the bond graph.
      */
     abstract fun assignCausality()
 
@@ -315,12 +318,10 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
         bondsMap.remove(id)
     }
 
-    //open fun implement(){}
-
-
-
+    // Return algebraic expression for the flow based on the elements constitutive laws.
     abstract fun getFlow(bond: Bond): Expr
 
+    // Return algebraic expression for the effort based on the elements constitutive laws.
     abstract fun getEffort(bond: Bond): Expr
 
 }
@@ -335,6 +336,7 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     override abstract fun getFlow(bond: Bond): Expr
 
 
+      //  Add the bond to the element.  First remove the old bonds (there should only be one).
     override fun addBond(bond: Bond){
         if (bondsMap.size > 0){
             getBondList().forEach { bondGraph.removeBond(it.id) }
@@ -343,6 +345,7 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         bondsMap[bond.id] = bond
     }
 
+    // One port display id is the element type followed by the number of the bond it is attched to. Example C1
     override fun createDisplayId(id: String) {
         val bondList = getBondList()
         if (bondList.isNotEmpty()){
@@ -360,7 +363,10 @@ abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     override abstract fun getFlow(bond: Bond): Expr
 
-
+    /*
+        Add the bond to this element.  If this element already has two bonds, we need to delete
+        both of them because we don't know which one the user is trying to replace.
+     */
     override fun addBond(bond: Bond) {
         if (bondsMap.size == 2){
             getBondList().forEach{ bondGraph.removeBond(it.id)}
@@ -369,6 +375,7 @@ abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         bondsMap[bond.id] = bond
     }
 
+    // Two port display id is bond number element type bond number. Ex 5TF6
     override fun createDisplayId(id: String) {
         val bondList = getBondList()
         if (bondList.size == 1) throw BadGraphException("Error: The 2-port on bond ${bondList[0].displayId} is missing a bond")
@@ -386,18 +393,25 @@ abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
 class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
+    /*
+        There are two situations where a one junction can set causality.
+        1. Some other element has set the flow on the one junction. Since all flows on a one junction are equal,
+           only one bond can set the flow on the junction.  The one junction must then set the flow on the other
+           bonds.
+        2. There is only one bond that does not have causality set and no other bond is setting the flow on the
+           one junction.  So this bond must set the flow on the one junction and the effort on the other element.
+     */
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
         val unassignedBonds = getUnassignedBonds()
         val settingFlow = assignedBonds.filter{ it.effortElement !== this}
         if (settingFlow.size > 1) throw BadGraphException("Error: Multiple bonds an 1 junction are setting flow. ${this.displayId}")
         if (settingFlow.size == 1) {
-
+            // A bond is setting the flow on the one junction.  The other bonds must set the flow on the other elements.
             for (bond in unassignedBonds){
-                //bond.effortElement = this
                 val otherElement = getOtherElement(this, bond)
                 bond.effortElement = this
-                otherElement.assignCausality()
+                otherElement.assignCausality()  // Propagate causality to other element.
 
             }
         } else {
@@ -405,13 +419,19 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
                 val bond = unassignedBonds[0]
                 val otherElement = getOtherElement(this , bond)
                 bond.effortElement = otherElement
-                otherElement.assignCausality()
+                otherElement.assignCausality() // Propagate causality to other element.
             }
         }
     }
 
     override fun createTokens() {}
 
+    /*
+        Only one bond determines the flow on a one junction and that flow is determined
+        by the other element attached to that bond. So find the bond setting the flow,
+        get the other element, and call getFLow on that element. Note: this function
+        doesn't use the bond parameter.
+     */
     override fun getFlow(bond: Bond): Expr {
         val bondsList = getBondList()
         val flowBond = bondsList.filter{it.effortElement !== this}[0]
@@ -419,11 +439,17 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
 
     }
 
+    /*
+        The effort on this bond is sum of the efforts of the other bonds attached to this one junction. The
+        efforts on those bonds is determined by the other elements attached to those bonds. Whether to
+        add or subtract an effort is determined by whether the arrow on the other bond points in the same
+        direction as the arrow on this bond i.e. either towards or away from the one junction.  So return
+        the algebraic sum of the efforts on the other bonds.
+     */
     override fun getEffort(bond: Bond): Expr {
 
         val otherBonds = getOtherBonds(bond)
         val thisElement = this
-
 
         var sum: Expr = Sum()
         for (otherBond in otherBonds ) {
@@ -436,6 +462,14 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
 }
 class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
+    /*
+       There are two situations where a zero junction can set causality.
+       1. Some other element has set the effort on the zero junction. Since all efforts on a zero junction are equal,
+          only one bond can set the effort on the junction.  The effort junction must then set the effort on the
+          other bonds.
+       2. There is only one bond that does not have causality set and no other bond is setting the effort on the
+          zero junction.  So this bond must set the effort on the zero junction and the flow on the other element.
+    */
     override fun assignCausality() {
         val assignedBonds = getAssignedBonds()
         val unassignedBonds = getUnassignedBonds()
@@ -460,6 +494,12 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
     override fun createTokens() {}
 
+    /*
+       Only one bond determines the effort on a zero junction and that effort is determined
+       by the other element attached to that bond. So find the bond setting the effort,
+       get the other element, and call getEffort on that element. Note: this function
+       doesn't use the bond parameter.
+    */
     override fun getEffort(bond: Bond): Expr {
         val bondsList = getBondList()
         val effortBond = bondsList.filter{it.effortElement === this}[0]
@@ -467,6 +507,13 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
     }
 
+    /*
+       The flow on this bond is sum of the flows of the other bonds attached to this zero junction. The
+       flows on those bonds is determined by the other elements attached to those bonds. Whether to
+       add or subtract a flow is determined by whether the arrow on the other bond points in the same
+       direction as the arrow on this bond i.e. either towards or away from the zero junction.  So return
+       the algebraic sum of the flows on the other bonds.
+    */
     override fun getFlow(bond: Bond): Expr {
 
         val otherBonds = getOtherBonds(bond)
@@ -483,9 +530,9 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 
 class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
-    var cToken = Token()
-    var qToken = Token()
-    var qDotToken = Token()
+    var cToken = Token() // the capacitance
+    var qToken = Token() // the generalized displacement q
+    var qDotToken = Token()  // time derivative of the displacement
 
 
     override fun createTokens() {
@@ -500,6 +547,11 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
     }
 
 
+    /*
+        The preferred causality for a capacitor is for it to set the effort on its bond, that is it imposes
+        the effort on the rest of the system. Then the effort on this bond can be expressed as displacement
+        divided by capacitance, q/C
+     */
     override fun assignCausality() {
 
         val bond = getBondList()[0]
@@ -553,6 +605,11 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     }
 
 
+    /*
+        Preferred causality for an inertia is for it to set the flow on its bond, that is it imposes its flow
+        on the rest of the system.  Then the flow on this bond can be expressed as momentum divided by inertia
+        p/I.
+     */
     override fun assignCausality() {
 
         val bond = getBondList()[0]
@@ -579,14 +636,38 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
         return Equation(pDotToken, getOtherElement(this, bond).getEffort(bond))
     }
 }
+/*
+    The behaviour of a resistor depends and how the augmentation of the bond graph proceeded. If after assigning
+    causality based on the sources and storage elements, causality of the graph is complete, then the causality
+    of the resistor was forced on it by the system.  You might consider this the normal case.  In this case when
+    asked, the resistor returns effort or flow based on its constitutive law e = fR.
 
+    However, if causality wasn't complete, causality proceeds by arbitrarily assigning causality on one of the
+    unassigned resistors. If you attempt to derive equations from a bond graph that has arbitrarily assigned
+    resistors, you will run into an infinite loop.  To solve this problem, you must derive an equation for the
+    effort or flow (depending on causality) for the resistor in terms of said effort or flow and the other state
+    variables. This equation must then be solved for the said effort or flow.  Then during normal equation
+    generation this expression must be used as a substitute for the normal constitutive law form of the
+    said effort or flow.
+
+    And this brings up a third case. When deriving the above equation, the derivation process will eventually
+    come back to this resistor.  If at this point it returns its constitutive law form, the loop become infinite.
+    So at this point the resistor must simply return a token representing the effort or flow we are deriving
+    for.  This reintroduces that variable into the right side of the equation (creating an equation that must
+    be solved) and ending the loop and derivation at that point.
+
+    This is made more complicated if there is more than one unassigned resistors.  In this case there will be
+    a set of simultaneous equations that must be solved.  So the solving the derived equation can't be done
+    here with access to just one of the equations.  It is done in the BondGraph class which then sets the
+    substituteExpression variable in each resistors.
+ */
 class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
-    var rToken = Token()
-    var eToken = Token()
-    var fToken = Token()
-    var derivingEquation = false
-    var substituteExprssion: Expr? = null
+    var rToken = Token()  // Resistance token
+    var eToken = Token()  // Effort token
+    var fToken = Token()  // FLow token
+    var derivingEquation = false  // True if we are in the process of deriving an equation
+    var substituteExprssion: Expr? = null // expression to use for effort or flow if causality was arbitrarily assigned
 
     override fun createTokens() {
         val bondsList = getBondList()
@@ -599,6 +680,9 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
 
+    /*
+        If this function is called, then the causality of this resistor is being arbitrarily assigned
+     */
     override fun assignCausality() {
 
         val bond = getBondList()[0]
@@ -648,8 +732,10 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
         val bond = getBondList()[0]
         val otherElement = getOtherElement(this, bond)
         if (bond.effortElement === this){
+            // Resistor is imposing flow on system so derive equation for the flow f = e/R
             return Equation(fToken, Term().multiply(otherElement.getEffort(bond)).divide(rToken))
         } else {
+            // Resistor is imposing effort on system so derive equation for effort e = fR
             return Equation(eToken, Term().multiply(otherElement.getFlow(bond)).multiply(rToken))
         }
     }
@@ -667,6 +753,7 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
         sToken = Token(bond.displayId, "", AnnotatedString("e"), true, false, false, false)
     }
 
+    // Source of effort imposes effort on the rest of the system.
     override fun assignCausality() {
         val bond = getBondList()[0]
         if (bond.effortElement === null) {
@@ -680,7 +767,7 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
     }
 
     override fun getFlow(bond: Bond): Expr {
-        if (true) throw BadGraphException("Error: call to SourecOfEffort.getFlow()  which make no since and is clearly an error")
+        if (true) throw BadGraphException("Error: call to SourceOfEffort.getFlow()  which makes no since and is clearly an error")
         return Term()
     }
 
@@ -709,6 +796,7 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
     }
 
 
+    // Source imposes flow on the rest of the system.
     override fun assignCausality() {
         val bond = getBondList()[0]
 
@@ -758,6 +846,12 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     }
 
+    /*
+        A transformer has two bonds.  Some other element has set the causality on one of the bonds and then
+        called assignCausality on this element.  We have to set the causality on the other bond.  A transformer
+        has two allowable causalities   :--- TF :---   or   ---: TF ---:
+        So find the bond that has been set and set the other one appropriately.
+     */
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error transformer $displayId has only one bond.")
         val assignedBonds = getAssignedBonds()
@@ -819,6 +913,12 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
 
+    /*
+       A gyrator has two bonds.  Some other element has set the causality on one of the bonds and then
+       called assignCausality on this element.  We have to set the causality on the other bond.  A gyrator
+       has two allowable causalities   :--- GY ---:   or   ---: GY :---
+       So find the bond that has been set and set the other one appropriately.
+    */
     override fun assignCausality() {
         if (bondsMap.size == 1) throw BadGraphException("Error gyrator $displayId has only one bond.")
         val assignedBonds = getAssignedBonds()
