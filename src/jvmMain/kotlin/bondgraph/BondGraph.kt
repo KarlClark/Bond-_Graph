@@ -12,6 +12,7 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
+import userInterface.MyConstants
 
 
 class BadGraphException (message: String) : Exception(message)
@@ -642,8 +643,10 @@ class BondGraph(var name: String) {
            while ( ! done ){
                if (! done){
                    val elementList = getUnassignedResistors()
+                   elementList.forEach { it.displayData.color = MyConstants.unassignedColor }
                    if (elementList.isNotEmpty()){
                        elementList[0].assignCausality()
+                       elementList[0].displayData.color = MyConstants.arbitrarilyAssignedColor
                        arbitrarilyAssignedResistors.add(elementList[0])
                        done = causalityComplete()
                    } else {
@@ -651,6 +654,8 @@ class BondGraph(var name: String) {
                    }
                }
            }
+
+           state.needsElementUpdate = true
 
        }catch(e: BadGraphException ) {
            results.clear()

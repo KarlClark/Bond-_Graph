@@ -571,7 +571,7 @@ fun displayElement(displayData: ElementDisplayData) {
         ,ElementTypes.toEnum(displayData.text)
         ,displayData.id
     ) {
-        elementContent(displayData.text, MyConstants.notDraggingColor)
+        elementContent(displayData.text, displayData.color)
     }
 }
 

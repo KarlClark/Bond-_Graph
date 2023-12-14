@@ -36,12 +36,16 @@ object MyConstants {
     val menuItemFontSize = 14.sp
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)
+    val myOrange = Color(237, 102, 43)
     val offColor = Color.LightGray
     val onColor = myGreen
     val draggingColor = Color.Red
     val notDraggingColor = Color.Black
     val graphBackground = Color(242, 215, 140)
     val resultsBackground = Color(206, 232, 246)
+    val unassignedColor = myOrange
+    val arbitrarilyAssignedColor = myGreen
+
 }
 // This composable builds the sidebar for the window.
 @Composable
