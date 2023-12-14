@@ -126,7 +126,7 @@ pretty obvious, the width and height are the size of the text, and the centerLoc
 the center of text.  This information is needed for drawing bonds to the element.  Every instance of
 Element contains an ElementDisplayData instance as one of its properties.
  */
-class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset, var color: Color = Black)
+class ElementDisplayData (val id: Int, var text: AnnotatedString, var location: Offset, val width: Float, val height: Float, var centerLocation: Offset, var color: Color = MyConstants.defaultElementColor)
 
 /*
     A data class that holds data for a element that can be serialized and saved to a file.  It also contains two functions.
@@ -615,7 +615,7 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     /*
         Preferred causality for an inertia is for it to set the flow on its bond, that is it imposes its flow
         on the rest of the system.  Then the flow on this bond can be expressed as momentum divided by inertia
-        p/I.
+        f = p/I.
      */
     override fun assignCausality() {
 

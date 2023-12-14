@@ -41,7 +41,9 @@ object MyConstants {
     val onColor = myGreen
     val draggingColor = Color.Red
     val notDraggingColor = Color.Black
-    val graphBackground = Color(242, 215, 140)
+    val defaultElementColor = Color.Black
+    val defaultBondColor = Color.Black
+    val graphBackground = Color(223, 216, 214)
     val resultsBackground = Color(206, 232, 246)
     val unassignedColor = myOrange
     val arbitrarilyAssignedColor = myGreen

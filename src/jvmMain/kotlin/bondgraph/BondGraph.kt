@@ -3,6 +3,7 @@ package bondgraph
 import algebra.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import bondgraph.ElementTypes.*
 import userInterface.LocalStateInfo
@@ -52,12 +53,13 @@ the screen.  The powerToElement indicates which element the arrow points to, and
 element 2.  THe effortElement indicates which element has the causal stroke and should match element 1 or element 2.
 
  */
-class Bond(val id: Int, val element1: Element, var offset1: @Contextual Offset, val element2: Element, var offset2: @Contextual Offset, var powerToElement: Element){
+class Bond(val id: Int, val element1: Element, var offset1: @Contextual Offset, val element2: Element, var offset2: @Contextual Offset, var powerToElement: Element, var color: Color = MyConstants.defaultBondColor){
     var displayId: String = ""
     var effortElement: Element? = null
 }
 @Serializable
-class BondSerializationData(val id: Int, val displayId: String, val elementId1: Int, val loc1x: Float, val loc1y: Float, val elementId2: Int, val locx2: Float, val locy2: Float, val powerToElementId: Int, val effortElementId: Int) {
+class BondSerializationData(val id: Int, val displayId: String, val elementId1: Int, val loc1x: Float, val loc1y: Float, val elementId2: Int,
+                            val locx2: Float, val locy2: Float, val powerToElementId: Int, val effortElementId: Int, val red: Float, val green: Float, val blue: Float) {
     companion object {
         fun getData(bond: Bond): BondSerializationData {
             with(bond) {
@@ -71,7 +73,11 @@ class BondSerializationData(val id: Int, val displayId: String, val elementId1: 
                     offset2.x,
                     offset2.y,
                     powerToElement.id,
-                    effortElement?.id ?: -1
+                    effortElement?.id ?: -1,
+                    color.red,
+                    color.green,
+                    color.blue
+
                 )
             }
         }
@@ -83,9 +89,7 @@ class BondSerializationData(val id: Int, val displayId: String, val elementId1: 
                 val element2 = elementsMap[elementId2]
                 val powerToElement = elementsMap[powerToElementId]
                 if (element1 != null && element2 != null && powerToElement != null) {
-                    val bond = Bond(
-                        id, element1, Offset(loc1x, loc1y), element2, Offset(locx2, locy2), powerToElement
-                    )
+                    val bond = Bond(id, element1, Offset(loc1x, loc1y), element2, Offset(locx2, locy2), powerToElement, Color(red, green, blue))
                     bond.displayId = displayId
                     if (effortElementId != -1) {
                         bond.effortElement = elementsMap[effortElementId]
@@ -533,8 +537,12 @@ class BondGraph(var name: String) {
     */
     private fun removeBondAugmentation() {
         graphHasChanged = true
-        bondsMap.values.forEach { it.effortElement = null
-        it.displayId = ""
+        bondsMap.values.forEach {
+            it.effortElement = null
+            it.displayId = ""
+            it.color = MyConstants.defaultBondColor
+            it.element1.displayData.color = MyConstants.defaultElementColor
+            it.element2.displayData.color = MyConstants.defaultElementColor
         }
     }
 

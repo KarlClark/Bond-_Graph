@@ -137,6 +137,8 @@ fun main() = application {
                 , onKeyEvent = {
                     if (it.isShiftPressed) {
                         isShifted = true
+                    } else {
+                        isShifted = false
                     }
                     false
                 }) {
