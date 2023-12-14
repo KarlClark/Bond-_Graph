@@ -265,7 +265,7 @@ fun windowBox() {
                  Column(  // The results screen. Contains a row that acts as a top bar with a column below
                      modifier = Modifier
                          .fillMaxWidth()
-                         .requiredHeight(800.dp)
+                         .requiredHeight(1000.dp)
                          .background(MyConstants.resultsBackground)
                  ) {
 

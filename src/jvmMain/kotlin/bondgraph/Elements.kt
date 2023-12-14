@@ -693,11 +693,14 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     override fun assignCausality() {
 
         val bond = getBondList()[0]
+        val otherElement = getOtherElement(this, bond)
         if (bond.effortElement === null) {
-            val otherElement = getOtherElement(this, bond)
-            //bond.effortElement = bond.element1
             bond.effortElement = otherElement
             otherElement.assignCausality()
+        } else {
+            if (bondGraph.arbitrarilyAssignedResistors.contains(this)){
+                otherElement.assignCausality()
+            }
         }
     }
 

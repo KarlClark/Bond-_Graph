@@ -26,6 +26,7 @@ import bondgraph.BondGraph.Companion.getArrowOffsets
 import bondgraph.BondGraph.Companion.getCausalOffsets
 import bondgraph.BondGraph.Companion.offsetFromCenter
 import bondgraph.BondGraph.Companion.getLabelOffset
+import bondgraph.Resistor
 
 
 internal val LocalStateInfo = compositionLocalOf { StateInfo() }
@@ -291,10 +292,17 @@ fun  dropTarget(
                             if (isShifted){ // if shift tap then switch the end the causal stroke is on
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
-                                    if (bond.effortElement == null){
-                                    bondGraph.setCasualElement(bondId, bond.element2)
-                                    } else {
-                                        bondGraph.setCasualElement(bondId, if (bond.effortElement == bond.element1) bond.element2 else bond.element1)
+                                    if (bond.element1 is Resistor || bond.element2  is Resistor) {
+                                        val resister = if (bond.element1 is Resistor)bond.element1 else bond.element2
+                                        if (bond.effortElement == null) {
+                                            bondGraph.setCasualElement(bondId, bond.element2)
+                                            bondGraph.preferedResistors.push(Pair(resister, bond.element2))
+                                        } else {
+                                            val effortElement = if (bond.effortElement == bond.element1) bond.element2 else bond.element1
+                                            bondGraph.setCasualElement(bondId, effortElement)
+                                            bondGraph.preferedResistors.push(Pair(resister, effortElement))
+                                        }
+                                        dragInfo.needsAgument = true
                                     }
                                 }
                             }else { // Switch the end the arrow is on
@@ -437,7 +445,7 @@ fun  dropTarget(
 
                 // Draw a bond given a Bond.
                 val drawBondWithBond = { bond: Bond->
-                    val color = Color.Black
+                    val color = bond.color
                     drawLine(color = color, bond.offset1, bond.offset2, 1f)
 
                     if (bond.powerToElement == bond.element1) {
@@ -536,6 +544,11 @@ fun  dropTarget(
         }
         bondGraph.forEachElement {displayElement(it.displayData)}
 
+        if (dragInfo.needsAgument){
+            dragInfo.needsAgument = false
+            println("calling augment form dropTarget")
+            bondGraph.augment()
+        }
     }
 }
 
@@ -595,6 +608,7 @@ internal class StateInfo {
     var bondColor by mutableStateOf(Color.Black)
     var dataToDrop = INVALID_TYPE
     var showSaveFileDialog by mutableStateOf(false)
+    var needsAgument by mutableStateOf(false)
 
 
 

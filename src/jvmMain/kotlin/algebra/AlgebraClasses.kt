@@ -153,7 +153,7 @@ class Token(
                 append(bondId2)
             }
             pop()
-            if ((name.text == "e") || name.text == "f") {
+            if (powerVar) {
                 append ("(t)")
             }
             if (exp > 0) {

@@ -761,6 +761,7 @@ fun gatherLikeTerms(sum: Sum):Expr {
     // in the termsMap. If the isPlusTerm flag is true then add the
     // term to the sum otherwise subtract it.  See the comment below.
     fun groupTerms(source: ArrayList<Expr>, isPlusTerm: Boolean) {
+        println("group terms terms= "); source.forEach { println(it.toAnnotatedString()) }
         for (term in source){
             val token = getStateToken(term as Term)
             if (termsMap.containsKey(token)) {
@@ -832,6 +833,10 @@ fun solve (token: Token, equation: Equation): Equation {
             val minusTerms = rightSide.minusTerms
             val matchingPlusTerms = plusTerms.filter { contains(token, it) }
             val matchingMinusTerms = minusTerms.filter{ contains(token, it) }
+
+            if (matchingPlusTerms.size + matchingMinusTerms.size == 0){
+                return equation
+            }
 
             // Subtract plus terms from both sides of equation.
             matchingPlusTerms.forEach {

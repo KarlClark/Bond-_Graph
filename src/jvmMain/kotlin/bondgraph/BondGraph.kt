@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
 import userInterface.MyConstants
+import java.util.LinkedList
 
 
 class BadGraphException (message: String) : Exception(message)
@@ -226,6 +227,7 @@ class BondGraph(var name: String) {
     private var elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     var bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
+    val preferedResistors = LinkedList<Pair<Element, Element>>()
     val results = Results()
 
     var graphHasChanged = false
@@ -272,8 +274,15 @@ class BondGraph(var name: String) {
         }
 
         println("data.arbitrarilyAssignedResistorsIds.size = ${data.arbitrarilyAssignedResistorsIds.size}")
-        data.arbitrarilyAssignedResistorsIds.forEach{ elementsMap.get(it)
-            ?.let { it1 -> arbitrarilyAssignedResistors.add(it1) } }
+        data.arbitrarilyAssignedResistorsIds.forEach{
+            elementsMap.get(it)?.let { it1 ->
+                arbitrarilyAssignedResistors.add(it1)
+                val effortElement = it1.getBondList()[0].effortElement
+                if (effortElement != null) {
+                    preferedResistors.push(Pair(it1, effortElement))
+                }
+            } }
+
 
         elementsMap.values.forEach{it.createDisplayId()}
 
@@ -543,7 +552,10 @@ class BondGraph(var name: String) {
             it.color = MyConstants.defaultBondColor
             it.element1.displayData.color = MyConstants.defaultElementColor
             it.element2.displayData.color = MyConstants.defaultElementColor
+            if (it.element1 is Resistor) it.element1.substituteExprssion = null
+            if (it.element2 is Resistor) it.element2.substituteExprssion = null
         }
+        arbitrarilyAssignedResistors.clear()
     }
 
     /*
@@ -648,20 +660,45 @@ class BondGraph(var name: String) {
            done = causalityComplete()
 
            println("done = $done")
-           while ( ! done ){
-               if (! done){
-                   val elementList = getUnassignedResistors()
-                   elementList.forEach { it.displayData.color = MyConstants.unassignedColor }
-                   if (elementList.isNotEmpty()){
-                       elementList[0].assignCausality()
-                       elementList[0].displayData.color = MyConstants.arbitrarilyAssignedColor
-                       arbitrarilyAssignedResistors.add(elementList[0])
-                       done = causalityComplete()
-                   } else {
-                       done = true
+           if ( ! done) {
+               val copyOfPreferredResistors = LinkedList<Pair<Element, Element>>()
+               copyOfPreferredResistors.addAll(preferedResistors)
+               while (!done) {
+                   if (!done) {
+                       val elementList = getUnassignedResistors()
+                       var element: Element? = null
+                       var elementPair: Pair<Element, Element>? = null
+                       elementList.forEach { it.displayData.color = MyConstants.unassignedColor }
+                       if (elementList.isNotEmpty()) {
+                           while (copyOfPreferredResistors.isNotEmpty()) {
+                               val pair = copyOfPreferredResistors.pop()
+                               if (elementList.contains(pair.first) ) {
+                                   elementPair = pair
+                                   break
+                               }
+                           }
+                           if (elementPair == null){
+                               element = elementList[0]
+                           } else {
+                               element = elementPair.first
+                           }
+                           arbitrarilyAssignedResistors.add(element)
+                           element.displayData.color = MyConstants.arbitrarilyAssignedColor
+                           if (elementPair != null) {
+                               element.getBondList()[0].effortElement = elementPair.second
+                           }
+                           element.assignCausality()
+
+
+                           done = causalityComplete()
+                       } else {
+                           done = true
+                       }
                    }
                }
            }
+
+           println("bond graph after augmentation"); bondsMap.values.forEach { println("bond ${it.displayId} effortElement = ${it.effortElement?.displayId}")  }
 
            state.needsElementUpdate = true
 
@@ -702,6 +739,7 @@ class BondGraph(var name: String) {
                 val relativilySolvedList = arrayListOf<Equation>()
                 arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add((it as Resistor).deriveEquation()) }
                 results.add(equationsList[0].toAnnotatedString())
+                println("derived equation = ${equationsList[0].toAnnotatedString()}")
                 equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
                 relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
 
@@ -718,6 +756,7 @@ class BondGraph(var name: String) {
 
                 results.add(equation.toAnnotatedString())
                 println("derive equation for element ${element.displayId}  -> ${equation.toAnnotatedString()}")
+
                 if (arbitrarilyAssignedResistors.size > 0) {
                     val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
                     equation = Equation(equation.leftSide, newRightSide)
