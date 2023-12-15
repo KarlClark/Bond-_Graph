@@ -277,6 +277,8 @@ class BondGraph(var name: String) {
         data.arbitrarilyAssignedResistorsIds.forEach{
             elementsMap.get(it)?.let { it1 ->
                 arbitrarilyAssignedResistors.add(it1)
+                println ("fromSerialization:  element ${it1.displayId} setting isCausalityArbitrarilyAssigned to true ")
+                (it1 as Resistor).isCausalityArbitrarilyAssigned = true
                 val effortElement = it1.getBondList()[0].effortElement
                 if (effortElement != null) {
                     preferedResistors.push(Pair(it1, effortElement))
@@ -552,8 +554,14 @@ class BondGraph(var name: String) {
             it.color = MyConstants.defaultBondColor
             it.element1.displayData.color = MyConstants.defaultElementColor
             it.element2.displayData.color = MyConstants.defaultElementColor
-            if (it.element1 is Resistor) it.element1.substituteExprssion = null
-            if (it.element2 is Resistor) it.element2.substituteExprssion = null
+            if (it.element1 is Resistor){
+                it.element1.substituteExprssion = null
+                it.element1.isCausalityArbitrarilyAssigned = false
+            }
+            if (it.element2 is Resistor) {
+                it.element2.substituteExprssion = null
+                it.element2.isCausalityArbitrarilyAssigned = false
+            }
         }
         arbitrarilyAssignedResistors.clear()
     }
@@ -648,7 +656,6 @@ class BondGraph(var name: String) {
                    if (elementList.isNotEmpty()){
                        elementList[0].assignCausality()
                        done = causalityComplete()
-                       bondsMap.values.forEach{println ("bond ${it.id} effort element= ${it.effortElement?.id}")}
                    } else {
                        done = true
                    }
@@ -659,7 +666,6 @@ class BondGraph(var name: String) {
            // using R elements.
            done = causalityComplete()
 
-           println("done = $done")
            if ( ! done) {
                val copyOfPreferredResistors = LinkedList<Pair<Element, Element>>()
                copyOfPreferredResistors.addAll(preferedResistors)
@@ -683,6 +689,7 @@ class BondGraph(var name: String) {
                                element = elementPair.first
                            }
                            arbitrarilyAssignedResistors.add(element)
+                           (element as Resistor).isCausalityArbitrarilyAssigned = true
                            element.displayData.color = MyConstants.arbitrarilyAssignedColor
                            if (elementPair != null) {
                                element.getBondList()[0].effortElement = elementPair.second
@@ -697,8 +704,6 @@ class BondGraph(var name: String) {
                    }
                }
            }
-
-           println("bond graph after augmentation"); bondsMap.values.forEach { println("bond ${it.displayId} effortElement = ${it.effortElement?.displayId}")  }
 
            state.needsElementUpdate = true
 
@@ -733,19 +738,14 @@ class BondGraph(var name: String) {
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
-            println("arbitrarilyAssignedResistors.size = ${arbitrarilyAssignedResistors.size }")
             if (arbitrarilyAssignedResistors.size > 0){
                 val equationsList = arrayListOf<Equation>()
                 val relativilySolvedList = arrayListOf<Equation>()
-                arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add((it as Resistor).deriveEquation()) }
                 results.add(equationsList[0].toAnnotatedString())
-                println("derived equation = ${equationsList[0].toAnnotatedString()}")
                 equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
                 relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
 
                 (arbitrarilyAssignedResistors[0] as Resistor).substituteExprssion = relativilySolvedList[0].rightSide
-                //state.showResults = true
-               // return
             }
 
             val elementsList = getIndependentStorageElements()

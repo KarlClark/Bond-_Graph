@@ -666,14 +666,15 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     This is made more complicated if there is more than one unassigned resistors.  In this case there will be
     a set of simultaneous equations that must be solved.  So the solving the derived equation can't be done
     here with access to just one of the equations.  It is done in the BondGraph class which then sets the
-    substituteExpression variable in each resistors.
+    substituteExpression variable for each resistor.
  */
 class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     var rToken = Token()  // Resistance token
     var eToken = Token()  // Effort token
     var fToken = Token()  // FLow token
-    var derivingEquation = false  // True if we are in the process of deriving an equation
+    //var derivingEquation = false  // True if we are in the process of deriving an equation
+    var isCausalityArbitrarilyAssigned = false
     var substituteExprssion: Expr? = null // expression to use for effort or flow if causality was arbitrarily assigned
 
     override fun createTokens() {
@@ -705,40 +706,33 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
     override fun getEffort(bond: Bond): Expr {
-        if (derivingEquation){
-            derivingEquation = false
-            return(eToken)
-        } else {
-            val thisBond = getBondList()[0]
-
-            if (thisBond.effortElement !== this && substituteExprssion != null) {
+        if (isCausalityArbitrarilyAssigned) {
+            if (substituteExprssion == null){
+                return eToken
+            } else {
                 return substituteExprssion as Expr
             }
-
-            val sFlow = getOtherElement(this, thisBond).getFlow(thisBond)
+        } else {
+            val sFlow = getOtherElement(this, bond).getFlow(bond)
             return Term().multiply(sFlow).multiply(rToken)
         }
     }
 
     override fun getFlow(bond: Bond): Expr {
-        if (derivingEquation){
-            derivingEquation = false
-            return(fToken)
-        } else {
-            val thisBond = getBondList()[0]
-
-            if (thisBond.effortElement === this && substituteExprssion != null) {
+        println("getFlow called on $displayId,  isCausalityArbitrarilyAssigned = $isCausalityArbitrarilyAssigned  substituteExprssion = ${substituteExprssion?.toAnnotatedString()}")
+        if (isCausalityArbitrarilyAssigned){
+            if (substituteExprssion == null) {
+                return fToken
+            } else {
                 return substituteExprssion as Expr
             }
-
-            val sEffort = getOtherElement(this, thisBond).getEffort(thisBond)
+        } else {
+            val sEffort = getOtherElement(this, bond).getEffort(bond)
             return Term().multiply(sEffort).divide(rToken)
         }
     }
 
     override fun deriveEquation(): Equation {
-
-        derivingEquation = true
         val bond = getBondList()[0]
         val otherElement = getOtherElement(this, bond)
         if (bond.effortElement === this){
