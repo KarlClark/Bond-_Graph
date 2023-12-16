@@ -3,7 +3,6 @@ package bondgraph
 import algebra.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -334,10 +333,14 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
 }
 
 abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
+    // eTOken is the token for the energy variable for a inertia or capacitor
+    // eDotToken is the token for the time derivative of the energy variable.
+    abstract var eToken: Token
+    abstract var eDotToken: Token
 
     // Expression to use in place of constitutive law in the case of resistors with arbitrarily assigned
     // causality or dependent inertias or capacitors with derivative causality.
-    var substituteExprssion: Expr? = null
+     var substituteExprssion: Expr? = null
 
     abstract fun deriveEquation(): Equation
 
@@ -542,8 +545,8 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
     var cToken = Token() // the capacitance
-    var qToken = Token() // the generalized displacement q
-    var qDotToken = Token()  // time derivative of the displacement
+    override var eToken = Token() // the generalized displacement q
+    override var eDotToken = Token()  // time derivative of the displacement
 
 
     override fun createTokens() {
@@ -553,8 +556,8 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
         if (bond.effortElement == null) throw BadGraphException("Error: Attempt to create tokens on an element with no causality set. Has createdTokens been called before augmntation?")
 
         cToken = Token(bond.displayId, "",  elementType.toAnnotatedString(), false, false, false, false)
-        qToken = Token(bond.displayId, "", AnnotatedString("q"), false, true, bond.effortElement !== this,false,)
-        qDotToken = Token(bond.displayId, "", AnnotatedString("q"), false, true, bond.effortElement !== this, true)
+        eToken = Token(bond.displayId, "", AnnotatedString("q"), false, true, bond.effortElement !== this,false,)
+        eDotToken = Token(bond.displayId, "", AnnotatedString("q"), false, true, bond.effortElement !== this, true)
     }
 
 
@@ -583,14 +586,14 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
 
         if (cToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on ${displayId }but tokens have not been created.  Has createdTokens been called?")
 
-        return Term().multiply(qToken).divide(cToken)
+        return Term().multiply(eToken).divide(cToken)
     }
 
     override fun deriveEquation(): Equation {
         val bond = getBondList()[0]
 
-        if (qDotToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on $displayId but tokens have not been created.  Has createdTokens been called?")
-        return Equation(qDotToken, getOtherElement(this, bond).getFlow(bond))
+        if (eDotToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on $displayId but tokens have not been created.  Has createdTokens been called?")
+        return Equation(eDotToken, getOtherElement(this, bond).getFlow(bond))
 
     }
 
@@ -601,8 +604,8 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
 
 
     var iToken = Token()
-    var pToken = Token()
-    var pDotToken = Token()
+    override var eToken = Token()
+    override var eDotToken = Token()
 
     override fun createTokens() {
         val bondsList = getBondList()
@@ -611,8 +614,8 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
         if (bond.effortElement == null) throw BadGraphException("Error: Attempt to create tokens on an element with no causality set. Has createdTokens been called before augmntation?")
 
         iToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
-        pToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement === this,false,)
-        pDotToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement !== this, true)
+        eToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement === this,false,)
+        eDotToken = Token(bond.displayId, "", AnnotatedString("p"), false, true, bond.effortElement !== this, true)
     }
 
 
@@ -639,12 +642,12 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     override fun getFlow(bond: Bond): Expr {
 
         if (iToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on ${displayId }but tokens have not been created.  Has createdTokens been called?")
-        return Term().multiply(pToken).divide(iToken)
+        return Term().multiply(eToken).divide(iToken)
     }
 
     override fun deriveEquation(): Equation {
         val bond = getBondList()[0]
-        return Equation(pDotToken, getOtherElement(this, bond).getEffort(bond))
+        return Equation(eDotToken, getOtherElement(this, bond).getEffort(bond))
     }
 }
 /*
@@ -674,8 +677,12 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
  */
 class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
 
+    // eToken and eDotToken not needed for resistor
+    override var eToken = Token()
+    override var eDotToken = Token()
+
     var rToken = Token()  // Resistance token
-    var eToken = Token()  // Effort token
+    var efToken = Token()  // Effort token
     var fToken = Token()  // FLow token
     //var derivingEquation = false  // True if we are in the process of deriving an equation
     var isCausalityArbitrarilyAssigned = false
@@ -687,7 +694,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
         val bond = bondsList[0]
 
         rToken = Token(bond.displayId, "", elementType.toAnnotatedString(), false, false, false, false)
-        eToken = Token(bond.displayId, "", AnnotatedString("e"), false, false, false, false)
+        efToken = Token(bond.displayId, "", AnnotatedString("e"), false, false, false, false)
         fToken = Token(bond.displayId, "", AnnotatedString("f"), false, false, false, false)
     }
 
@@ -712,7 +719,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     override fun getEffort(bond: Bond): Expr {
         if (isCausalityArbitrarilyAssigned) {
             if (substituteExprssion == null){
-                return eToken
+                return efToken
             } else {
                 return substituteExprssion as Expr
             }
@@ -744,12 +751,16 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
             return Equation(fToken, Term().multiply(otherElement.getEffort(bond)).divide(rToken))
         } else {
             // Resistor is imposing effort on system so derive equation for effort e = fR
-            return Equation(eToken, Term().multiply(otherElement.getFlow(bond)).multiply(rToken))
+            return Equation(efToken, Term().multiply(otherElement.getFlow(bond)).multiply(rToken))
         }
     }
 }
 
 class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+
+    // eToken and eDotToken not needed for sourceOfEffort
+    override var eToken = Token()
+    override var eDotToken = Token()
 
     var sToken = Token()
 
@@ -792,6 +803,10 @@ class SourceOfEffort(bondGraph: BondGraph, id: Int, elementType: ElementTypes, d
 }
 
 class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): OnePort(bondGraph, id, elementType, displayData) {
+
+    // eToken and eDotToken not needed for SourceOfFlow
+    override var eToken = Token()
+    override var eDotToken = Token()
 
     var sToken = Token()
 
