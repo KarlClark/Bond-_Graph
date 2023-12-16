@@ -224,8 +224,8 @@ class BondGraph(var name: String) {
     properly when adding or removing elements or bonds.
 
      */
-    private var elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
-    var bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
+    private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
+    val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
     val preferedResistors = LinkedList<Pair<Element, Element>>()
     val results = Results()
@@ -741,6 +741,7 @@ class BondGraph(var name: String) {
             if (arbitrarilyAssignedResistors.size > 0){
                 val equationsList = arrayListOf<Equation>()
                 val relativilySolvedList = arrayListOf<Equation>()
+                arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add((it as Resistor).deriveEquation()) }
                 results.add(equationsList[0].toAnnotatedString())
                 equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
                 relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
