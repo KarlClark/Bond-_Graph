@@ -335,6 +335,10 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
 
 abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
+    // Expression to use in place of constitutive law in the case of resistors with arbitrarily assigned
+    // causality or dependent inertias or capacitors with derivative causality.
+    var substituteExprssion: Expr? = null
+
     abstract fun deriveEquation(): Equation
 
     // All elements must be able to express their constitutive laws for efforts and flows using the algebra classes.
@@ -675,7 +679,7 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     var fToken = Token()  // FLow token
     //var derivingEquation = false  // True if we are in the process of deriving an equation
     var isCausalityArbitrarilyAssigned = false
-    var substituteExprssion: Expr? = null // expression to use for effort or flow if causality was arbitrarily assigned
+
 
     override fun createTokens() {
         val bondsList = getBondList()

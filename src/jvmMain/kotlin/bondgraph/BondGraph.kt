@@ -16,6 +16,7 @@ import kotlinx.serialization.encodeToHexString
 import userInterface.MyConstants
 import java.util.LinkedList
 
+val displayIntermediateResults = true
 
 class BadGraphException (message: String) : Exception(message)
 class AlgebraException (message: String) : Exception(message)
@@ -24,12 +25,14 @@ class AlgebraException (message: String) : Exception(message)
 class Results() {
     val resultsList = mutableListOf<AnnotatedString>()
 
-    fun add(string: String) {
-        resultsList.add(AnnotatedString( string))
+    fun add(string: String?) {
+
+        val s = string ?:
+        resultsList.add(AnnotatedString( string ?: "null"))
     }
 
-    fun add(string: AnnotatedString) {
-        resultsList.add(string)
+    fun add(string: AnnotatedString?) {
+        resultsList.add(string ?: AnnotatedString("null"))
     }
 
     fun clear(){
@@ -226,6 +229,7 @@ class BondGraph(var name: String) {
      */
     private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
+    val stateEquationsMap = linkedMapOf<Element, Equation>()
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
     val preferedResistors = LinkedList<Pair<Element, Element>>()
     val results = Results()
@@ -719,6 +723,8 @@ class BondGraph(var name: String) {
     fun derive(){
 
         val state = LocalStateInfo.current
+        val simultaneousEquationsMap = linkedMapOf<Element, Equation>()
+        var solvedEquationsMap = linkedMapOf<Element, Equation>()
 
 
         try {
@@ -739,15 +745,17 @@ class BondGraph(var name: String) {
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
             if (arbitrarilyAssignedResistors.size > 0){
-                val equationsList = arrayListOf<Equation>()
-                val relativilySolvedList = arrayListOf<Equation>()
-                arbitrarilyAssignedResistors.forEach { println("calling deriveEquation on ${it.displayId}"); equationsList.add((it as Resistor).deriveEquation()) }
-                results.add(equationsList[0].toAnnotatedString())
-                equationsList.forEach { relativilySolvedList.add( solve(it.leftSide as Token, it)) }
-                relativilySolvedList.forEach { results.add(it.toAnnotatedString()) }
-
-                (arbitrarilyAssignedResistors[0] as Resistor).substituteExprssion = relativilySolvedList[0].rightSide
+                arbitrarilyAssignedResistors.forEach {
+                    (it as Resistor).substituteExprssion = null
+                    println("calling deriveEquation on ${it.displayId}")
+                    simultaneousEquationsMap[it] = ((it as Resistor).deriveEquation())
+                    if (displayIntermediateResults) results.add(simultaneousEquationsMap[it]?.toAnnotatedString())
+                }
             }
+
+            solvedEquationsMap = solveSimultaneousEquations(simultaneousEquationsMap)
+            if (displayIntermediateResults) solvedEquationsMap.values.forEach {results.add(it.toAnnotatedString())  }
+            solvedEquationsMap.forEach { (key, value) -> (key as OnePort).substituteExprssion = value.rightSide}
 
             val elementsList = getIndependentStorageElements()
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")

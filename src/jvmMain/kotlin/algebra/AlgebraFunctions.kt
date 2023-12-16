@@ -2,6 +2,7 @@ package algebra
 
 import androidx.compose.ui.text.AnnotatedString
 import bondgraph.AlgebraException
+import bondgraph.Element
 
 fun List<Expr>.containsExpr(expr: Expr): Boolean {
     return this.any{expr.equals(it)}
@@ -877,4 +878,19 @@ fun solve (token: Token, equation: Equation): Equation {
 
 
     throw AlgebraException("Unknown error solving equation ${equation.toAnnotatedString()} for ${token.toAnnotatedString()}")
+}
+
+fun solveSimultaneousEquations(equations: Map<Element, Equation>): LinkedHashMap<Element, Equation> {
+
+    val solvedEquations = linkedMapOf<Element, Equation>()
+
+    if (equations.size == 1) {
+        equations.forEach{(key, value) -> solvedEquations[key] = solve((value.leftSide as Token), value)}
+        return solvedEquations
+    }
+    /*
+    TODO    implement solving set of simultaneous equations.
+     */
+    equations.forEach { (key, value) -> solvedEquations[key] = Equation(Term(), Term()) }
+    return solvedEquations
 }
