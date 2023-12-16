@@ -578,8 +578,9 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
     }
 
     override fun getFlow(bond: Bond): Expr {
-        if (true) throw BadGraphException("Error: call to Capacitor.getFlow() which is not implemented")
-        return Term()
+
+        if (substituteExprssion == null) throw BadGraphException("Error: no substitute expression for Capacitor in derivative causality = $displayId")
+        return substituteExprssion as Expr
     }
 
     override fun getEffort(bond: Bond): Expr {
@@ -593,7 +594,13 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
         val bond = getBondList()[0]
 
         if (eDotToken.bondId1.equals("")) throw BadGraphException("Error: getEffort called on $displayId but tokens have not been created.  Has createdTokens been called?")
-        return Equation(eDotToken, getOtherElement(this, bond).getFlow(bond))
+        if (bond.effortElement !== this) {
+            // Integral causality - independent variable return expression for derivative of displacement
+            return Equation(eDotToken, getOtherElement(this, bond).getFlow(bond))
+        } else {
+            // derivative causality - dependent variable return expression for displacement in terms of other state variables.
+            return Equation(eToken, getOtherElement(this, bond).getEffort(bond).multiply(cToken))
+        }
 
     }
 
@@ -635,8 +642,8 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     }
 
     override fun getEffort(bond: Bond): Expr {
-        if (true) throw BadGraphException("Error: call to Inertia.getEffort which is not implemented")
-        return Term()
+        if (substituteExprssion == null) throw BadGraphException("Error: no substitute expression for Inertia in derivative causality = $displayId")
+        return substituteExprssion as Expr
     }
 
     override fun getFlow(bond: Bond): Expr {
@@ -647,7 +654,13 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
 
     override fun deriveEquation(): Equation {
         val bond = getBondList()[0]
-        return Equation(eDotToken, getOtherElement(this, bond).getEffort(bond))
+        if (bond.effortElement === this) {
+            // Integral causality - independent variable return expression for derivative of momentum
+            return Equation(eDotToken, getOtherElement(this, bond).getEffort(bond))
+        } else {
+            // derivative causality - dependent variable return expression for momentum in terms of other state variables.
+            return Equation(eToken, getOtherElement(this, bond).getFlow(bond).multiply(iToken))
+        }
     }
 }
 /*

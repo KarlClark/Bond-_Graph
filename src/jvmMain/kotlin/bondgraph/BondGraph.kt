@@ -27,15 +27,17 @@ class Results() {
 
     fun add(string: String?) {
 
-        val s = string ?:
+        println("results.add(string) $string")
         resultsList.add(AnnotatedString( string ?: "null"))
     }
 
     fun add(string: AnnotatedString?) {
+        println("results.add(AnnotatedString) $string")
         resultsList.add(string ?: AnnotatedString("null"))
     }
 
     fun clear(){
+        println("results.clear() called")
         resultsList.clear()
         resultsList.clear()
     }
@@ -725,6 +727,10 @@ class BondGraph(var name: String) {
         val state = LocalStateInfo.current
         val simultaneousEquationsMap = linkedMapOf<Element, Equation>()
         var solvedEquationsMap = linkedMapOf<Element, Equation>()
+        val eTokenToEDotTokenMap = linkedMapOf<Token, Token>()
+        val derivativeCausalityElements = elementsMap.values.filter{
+            (it is Capacitor && it.getBondList()[0].effortElement === it) ||
+            (it is Inertia && it.getBondList()[0].effortElement !== it)}
 
 
         try {
@@ -740,7 +746,12 @@ class BondGraph(var name: String) {
           */
 
             elementsMap.forEach { it.value.createDisplayId() }
-            elementsMap.forEach{it.value.createTokens()}
+            elementsMap.values.forEach{
+                it.createTokens()
+                if (it is Capacitor || it is Inertia) {
+                    eTokenToEDotTokenMap[(it as OnePort).eToken] = (it).eDotToken
+                }
+            }
 
             if (! causalityComplete()) throw BadGraphException("Error: Graph is not completely augmented")
 
@@ -748,13 +759,24 @@ class BondGraph(var name: String) {
                 arbitrarilyAssignedResistors.forEach {
                     (it as Resistor).substituteExprssion = null
                     println("calling deriveEquation on ${it.displayId}")
-                    simultaneousEquationsMap[it] = ((it as Resistor).deriveEquation())
+                    simultaneousEquationsMap[it] = ((it).deriveEquation())
+                    if (displayIntermediateResults) results.add(simultaneousEquationsMap[it]?.toAnnotatedString())
+                }
+            }
+
+            println ("derivativeCausalityElements.size = ${derivativeCausalityElements.size}")
+            if (derivativeCausalityElements.isNotEmpty()){
+                derivativeCausalityElements.forEach {
+                    println("derivative causality calling derive equation on ${it.displayId}")
+                    simultaneousEquationsMap[it] = (it as OnePort).deriveEquation()
+                    println("Equation -> ${simultaneousEquationsMap[it]?.toAnnotatedString()}")
                     if (displayIntermediateResults) results.add(simultaneousEquationsMap[it]?.toAnnotatedString())
                 }
             }
 
             solvedEquationsMap = solveSimultaneousEquations(simultaneousEquationsMap)
             if (displayIntermediateResults) solvedEquationsMap.values.forEach {results.add(it.toAnnotatedString())  }
+
             solvedEquationsMap.forEach { (key, value) -> (key as OnePort).substituteExprssion = value.rightSide}
 
             val elementsList = getIndependentStorageElements()
@@ -780,13 +802,21 @@ class BondGraph(var name: String) {
             state.showResults = true
 
         }catch(e: BadGraphException ) {
+
+            println ("calling results clear 1")
             results.clear()
+            println("BadGraphError $e")
             results.add(e.message.toString())
             state.showResults = true
         }
         catch (e: AlgebraException){
+
+            println ("calling results clear 2")
             results.clear()
+            println("AlgebraException: ${e.message.toString()} ")
+            println("calling results.add")
             results.add(e.message.toString())
+            println("done calling results.add")
             state.showResults = true
         }
     }

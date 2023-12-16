@@ -827,6 +827,15 @@ fun solve (token: Token, equation: Equation): Equation {
     var leftSide = equation.leftSide
     var rightSide = equation.rightSide
 
+    if (equation.rightSide is Term){
+        if ((equation.rightSide as Term).numerators.contains(token) || (equation.rightSide as Term).denominators.contains(token)) {
+            throw(AlgebraException("Error: Can't solve equation for ${token.toAnnotatedString()} because there is just one "
+                    + "term on each side of the equation and ${token.toAnnotatedString()} appears in both of them."
+                    +"\nEquation is ${equation.toAnnotatedString()}"))
+        }
+        return equation
+    }
+
     if (isTokenInDenominator(token, leftSide) || isTokenInDenominator(token, rightSide)) throw AlgebraException("Error: The token we are solving for occurs in the denominator of one of the terms.  " +
             "These algebra routines can't solve this")
         if (rightSide is Sum) {
