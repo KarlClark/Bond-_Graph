@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import bondgraph.ElementTypes.*
 import userInterface.LocalStateInfo
 import kotlin.math.*
@@ -768,9 +769,12 @@ class BondGraph(var name: String) {
             if (derivativeCausalityElements.isNotEmpty()){
                 derivativeCausalityElements.forEach {
                     println("derivative causality calling derive equation on ${it.displayId}")
-                    simultaneousEquationsMap[it] = (it as OnePort).deriveEquation()
-                    println("Equation -> ${simultaneousEquationsMap[it]?.toAnnotatedString()}")
-                    if (displayIntermediateResults) results.add(simultaneousEquationsMap[it]?.toAnnotatedString())
+                    val equation = (it as OnePort).deriveEquation()
+                    if (displayIntermediateResults) results.add(buildAnnotatedString { append("Equation -> ") ; append(equation.toAnnotatedString())})
+                    println("Equation -> " + equation.toAnnotatedString())
+                    simultaneousEquationsMap[it] = replaceTokens(equation, eTokenToEDotTokenMap)
+                    println(" dot equation -> " + simultaneousEquationsMap[it]?.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(buildAnnotatedString { append("dot equation -> ") ; append(simultaneousEquationsMap[it]!!.toAnnotatedString())})
                 }
             }
 
@@ -784,19 +788,26 @@ class BondGraph(var name: String) {
 
             for (element in elementsList ) {
                 var equation = (element as OnePort).deriveEquation()
+                println("derived equation for element ${element.displayId}  -> ${equation.toAnnotatedString()}")
+                if (displayIntermediateResults) results.add(equation.toAnnotatedString())
 
-                results.add(equation.toAnnotatedString())
-                println("derive equation for element ${element.displayId}  -> ${equation.toAnnotatedString()}")
+
+
+                if (derivativeCausalityElements.size > 0) {
+                    equation = solve(equation.leftSide as Token, equation)
+                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                }
+
 
                 if (arbitrarilyAssignedResistors.size > 0) {
                     val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
                     equation = Equation(equation.leftSide, newRightSide)
-                    results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
                     println("${newRightSide.toAnnotatedString()}")
                     equation = simplifySums(equation)
-                    results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
                     equation = cancel(equation)
-                    results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
                 }
             }
             state.showResults = true

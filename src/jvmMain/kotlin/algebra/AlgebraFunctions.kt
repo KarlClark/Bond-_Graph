@@ -742,7 +742,117 @@ fun getStateToken(term: Term): Token {
             return expr
             }
     }
-    throw AlgebraException("Error: getKeyToken called on term with to power or energy variable = ${term.toAnnotatedString()}")
+    throw AlgebraException("Error: getKeyToken called on term with no power or energy variable = ${term.toAnnotatedString()}")
+}
+
+fun replaceToken(token: Token, newToken: Token, expr: Expr): Expr{
+    val numerators = arrayListOf<Expr>()
+    val denominators = arrayListOf<Expr>()
+
+    if (expr is Token){
+        if (token === expr) {
+            return newToken
+        } else {
+            return expr
+        }
+    }
+
+    if (expr is Sum) {
+        return expr
+    }
+
+    numerators.addAll((expr as Term).numerators)
+    denominators.addAll(expr.denominators)
+
+    if (numerators.contains(token)){
+        numerators.remove(token)
+        numerators.add(newToken)
+    }
+
+    if (denominators.contains(token)){
+        denominators.remove(token)
+        denominators.add(newToken)
+    }
+
+    val term = Term()
+    term.numerators.addAll(numerators)
+    term.denominators.addAll(denominators)
+
+    return term
+}
+
+fun replaceTokens(equation: Equation, replacementMap: Map<Token, Token>): Equation{
+
+    var token: Token
+    val leftSidePlusTerms = arrayListOf<Expr>()
+    val rightSidePlusTerms = arrayListOf<Expr>()
+    val leftSideMinusTerms = arrayListOf<Expr>()
+    val rightSideMinusTerms = arrayListOf<Expr>()
+    val newLeftSidePlusTerms = arrayListOf<Expr>()
+    val newRightSidePlusTerms = arrayListOf<Expr>()
+    val newLeftSideMinusTerms = arrayListOf<Expr>()
+    val newRightSideMinusTerms = arrayListOf<Expr>()
+
+    fun createSum(expr: Expr, plusTerms: ArrayList<Expr>, minusTerms: ArrayList<Expr>, newPlusTerms: ArrayList<Expr>) {
+
+        when (expr) {
+
+            is Token -> {
+                if (expr in replacementMap.keys) {
+                    newPlusTerms.add(replacementMap[expr]!!)
+                } else {
+                    newPlusTerms.add(expr)
+                }
+            }
+
+            is Term -> {
+                plusTerms.add(expr)
+            }
+
+            is Sum -> {
+                plusTerms.addAll(expr.plusTerms)
+                minusTerms.addAll(expr.minusTerms)
+            }
+        }
+    }
+
+    fun checkTerm(term: Term): Expr{
+        val token = getStateToken(term)
+        if (token in replacementMap.keys) {
+            return replaceToken(token, replacementMap[token]!!, term)
+        }
+
+        return term
+    }
+
+    createSum(equation.leftSide, leftSidePlusTerms, leftSideMinusTerms, newLeftSidePlusTerms)
+    createSum(equation.rightSide, rightSidePlusTerms, rightSideMinusTerms, newRightSidePlusTerms)
+
+    leftSidePlusTerms.forEach { newLeftSidePlusTerms.add(checkTerm(it as Term)) }
+    leftSideMinusTerms.forEach { newLeftSideMinusTerms.add(checkTerm(it as Term)) }
+    rightSidePlusTerms.forEach { newRightSidePlusTerms.add(checkTerm(it as Term)) }
+    rightSideMinusTerms.forEach { newRightSideMinusTerms.add(checkTerm(it as Term)) }
+
+    var leftSide: Expr
+    var rightSide: Expr
+
+    if (newLeftSidePlusTerms.size == 1 && newLeftSideMinusTerms.size == 0) {
+        leftSide = newLeftSidePlusTerms[0]
+    } else {
+        val sum = Sum()
+        sum.plusTerms.addAll(newLeftSidePlusTerms)
+        sum.minusTerms.addAll(newLeftSideMinusTerms)
+        leftSide = sum
+    }
+    if (newRightSidePlusTerms.size == 1 && newRightSideMinusTerms.size == 0) {
+        rightSide = newRightSidePlusTerms[0]
+    } else {
+        val sum = Sum()
+        sum.plusTerms.addAll(newRightSidePlusTerms)
+        sum.minusTerms.addAll(newRightSideMinusTerms)
+        rightSide = sum
+    }
+     return Equation(leftSide, rightSide)
 }
 
 /*
