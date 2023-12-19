@@ -18,15 +18,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import bondgraph.ElementTypes
+import bondgraph.*
 import bondgraph.ElementTypes.*
-import bondgraph.ElementDisplayData
-import bondgraph.Bond
 import bondgraph.BondGraph.Companion.getArrowOffsets
 import bondgraph.BondGraph.Companion.getCausalOffsets
 import bondgraph.BondGraph.Companion.offsetFromCenter
 import bondgraph.BondGraph.Companion.getLabelOffset
-import bondgraph.Resistor
 
 
 internal val LocalStateInfo = compositionLocalOf { StateInfo() }
@@ -296,11 +293,11 @@ fun  dropTarget(
                                         val resister = if (bond.element1 is Resistor)bond.element1 else bond.element2
                                         if (bond.effortElement == null) {
                                             bondGraph.setCasualElement(bondId, bond.element2)
-                                            bondGraph.preferedResistors.push(Pair(resister, bond.element2))
+                                            bondGraph.unAssignedResistors.removeAndAddToFront(Pair(resister, bond.element2))
                                         } else {
                                             val effortElement = if (bond.effortElement == bond.element1) bond.element2 else bond.element1
                                             bondGraph.setCasualElement(bondId, effortElement)
-                                            bondGraph.preferedResistors.push(Pair(resister, effortElement))
+                                            bondGraph.unAssignedResistors.removeAndAddToFront(Pair(resister, effortElement))
                                         }
                                         dragInfo.needsAgument = true
                                     }

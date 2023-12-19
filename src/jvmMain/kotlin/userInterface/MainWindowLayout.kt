@@ -47,6 +47,7 @@ object MyConstants {
     val resultsBackground = Color(206, 232, 246)
     val unassignedColor = myOrange
     val arbitrarilyAssignedColor = myGreen
+    val derivativeCausalityColor = myGreen
 
 }
 // This composable builds the sidebar for the window.

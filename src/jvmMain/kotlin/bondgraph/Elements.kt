@@ -574,7 +574,8 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
             bond.effortElement = otherElement
             otherElement.assignCausality()
         }
-
+        displayData.color = if (bond.effortElement !== this) MyConstants.defaultElementColor else MyConstants.derivativeCausalityColor
+        bond.color = displayData.color
     }
 
     override fun getFlow(bond: Bond): Expr {
@@ -639,6 +640,8 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
             bond.effortElement = this
             otherElement.assignCausality()
         }
+        displayData.color = if (bond.effortElement === this) MyConstants.defaultElementColor else MyConstants.derivativeCausalityColor
+        bond.color = displayData.color
     }
 
     override fun getEffort(bond: Bond): Expr {

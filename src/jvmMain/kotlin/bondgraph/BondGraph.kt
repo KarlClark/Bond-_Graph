@@ -22,6 +22,42 @@ val displayIntermediateResults = true
 class BadGraphException (message: String) : Exception(message)
 class AlgebraException (message: String) : Exception(message)
 
+/*
+    See if there is a pair in the list whose first element matches the given element.
+ */
+fun LinkedList<Pair<Element, Element>>.contains(element: Element): Boolean {
+    forEach { if (it.first === element) return true }
+    return false
+}
+
+/*
+    See if there is a pair in the list whose first element matches the given
+    element.  If there is move it to the front of list.  Otherwise, create
+    a new pair and add it to the front of the list.
+ */
+fun LinkedList<Pair<Element, Element?>>.removeAndAddToFront(newPair: Pair<Element, Element>){
+    var oldPair: Pair<Element, Element?>? = null
+    for(pair in this){
+        if (pair.first === newPair.first){
+            oldPair = pair
+            break
+        }
+    }
+    if (oldPair != null) {
+        remove(oldPair)
+    }
+    addFirst(newPair)
+}
+
+/*
+    Find any pairs whose first element match the given element and remove
+    them from the list.
+ */
+fun LinkedList<Pair<Element, Element>>.removePair(pair: Pair<Element, Element?>) {
+    val ePairList = filter{ it.first === pair.first}
+    ePairList.forEach { remove(it) }
+}
+
 
 class Results() {
     val resultsList = mutableListOf<AnnotatedString>()
@@ -234,9 +270,15 @@ class BondGraph(var name: String) {
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val stateEquationsMap = linkedMapOf<Element, Equation>()
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
-    val preferedResistors = LinkedList<Pair<Element, Element>>()
-    val results = Results()
 
+    /*
+    List of resistors that were not assigned causality after sources and storage elements
+    were processed. If the user has picked a preferred causality the effort element is
+    stored in the second element of the pair. The elements the user has chosen the causality
+    for are stored it the front of the list so they are processed first.
+    */
+    val unAssignedResistors = LinkedList<Pair<Element, Element?>>()
+    val results = Results()
     var graphHasChanged = false
     var newElementId = 0
     var newBondId = 0
@@ -244,7 +286,6 @@ class BondGraph(var name: String) {
 
 
     fun toSerializedStrings(): String {
-
 
         val elementData = elementsMap.values.map{ElementSerializationData.getData(it)}
         val bondData = bondsMap.values.map{BondSerializationData.getData(it)}
@@ -281,6 +322,9 @@ class BondGraph(var name: String) {
         }
 
         println("data.arbitrarilyAssignedResistorsIds.size = ${data.arbitrarilyAssignedResistorsIds.size}")
+        unAssignedResistors.addAll(elementsMap.values
+            .filter { it is Resistor && it.displayData.color != MyConstants.defaultElementColor  }
+            .map{Pair(it, null)})
         data.arbitrarilyAssignedResistorsIds.forEach{
             elementsMap.get(it)?.let { it1 ->
                 arbitrarilyAssignedResistors.add(it1)
@@ -288,7 +332,7 @@ class BondGraph(var name: String) {
                 (it1 as Resistor).isCausalityArbitrarilyAssigned = true
                 val effortElement = it1.getBondList()[0].effortElement
                 if (effortElement != null) {
-                    preferedResistors.push(Pair(it1, effortElement))
+                    unAssignedResistors.removeAndAddToFront(Pair(it1, effortElement))
                 }
             } }
 
@@ -673,42 +717,56 @@ class BondGraph(var name: String) {
            // using R elements.
            done = causalityComplete()
 
-           if ( ! done) {
-               val copyOfPreferredResistors = LinkedList<Pair<Element, Element>>()
-               copyOfPreferredResistors.addAll(preferedResistors)
-               while (!done) {
-                   if (!done) {
-                       val elementList = getUnassignedResistors()
-                       var element: Element? = null
-                       var elementPair: Pair<Element, Element>? = null
-                       elementList.forEach { it.displayData.color = MyConstants.unassignedColor }
-                       if (elementList.isNotEmpty()) {
-                           while (copyOfPreferredResistors.isNotEmpty()) {
-                               val pair = copyOfPreferredResistors.pop()
-                               if (elementList.contains(pair.first) ) {
-                                   elementPair = pair
-                                   break
-                               }
-                           }
-                           if (elementPair == null){
-                               element = elementList[0]
-                           } else {
-                               element = elementPair.first
-                           }
-                           arbitrarilyAssignedResistors.add(element)
-                           (element as Resistor).isCausalityArbitrarilyAssigned = true
-                           element.displayData.color = MyConstants.arbitrarilyAssignedColor
-                           if (elementPair != null) {
-                               element.getBondList()[0].effortElement = elementPair.second
-                           }
-                           element.assignCausality()
+           if ( ! done){
+               /*
+                    We want to generate a new leist of un-assigned resistors.  But we want to keep any values
+                    from the old list that are still in the current list.  Likewise, we want to delete any elements
+                    from the old list that are not in the current list.
+                */
 
+               // Get the current list of un-assigned resistors and update their colors and the colors of their bonds.
+               val currentUnassignedResistors = mutableListOf<Element>()
+               currentUnassignedResistors.addAll(getUnassignedResistors())
+               currentUnassignedResistors.forEach {
+                   it.displayData.color = MyConstants.unassignedColor
+                   it.getBondList()[0].color = MyConstants.unassignedColor
+               }
 
-                           done = causalityComplete()
-                       } else {
-                           done = true
-                       }
+               // make a copy of the un-assigned resistors list, so we have something we can iterate
+               // over while we modify the original list.
+               val copyOfUnassignedResistors = LinkedList<Pair<Element, Element?>>()
+               copyOfUnassignedResistors.addAll(unAssignedResistors)
+
+               // Iterate ove the un-assigned resistors list comparing it to the current list.  If a resistor is
+               // in both lists, then remove it from the current list (we want to keep the old entry).  If it's
+               // not in current list, then remove it from the old list too.
+               for (pair in copyOfUnassignedResistors) {
+                   if (currentUnassignedResistors.contains(pair.first)) {
+                       currentUnassignedResistors.remove(pair.first)
+                   } else {
+                       unAssignedResistors.remove(pair)
                    }
+               }
+
+               // If there are any resistors left in the new list, then add them to the end of the old list.
+               currentUnassignedResistors.forEach {
+                   unAssignedResistors.add(Pair(it, null))
+               }
+
+               // now assign and propagate causality to the resistors in the un-assigned resistor list
+               // one at a time until causality is complete.
+              for (pair in unAssignedResistors){
+                  val element = pair.first
+                  arbitrarilyAssignedResistors.add(element)
+                  (element as Resistor).isCausalityArbitrarilyAssigned = true
+                  element.displayData.color = MyConstants.arbitrarilyAssignedColor
+                  val bond = element.getBondList()[0]
+                  bond.color = MyConstants.arbitrarilyAssignedColor
+                  bond.effortElement = pair.second
+                  element.assignCausality()
+                  if (causalityComplete()){
+                      break
+                  }
                }
            }
 

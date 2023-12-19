@@ -8,6 +8,7 @@ fun List<Expr>.containsExpr(expr: Expr): Boolean {
     return this.any{expr.equals(it)}
 }
 fun testCases(){
+
     val at = Token("1", "", AnnotatedString("A"))
     val bt = Token("1", "", AnnotatedString("B"))
     val ct = Token("1", "", AnnotatedString("C"))
