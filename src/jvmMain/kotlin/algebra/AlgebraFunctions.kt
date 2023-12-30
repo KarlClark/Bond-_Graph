@@ -3,7 +3,6 @@ package algebra
 import androidx.compose.ui.text.AnnotatedString
 import bondgraph.AlgebraException
 import bondgraph.Element
-import java.util.LinkedList
 import kotlin.math.absoluteValue
 
 fun List<Expr>.containsExpr(expr: Expr): Boolean {
@@ -29,6 +28,8 @@ fun testCases(){
     var expr1: Expr
     var expr2: Expr
     var expr3: Expr
+    var expr4: Expr
+    var expr5: Expr
     println("Test cases &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
     println(Term().multiply(xt).divide(yt).multiply(n10).toAnnotatedString())
     println("-------------------------------------------------------------")
@@ -37,7 +38,14 @@ fun testCases(){
     expr2 = term1.multiply(xt).divide(yt)
     println("expr2 = ${expr2.toAnnotatedString()}")
     expr3 = expr1.multiply(expr2)
+    expr4 = expr2.multiply(at).divide(bt).divide(n10)
+    expr5 = Term().multiply(bt).divide(ct).multiply(n6)
+
     println("expr3 = ${expr3.toAnnotatedString()}")
+    println("expr4 = ${expr4.toAnnotatedString()}")
+    println("expr5 = ${expr5.toAnnotatedString()}")
+    expr5 = expr3.divide(expr5)
+    println("expr5 = ${expr5.toAnnotatedString()}")
     println ("result ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     println("${expr1.toAnnotatedString()} x ${expr2.toAnnotatedString()} = ${expr3.toAnnotatedString()}  ${expr3::class.simpleName}")
     expr3 = expr1.divide(n2)
@@ -72,6 +80,40 @@ a Sum like (a + b -a). After simplifying we are left with a Sum with just one To
 function resolves these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
  */
 
+fun stripCoefficentFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
+    var num = startNum
+    source.forEach {
+        when (it) {
+            is Token -> dest.add(it)
+            is Number -> num = operation(num, it.value)
+            is Term -> {
+                val p = stripCoefficient(it)
+                dest.add(p.second)
+                num = operation(num, p.first)
+            }
+            is Sum -> dest.add(it)
+        }
+    }
+    return num
+}
+
+fun rationalizeCoefficient(term: Term): Term {
+
+    val numerators = arrayListOf<Expr>()
+    val denominators = arrayListOf<Expr>()
+    var num = 1.0
+
+    num = stripCoefficentFromList(term.numerators, numerators, 1.0, Double::times)
+    num = stripCoefficentFromList(term.denominators, denominators, num, Double::div)
+
+    val newTerm = Term()
+    if (num != 1.0) {
+        newTerm.numerators.add(Number(num))
+    }
+    newTerm.numerators.addAll(numerators)
+    newTerm.denominators.addAll(denominators)
+    return newTerm
+}
 
 /*
     Take a term and strip off the number coefficient and return a pair containing the value
@@ -85,25 +127,10 @@ fun stripCoefficient(term: Term): Pair<Double, Term>{
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
     var num = 1.0
-    fun stripFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
-        var num = startNum
-        source.forEach {
-            when (it) {
-                is Token -> dest.add(it)
-                is Number -> num = operation(num, it.value)
-                is Term -> {
-                    val p = stripCoefficient(it)
-                    dest.add(p.second)
-                    num = operation(num, p.first)
-                }
-                is Sum -> dest.add(it)
-            }
-        }
-        return num
-    }
 
-    num = stripFromList(term.numerators, numerators, 1.0, Double::times)
-    num = stripFromList(term.denominators, denominators, num, Double::div)
+
+    num = stripCoefficentFromList(term.numerators, numerators, 1.0, Double::times)
+    num = stripCoefficentFromList(term.denominators, denominators, num, Double::div)
 
     val term = Term()
     term.numerators.addAll(numerators)
@@ -122,7 +149,6 @@ fun combineTerms(sum: Sum): Expr {
         var num = startNum
         var value1 = 1.0
 
-        println("processTerms")
         for (expr in exprs) {
             var expr1 = expr
             if (expr is Term){
@@ -132,7 +158,6 @@ fun combineTerms(sum: Sum): Expr {
             }
             foundOne = false
             for (expr2 in termValueMap.keys) {
-                println("${expr1.toAnnotatedString()} =? ${expr2.toAnnotatedString()}  ${expr1.equals(expr2)}")
                 if (expr1.equals(expr2)) {
 
                     foundOne = true
@@ -168,20 +193,17 @@ fun combineTerms(sum: Sum): Expr {
 
         return num
     }
-    println("combineTerms")
     number = processTerms(sum.plusTerms, 0.0,  Double::plus)
     number = processTerms(sum.minusTerms, number, Double::minus)
 
     val sum = Sum()
     termValueMap.forEach{(key, value) ->
-        println("key = ${key.toAnnotatedString()} value = $value")
         if (value != 0.0) {
             var expr: Expr = Term()
             if (value != 1.0) {
                 expr = expr.multiply(Number(value.absoluteValue))
             }
             expr = expr.multiply(key)
-            println("Combineterms Return from term.multiply")
             if (value < 0) {
                 sum.minusTerms.add(expr)
             } else {
@@ -194,7 +216,6 @@ fun combineTerms(sum: Sum): Expr {
         sum.plusTerms.add(Number(number))
     }
 
-    println("sum  = ${sum.toAnnotatedString()}")
    /* if (sum.plusTerms.size == 1 && sum.minusTerms.size == 0){
         return sum.plusTerms[0]
     }*/
@@ -656,7 +677,6 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
     val plusNumerators = arrayListOf<Expr>()
     val minusNumerators = arrayListOf<Expr>()
 
-    println("expandProductOfSumAndTerm expr = ${expr.toAnnotatedString()}")
     // create a Term that is the product of expr and all the Terms in the termList
     fun productTerm(expr: Expr): Expr{
         val term = Term()
@@ -723,7 +743,6 @@ fun convertExpressionNumeratorToCommonDenominator(expr: Expr, commonDenominator:
 
     val copyOfCommonDenominator = arrayListOf<Expr>()
 
-    println("convertExpressionNumeratorToCommonDenominator expr = ${expr.toAnnotatedString()}")
     if (expr is Token || expr is Sum) {
         // no denominator. Multiply the entire expression by the common denominator
         val term = Term()
@@ -768,7 +787,6 @@ fun commonDenominator(sum: Sum): Expr {
     allTerms.addAll(sum.plusTerms)
     allTerms.addAll(sum.minusTerms)
 
-    println("commonDenominator  sum = ${sum.toAnnotatedString()}")
 
     /*
     For each term in the sum add the terms in its denominator to the common denominator.
@@ -1029,7 +1047,7 @@ fun gatherLikeTerms(sum: Sum):Expr {
     // in the termsMap. If the isPlusTerm flag is true then add the
     // term to the sum otherwise subtract it.  See the comment below.
     fun groupTerms(source: ArrayList<Expr>, isPlusTerm: Boolean) {
-        println("group terms terms= "); source.forEach { println(it.toAnnotatedString()) }
+        //println("group terms terms= "); source.forEach { println(it.toAnnotatedString()) }
         for (term in source){
             val token = getStateToken(term as Term)
             if (termsMap.containsKey(token)) {

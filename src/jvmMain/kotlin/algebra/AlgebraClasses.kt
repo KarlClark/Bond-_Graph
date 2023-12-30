@@ -382,14 +382,8 @@ class Term():Expr {
         return  newTerm
     }
     override fun add(expr: Expr): Expr {
-        if (count++ > 5) 10/0
-        println("Term.add cnt= $count  ${this.toAnnotatedString()} + ${expr.toAnnotatedString()}")
-
         var sum = Sum().add(this)
-        println("Term.add sum = ${sum.toAnnotatedString()}")
         sum = sum.add(expr)
-        println("Term.add sum = ${sum.toAnnotatedString()}")
-        println("Term.add returning ${sum.toAnnotatedString()}")
         return sum
     }
 
@@ -432,9 +426,10 @@ class Term():Expr {
             }
         }
 
-        val term = Term()
+        var term: Term = Term()
         term.numerators.addAll(newNumerators)
         term.denominators.addAll(newDenominators)
+        term = rationalizeCoefficient(term)
         return cancel(term)
     }
 
@@ -473,9 +468,10 @@ class Term():Expr {
         }
 
         // Create a new term and call cancel on it.
-        val term = Term()
+        var term = Term()
         term.numerators.addAll(newNumerators)
         term.denominators.addAll(newDenominators)
+        term = rationalizeCoefficient(term)
         return cancel(term)
     }
 
@@ -615,9 +611,7 @@ class Sum(): Expr {
         val sum = Sum()
         sum.plusTerms.addAll(newPlusTerms)
         sum.minusTerms.addAll(newMinusTerms)
-        println("Sum.add sum = ${sum.toAnnotatedString()}")
         val expression =  combineTerms(sum)
-        println("expression = ${expression.toAnnotatedString()}")
         return expression
     }
 
