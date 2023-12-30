@@ -318,7 +318,7 @@ fun cancel(equation: Equation): Equation {
     val newPlusTerms = arrayListOf<Expr>()
     val newMinusTerms = arrayListOf<Expr>()
 
-    if (equation.rightSide is Token){
+    if (equation.rightSide is Token || equation.rightSide is Number){
         return equation
     }
 
@@ -350,7 +350,7 @@ fun simplifySums(equation: Equation): Equation {
     val newMinusTerms = arrayListOf<Expr>()
 
     // No Sum to simplify.
-    if (equation.rightSide is Token){
+    if (equation.rightSide is Token || equation.rightSide is Number){
         return equation
     }
 
@@ -458,7 +458,7 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     var isPlusTerm: Boolean
 
     //Build lists for the terms in the numerator and denominator.
-    if (expr is Sum || expr is Token) {
+    if (expr !is Term) {
         // no denominator, just one expression to add
         numerators.add(expr)
     } else {
@@ -686,7 +686,7 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
     }
 
 
-    if (expr is Token || expr is Sum){
+    if (expr !is Term){
         // nothing to expand
         return expr
     }
@@ -694,7 +694,7 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
 
 
     // break expr apart into a list of Terms and a list o Sums.
-    for (e in (expr as Term).numerators){
+    for (e in (expr).numerators){
         if (e is Token || e is Term) {
             termList.add(e)
         } else {
@@ -869,13 +869,7 @@ fun factorSum(token: Token, sum: Sum): Expr  {
     newSum.minusTerms.addAll(newMinusTerms)
     return newSum
 }
-/*
-    Remove token from the expression.  Several cases,
-    factor a from axy -> xy
-    factor a from axy/ef -> xy/ef
-    factor a from  (axy + amn) -> (xy + mn)
-    factor a from (axy + amn)/ef -> (xy + mn)/ef
- */
+
 fun factor  (token: Token, expr: Expr): Expr {
 
     if (expr is Token)throw AlgebraException ("Error: Attempt to factor a single token = ${token.toAnnotatedString()}")
