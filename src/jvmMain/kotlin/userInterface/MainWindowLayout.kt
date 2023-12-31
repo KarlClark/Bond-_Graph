@@ -370,6 +370,15 @@ fun mainWindow() {
                 }
             }
 
+            Text("Values"
+                , fontSize = MyConstants.menuBarFontSize
+                , textAlign = TextAlign.Center
+                , modifier = Modifier
+                    .clickable { currentState.showValuesWindow = true; println("Values clicked") }
+                    .padding(horizontal = 12.dp)
+                    .align(Alignment.CenterVertically)
+            )
+
             Text(text = pathToBondGraphFile?.toString() ?: ""
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.menuBarFontSize
@@ -385,17 +394,19 @@ fun mainWindow() {
 
 
     Window(
-        /*onCloseRequest = ::exitApplication*/ onCloseRequest = {currentState.exit = true}, state = WindowState(width = 1200.dp, height = 800.dp)
+        onCloseRequest = {currentState.exit = true}
+        ,state = WindowState(width = 1200.dp, height = 800.dp)
         //, icon = (painterResource("one_by_one_pixel.jpg"))
 
-        , onKeyEvent = {
+        ,onKeyEvent = {
             if (it.isShiftPressed) {
                 isShifted = true
             } else {
                 isShifted = false
             }
             false
-        }) {
+        }
+    ) {
 
         Column {
 

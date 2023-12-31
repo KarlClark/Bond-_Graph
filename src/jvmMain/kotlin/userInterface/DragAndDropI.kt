@@ -608,5 +608,5 @@ internal class StateInfo {
     var needsAgument by mutableStateOf(false)
     var exit by mutableStateOf(false)
     var afterSaveAction by mutableStateOf< (@Composable () -> Unit)?>(null)
-
+    var showValuesWindow by mutableStateOf(false)
 }

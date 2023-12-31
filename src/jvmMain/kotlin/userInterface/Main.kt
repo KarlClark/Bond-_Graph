@@ -75,6 +75,9 @@ fun main() = application {
         }
 
         runWindows()
+        if (state.showValuesWindow) {
+            valuesWindow()
+        }
     }
 }
 
