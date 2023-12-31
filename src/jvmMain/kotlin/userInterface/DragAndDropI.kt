@@ -606,7 +606,7 @@ internal class StateInfo {
     var dataToDrop = INVALID_TYPE
     var showSaveFileDialog by mutableStateOf(false)
     var needsAgument by mutableStateOf(false)
-
-
+    var exit by mutableStateOf(false)
+    var afterSaveAction by mutableStateOf< (@Composable () -> Unit)?>(null)
 
 }
