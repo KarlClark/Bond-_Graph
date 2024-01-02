@@ -119,6 +119,35 @@ enum class ElementTypes {
     }
 }
 
+enum class powerVar {
+    EFFORT {
+        override fun toString() = "effort"
+           }
+    ,FLOW {
+        override fun toString() = "flow"
+    }
+    ,UNKNOWN {
+        override fun toString() = "unknown"
+    };
+
+    companion object{
+        fun toEnum(string: String): powerVar {
+            when  {
+                string.equals("effort") -> return EFFORT
+                string.equals("flow") -> return FLOW
+                else -> return UNKNOWN
+            }
+        }
+    }
+}
+class onePortValueData(val element: Element, var description: String, var value: Double)
+class twoPortValueData(val element: Element, var description: String, var operation: (Double, Double) -> Double,
+                       var powerVar1: powerVar, var bond1:Bond, var value: Double, var powerVar2: powerVar, var bond2:Bond)
+class valueSet() {
+    var discription = "no description"
+    val onePorts = arrayListOf<onePortValueData>()
+    val twoPorts = arrayListOf<twoPortValueData>()
+}
 /*
 The data needed to display a representation of the element on the screen.  The id, text and location are
 pretty obvious, the width and height are the size of the text, and the centerLocation is the location of
