@@ -78,6 +78,7 @@ fun setColumn () {
         modifier = Modifier
             .background(Color.DarkGray)
             .width(MyConstants.setColumnWidth)
+            .fillMaxHeight()
 
 
     ) {
@@ -93,7 +94,6 @@ fun setColumn () {
             modifier = Modifier
                 .padding(MyConstants.valuesGeneralPadding)
                 .background(Color.DarkGray)
-            //.background(Color.Yellow)
             , verticalArrangement = Arrangement.spacedBy(MyConstants.valuesGeneralPadding)
         ) {
             bondGraph.valuesSetsMap.values.forEach {
@@ -165,9 +165,7 @@ fun valuesBar () {
                 Row(
                 ) {
 
-                    Text("Save"
-                        //, textAlign = TextAlign.Left
-                        ,
+                    Text("Save",
                         fontSize = MyConstants.valuesBarFontSizeSmall,
                         color = MyConstants.valuesBarsTextColor,
                         modifier = Modifier
@@ -175,9 +173,7 @@ fun valuesBar () {
                             .padding(horizontal = 14.dp)
                     )
 
-                    Text("Save As"
-                        //, textAlign = TextAlign.Right
-                        ,
+                    Text("Save As",
                         fontSize = MyConstants.valuesBarFontSizeSmall,
                         color = MyConstants.valuesBarsTextColor,
                         modifier = Modifier
@@ -185,9 +181,7 @@ fun valuesBar () {
                             .padding(horizontal = 12.dp)
                     )
 
-                    Text("Delete"
-                        //, textAlign = TextAlign.Right
-                        ,
+                    Text("Delete",
                         fontSize = MyConstants.valuesBarFontSizeSmall,
                         color = MyConstants.valuesBarsTextColor,
                         modifier = Modifier
@@ -228,16 +222,14 @@ fun valuesColumn() {
 
     Column(modifier = Modifier
         .background(Color.Cyan)
-        //.width(MyConstants.valuesColumnWidth)
-        .fillMaxWidth()
+        .width(MyConstants.valuesColumnWidth)
+        .fillMaxHeight()
     ) {
 
         valuesBar()
         LazyColumn(modifier = Modifier
             .padding(horizontal = 12.dp)
             .fillMaxWidth()
-
-
         ) {
             if (currentState.newSet) {
                 var eList: List<Element>
@@ -292,8 +284,9 @@ fun onePortItem(element: Element){
             Text ("Value"
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
-            TextField(
-                value = valueInput
+            TextField(modifier = Modifier
+                .width(MyConstants.valueColumnWidth)
+                , value = valueInput
                 , onValueChange = {newText -> valueInput = newText}
             )
         }
@@ -304,11 +297,11 @@ fun onePortItem(element: Element){
 
         ) {
             Text ("Units"
-                //, textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
 
-            TextField(
-                value = unitsInput
+            TextField(modifier = Modifier
+                .width(MyConstants.unitsColumnWidth)
+                , value = unitsInput
                 , onValueChange = {newText -> unitsInput = newText}
             )
         }
@@ -322,8 +315,9 @@ fun onePortItem(element: Element){
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
 
-            TextField(
-                value = descriptionInput
+            TextField(modifier = Modifier
+                .fillMaxWidth()
+                , value = descriptionInput
                 , onValueChange = {newText -> descriptionInput = newText}
             )
         }
@@ -345,8 +339,6 @@ fun valuesWindow() {
     ) {
 
         Box  {
-            var size = IntSize(0,0)
-            var width = 0
 
             Row (modifier = Modifier
                 .wrapContentWidth()

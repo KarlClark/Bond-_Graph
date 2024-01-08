@@ -50,6 +50,9 @@ object MyConstants {
     val setColumnWidth = 180.dp
     val valuesColumnWidth = 400.dp
     val valuesGeneralPadding = 6.dp
+    val valueColumnWidth = 100.dp
+    val unitsColumnWidth = 60.dp
+    val descriptionColumnWidth = 150.dp
 
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)
