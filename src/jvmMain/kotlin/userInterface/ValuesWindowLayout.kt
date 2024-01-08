@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -284,11 +285,12 @@ fun onePortItem(element: Element){
             Text ("Value"
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
-            TextField(modifier = Modifier
+            BasicTextField(modifier = Modifier
                 .width(MyConstants.valueColumnWidth)
                 , value = valueInput
                 , onValueChange = {newText -> valueInput = newText}
             )
+            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.valueColumnWidth))
         }
 
         Column (modifier = Modifier
@@ -299,11 +301,12 @@ fun onePortItem(element: Element){
             Text ("Units"
                 , fontSize = MyConstants.valuesFontSize)
 
-            TextField(modifier = Modifier
+            BasicTextField(modifier = Modifier
                 .width(MyConstants.unitsColumnWidth)
                 , value = unitsInput
                 , onValueChange = {newText -> unitsInput = newText}
             )
+            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.unitsColumnWidth))
         }
 
         Column (modifier = Modifier
@@ -315,11 +318,12 @@ fun onePortItem(element: Element){
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
 
-            TextField(modifier = Modifier
+            BasicTextField(modifier = Modifier
                 .fillMaxWidth()
                 , value = descriptionInput
                 , onValueChange = {newText -> descriptionInput = newText}
             )
+            Divider( thickness = 1.dp, color = Color.Black)
         }
 
 
