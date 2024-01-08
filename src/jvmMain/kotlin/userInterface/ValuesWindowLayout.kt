@@ -269,40 +269,59 @@ fun onePortItem(element: Element){
     var valueInput by remember { mutableStateOf("") }
     var unitsInput by remember { mutableStateOf("") }
     var descriptionInput by remember { mutableStateOf("") }
-    Row(
+    Row(modifier = Modifier
+        , horizontalArrangement = Arrangement.spacedBy(6.dp)
 
     ) {
-        Column (
+        Column (modifier = Modifier
+            .padding(top = 6.dp)
+            , horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Name", fontSize = MyConstants.valuesFontSize)
+            Text ("Name", modifier = Modifier
+                , textAlign = TextAlign.Center
+                , fontSize = MyConstants.valuesFontSize)
             Text(element.displayId)
         }
 
-        Column (
+        Column (modifier = Modifier
+            .padding(top = 6.dp)
+            ,horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Value", fontSize = MyConstants.valuesFontSize)
+            Text ("Value"
+                , textAlign = TextAlign.Center
+                , fontSize = MyConstants.valuesFontSize)
             TextField(
                 value = valueInput
                 , onValueChange = {newText -> valueInput = newText}
             )
         }
 
-        Column (
+        Column (modifier = Modifier
+            .padding(top = 6.dp)
+            , horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Units", fontSize = MyConstants.valuesFontSize)
+            Text ("Units"
+                //, textAlign = TextAlign.Center
+                , fontSize = MyConstants.valuesFontSize)
+
             TextField(
                 value = unitsInput
                 , onValueChange = {newText -> unitsInput = newText}
             )
         }
 
-        Column (
+        Column (modifier = Modifier
+            .padding(top = 6.dp)
+            , horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Description", fontSize = MyConstants.valuesFontSize)
+            Text ("Description"
+                , textAlign = TextAlign.Center
+                , fontSize = MyConstants.valuesFontSize)
+
             TextField(
                 value = descriptionInput
                 , onValueChange = {newText -> descriptionInput = newText}
