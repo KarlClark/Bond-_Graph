@@ -609,4 +609,6 @@ internal class StateInfo {
     var exit by mutableStateOf(false)
     var afterSaveAction by mutableStateOf< (@Composable () -> Unit)?>(null)
     var showValuesWindow by mutableStateOf(false)
+    var setName by mutableStateOf("Default Set")
+    var selectedSetId by mutableStateOf(0)
 }

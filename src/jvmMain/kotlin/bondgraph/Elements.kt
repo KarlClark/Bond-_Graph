@@ -140,13 +140,12 @@ enum class powerVar {
         }
     }
 }
-class onePortValueData(val element: Element, var description: String, var value: Double)
-class twoPortValueData(val element: Element, var description: String, var operation: (Double, Double) -> Double,
-                       var powerVar1: powerVar, var bond1:Bond, var value: Double, var powerVar2: powerVar, var bond2:Bond)
-class valueSet() {
-    var discription = "no description"
-    val onePorts = arrayListOf<onePortValueData>()
-    val twoPorts = arrayListOf<twoPortValueData>()
+class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null)
+class TwoPortValueData(val element: Element, var description: String = "", var operation: ((Double, Double) -> Double),
+                       var powerVar1: powerVar, var bond1:Bond, var value: Double? = null, var powerVar2: powerVar, var bond2:Bond)
+class ValuesSet(val id: Int, var description: String = "no description") {
+    val onePorts = arrayListOf<OnePortValueData>()
+    val twoPorts = arrayListOf<TwoPortValueData>()
 }
 /*
 The data needed to display a representation of the element on the screen.  The id, text and location are

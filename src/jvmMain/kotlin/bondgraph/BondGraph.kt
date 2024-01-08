@@ -268,6 +268,7 @@ class BondGraph(var name: String) {
      */
     private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
+    val valuesSetsMap = linkedMapOf<Int, ValuesSet>()
     val stateEquationsMap = linkedMapOf<Element, Equation>()
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
 
@@ -282,6 +283,7 @@ class BondGraph(var name: String) {
     var graphHasChanged = false
     var newElementId = 0
     var newBondId = 0
+    var newValueSetId = 0
 
 
 
@@ -348,6 +350,7 @@ class BondGraph(var name: String) {
 
     fun getNextElementId() = newElementId++
     fun getNextBondId() = newBondId++
+    fun getNextValueSetId() = newValueSetId++
 
     // Add or update an element in the bond graph.
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {

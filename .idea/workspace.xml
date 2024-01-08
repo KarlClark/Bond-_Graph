@@ -5,8 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2366e1a6-d664-4953-8ba0-3c93284ce241" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/hs_err_pid14816.log" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/hs_err_pid23296.log" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/replay_pid14816.log" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/replay_pid23296.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/DragAndDropI.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/DragAndDropI.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/MainWindowLayout.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/MainWindowLayout.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/ValuesWindowLayout.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/ValuesWindowLayout.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -114,7 +121,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="kotlin-line">
           <url>file://$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt</url>
-          <line>348</line>
+          <line>347</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

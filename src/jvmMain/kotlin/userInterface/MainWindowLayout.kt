@@ -41,11 +41,22 @@ object MyConstants {
     val subTextFontSize: TextUnit = 15.sp
     val menuBarFontSize = 18.sp
     val menuItemFontSize = 14.sp
+    val valuesBarFontSize = 14.sp
+    val valuesBarFontSizeSmall = 12.sp
+    val plusSignFontSize = 22.sp
+
+    val valuesRowHeight = 35.dp
+    val valuesSetColumnWidth = 180.dp
+    val valuesColumnWidth = 200.dp
+    val valuesGeneralPadding = 6.dp
+
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)
     val myOrange = Color(237, 102, 43)
     val offColor = Color.LightGray
     val onColor = myGreen
+    val lightBlue = Color(144, 190, 248)
+    val mediumBlue = Color(53, 135, 237)
     val draggingColor = Color.Red
     val notDraggingColor = Color.Black
     val defaultElementColor = Color.Black
@@ -55,6 +66,10 @@ object MyConstants {
     val unassignedColor = myOrange
     val arbitrarilyAssignedColor = myGreen
     val derivativeCausalityColor = myGreen
+    val valuesBarsColor = mediumBlue
+    val valuesBarsTextColor = Color.White
+    val valuesSetDefaultColor = Color.LightGray
+    val valuesSetSelectedColor = lightBlue
 
 }
 // This composable builds the sidebar for the window.
