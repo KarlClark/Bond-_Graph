@@ -186,7 +186,7 @@ fun valuesBar () {
                         fontSize = MyConstants.valuesBarFontSizeSmall,
                         color = MyConstants.valuesBarsTextColor,
                         modifier = Modifier
-                            .clickable { saveAs = true }
+                            .clickable { delete = true }
                             .padding(horizontal = 12.dp)
                     )
                 }
@@ -222,7 +222,7 @@ fun valuesColumn() {
     val currentState = LocalStateInfo.current
 
     Column(modifier = Modifier
-        .background(Color.Cyan)
+        .background(Color.DarkGray)
         .width(MyConstants.valuesColumnWidth)
         .fillMaxHeight()
     ) {
@@ -231,6 +231,8 @@ fun valuesColumn() {
         LazyColumn(modifier = Modifier
             .padding(horizontal = 12.dp)
             .fillMaxWidth()
+            .padding(MyConstants.valuesGeneralPadding)
+            , verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (currentState.newSet) {
                 var eList: List<Element>
@@ -263,15 +265,21 @@ fun onePortItem(element: Element){
     var unitsInput by remember { mutableStateOf("") }
     var descriptionInput by remember { mutableStateOf("") }
     Row(modifier = Modifier
+        .border(BorderStroke(width = 1.dp, Color.Black))
+        //.padding(6.dp)
+        .background(Color.LightGray)
         , horizontalArrangement = Arrangement.spacedBy(6.dp)
+
 
     ) {
         Column (modifier = Modifier
             .padding(top = 6.dp)
+            .width(50.dp)
             , horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
             Text ("Name", modifier = Modifier
+                .padding(vertical = 6.dp)
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
             Text(element.displayId)
@@ -282,7 +290,8 @@ fun onePortItem(element: Element){
             ,horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Value"
+            Text ("Value", modifier = Modifier
+                .padding(vertical = 6.dp)
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
             BasicTextField(modifier = Modifier
@@ -290,7 +299,7 @@ fun onePortItem(element: Element){
                 , value = valueInput
                 , onValueChange = {newText -> valueInput = newText}
             )
-            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.valueColumnWidth))
+            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp))
         }
 
         Column (modifier = Modifier
@@ -298,7 +307,8 @@ fun onePortItem(element: Element){
             , horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Units"
+            Text ("Units", modifier = Modifier
+                .padding(vertical = 6.dp)
                 , fontSize = MyConstants.valuesFontSize)
 
             BasicTextField(modifier = Modifier
@@ -314,7 +324,8 @@ fun onePortItem(element: Element){
             , horizontalAlignment =  Alignment.CenterHorizontally
 
         ) {
-            Text ("Description"
+            Text ("Description", modifier = Modifier
+                .padding(vertical = 6.dp)
                 , textAlign = TextAlign.Center
                 , fontSize = MyConstants.valuesFontSize)
 
@@ -323,7 +334,7 @@ fun onePortItem(element: Element){
                 , value = descriptionInput
                 , onValueChange = {newText -> descriptionInput = newText}
             )
-            Divider( thickness = 1.dp, color = Color.Black)
+            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = 6.dp))
         }
 
 
@@ -355,7 +366,7 @@ fun valuesWindow() {
 
                 Divider(
                       thickness = 1.dp
-                    , color = Color.Black
+                    , color = Color.White
                     , modifier = Modifier
                         .fillMaxHeight()
                         .width(1.dp)
