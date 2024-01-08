@@ -44,10 +44,11 @@ object MyConstants {
     val valuesBarFontSize = 14.sp
     val valuesBarFontSizeSmall = 12.sp
     val plusSignFontSize = 22.sp
+    val valuesFontSize = 14.sp
 
     val valuesRowHeight = 35.dp
-    val valuesSetColumnWidth = 180.dp
-    val valuesColumnWidth = 200.dp
+    val setColumnWidth = 180.dp
+    val valuesColumnWidth = 400.dp
     val valuesGeneralPadding = 6.dp
 
     val myGreen = Color(10, 140, 10)
@@ -68,8 +69,8 @@ object MyConstants {
     val derivativeCausalityColor = myGreen
     val valuesBarsColor = mediumBlue
     val valuesBarsTextColor = Color.White
-    val valuesSetDefaultColor = Color.LightGray
-    val valuesSetSelectedColor = lightBlue
+    val setDefaultColor = Color.LightGray
+    val setSelectedColor = lightBlue
 
 }
 // This composable builds the sidebar for the window.

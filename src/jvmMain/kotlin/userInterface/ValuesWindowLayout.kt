@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -19,12 +19,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
-import bondgraph.ValuesSet
+import bondgraph.*
 
 @Composable
-fun valuesSetsBar (){
+fun setsBar (){
 
-    var newSet by remember { mutableStateOf(false) }
+    val currentState = LocalStateInfo.current
 
     Column(modifier = Modifier
         .background(Color.Red)
@@ -59,15 +59,10 @@ fun valuesSetsBar (){
                 textAlign = TextAlign.Center,
                 color = MyConstants.valuesBarsTextColor,
                 modifier = Modifier
-                    .clickable { newSet = true; println("newSet clicked") }
+                    .clickable { currentState.newSet = true; println("newSet clicked") }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
             )
-
-            if (newSet) {
-                newSet = false
-                println("newSet")
-            }
         }
 
         Divider(
@@ -75,6 +70,60 @@ fun valuesSetsBar (){
         )
     }
 }
+
+@Composable
+fun setColumn () {
+
+    Column(
+        modifier = Modifier
+            .background(Color.DarkGray)
+            .width(MyConstants.setColumnWidth)
+
+
+    ) {
+
+        if (bondGraph.valuesSetsMap.isEmpty()) {
+            val id = bondGraph.getNextValueSetId()
+            bondGraph.valuesSetsMap[id] = ValuesSet(id, "No Values Set")
+        }
+
+        setsBar()
+
+        LazyColumn(
+            modifier = Modifier
+                .padding(MyConstants.valuesGeneralPadding)
+                .background(Color.DarkGray)
+            //.background(Color.Yellow)
+            , verticalArrangement = Arrangement.spacedBy(MyConstants.valuesGeneralPadding)
+        ) {
+            bondGraph.valuesSetsMap.values.forEach {
+                item { setItem(it) }
+            }
+        }
+    }
+}
+
+@Composable
+fun setItem(valuesSet: ValuesSet) {
+
+    val currentState = LocalStateInfo.current
+
+    Box(modifier = Modifier
+        .border(BorderStroke(width = 1.dp, color = Color.Black))
+        .background(color = if (currentState.selectedSetId == valuesSet.id) MyConstants.setSelectedColor else MyConstants.setDefaultColor)
+        .fillMaxWidth()
+        .clickable { println("${valuesSet.description} clicked") }
+
+
+    ) {
+        Text(valuesSet.description
+            , modifier = Modifier
+                .fillMaxWidth()
+                .padding(MyConstants.valuesGeneralPadding)
+        )
+    }
+}
+
 @Composable
 fun valuesBar () {
 
@@ -171,45 +220,16 @@ fun valuesBar () {
     }
 }
 
-@Composable
-fun setColumn () {
-
-    Column(
-        modifier = Modifier
-            .background(Color.DarkGray)
-            .width(MyConstants.valuesSetColumnWidth)
-
-
-    ) {
-
-        if (bondGraph.valuesSetsMap.isEmpty()) {
-            val id = bondGraph.getNextValueSetId()
-            bondGraph.valuesSetsMap[id] = ValuesSet(id, "No Values Set")
-        }
-        val id = bondGraph.getNextValueSetId()
-        bondGraph.valuesSetsMap[id] = ValuesSet(id, "Long long long description")
-
-        valuesSetsBar()
-
-        LazyColumn(
-            modifier = Modifier
-                .padding(MyConstants.valuesGeneralPadding)
-                .background(Color.DarkGray)
-                //.background(Color.Yellow)
-            , verticalArrangement = Arrangement.spacedBy(MyConstants.valuesGeneralPadding)
-        ) {
-            bondGraph.valuesSetsMap.values.forEach {
-                item { valuesSetItem(it) }
-            }
-        }
-    }
-}
 
 @Composable
 fun valuesColumn() {
+
+    val currentState = LocalStateInfo.current
+
     Column(modifier = Modifier
         .background(Color.Cyan)
-        .width(MyConstants.valuesColumnWidth)
+        //.width(MyConstants.valuesColumnWidth)
+        .fillMaxWidth()
     ) {
 
         valuesBar()
@@ -219,36 +239,81 @@ fun valuesColumn() {
 
 
         ) {
-            item {
-                Text("LazyCOlumn 2", modifier = Modifier.fillMaxWidth())
-                Text("LazyCOlumn 2")
-                Text("LazyCOlumn 2")
+            if (currentState.newSet) {
+                var eList: List<Element>
+
+                bondGraph.getElementList()
+                    .filter{it is Capacitor}
+                    .sortedBy{it.displayId.toString()}
+                    .forEach{item{ onePortItem(it) }}
+
+                bondGraph.getElementList()
+                    .filter{it is Inertia}
+                    .sortedBy{it.displayId.toString()}
+                    .forEach{item{ onePortItem(it) }}
+
+                bondGraph.getElementList()
+                    .filter{it is Resistor}
+                    .sortedBy{it.displayId.toString()}
+                    .forEach{item{ onePortItem(it) }}
+
+
             }
+
         }
     }
-
 }
-
 @Composable
-fun valuesSetItem(valuesSet: ValuesSet) {
+fun onePortItem(element: Element){
 
-    val currentState = LocalStateInfo.current
-
-    Box(modifier = Modifier
-        .border(BorderStroke(width = 1.dp, color = Color.Black))
-        .background(color = if (currentState.selectedSetId == valuesSet.id) MyConstants.valuesSetSelectedColor else MyConstants.valuesSetDefaultColor)
-        .fillMaxWidth()
-        .clickable { println("${valuesSet.description} clicked") }
-
+    var valueInput by remember { mutableStateOf("") }
+    var unitsInput by remember { mutableStateOf("") }
+    var descriptionInput by remember { mutableStateOf("") }
+    Row(
 
     ) {
-        Text(valuesSet.description
-            , modifier = Modifier
-                .fillMaxWidth()
-                .padding(MyConstants.valuesGeneralPadding)
-        )
+        Column (
+
+        ) {
+            Text ("Name", fontSize = MyConstants.valuesFontSize)
+            Text(element.displayId)
+        }
+
+        Column (
+
+        ) {
+            Text ("Value", fontSize = MyConstants.valuesFontSize)
+            TextField(
+                value = valueInput
+                , onValueChange = {newText -> valueInput = newText}
+            )
+        }
+
+        Column (
+
+        ) {
+            Text ("Units", fontSize = MyConstants.valuesFontSize)
+            TextField(
+                value = unitsInput
+                , onValueChange = {newText -> unitsInput = newText}
+            )
+        }
+
+        Column (
+
+        ) {
+            Text ("Description", fontSize = MyConstants.valuesFontSize)
+            TextField(
+                value = descriptionInput
+                , onValueChange = {newText -> descriptionInput = newText}
+            )
+        }
+
+
     }
 }
+
+
 
 @Composable
 fun valuesWindow() {

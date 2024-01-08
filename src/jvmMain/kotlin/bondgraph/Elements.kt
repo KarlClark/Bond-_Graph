@@ -140,7 +140,7 @@ enum class powerVar {
         }
     }
 }
-class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null)
+class OnePortValueData(val element: Element, var description: String = "", var value: Double, units: String = "")
 class TwoPortValueData(val element: Element, var description: String = "", var operation: ((Double, Double) -> Double),
                        var powerVar1: powerVar, var bond1:Bond, var value: Double? = null, var powerVar2: powerVar, var bond2:Bond)
 class ValuesSet(val id: Int, var description: String = "no description") {

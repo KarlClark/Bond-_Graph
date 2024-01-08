@@ -611,4 +611,5 @@ internal class StateInfo {
     var showValuesWindow by mutableStateOf(false)
     var setName by mutableStateOf("Default Set")
     var selectedSetId by mutableStateOf(0)
+    var newSet by mutableStateOf(false)
 }
