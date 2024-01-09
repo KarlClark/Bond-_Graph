@@ -297,7 +297,35 @@ fun onePortItem(element: Element){
             BasicTextField(modifier = Modifier
                 .width(MyConstants.valueColumnWidth)
                 , value = valueInput
-                , onValueChange = {newText -> valueInput = newText}
+                , onValueChange = {newText ->
+                    var periodCount = 0
+                    var zeroCount = 0
+                    valueInput = buildString {
+                        newText.forEach {
+                            when {
+                                it == '.' -> {
+                                    if (periodCount++ == 0) {
+                                        append(it)
+                                    }
+                                }
+
+                                it == '0' -> {
+                                    println("cap")
+                                    if ((length == 1 && get(0) != '0') || length != 1  ) {
+                                        append(it)
+                                    }
+                                }
+
+                                it.isDigit() -> {
+                                    if (length == 1 && get(0) == '0'){
+                                        deleteAt(0)
+                                    }
+                                    append(it)
+                                }
+                            }
+                        }
+                    }
+                }
             )
             Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp))
         }
