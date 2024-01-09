@@ -12,8 +12,14 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -235,35 +241,50 @@ fun valuesColumn() {
             , verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (currentState.newSet) {
-                var eList: List<Element>
+                var eList = arrayListOf<Element>()
+                var focusRequesterOriginal = FocusRequester()
+                var focusRequester1 = focusRequesterOriginal
+                var focusRequester2 = FocusRequester()
 
-                bondGraph.getElementList()
-                    .filter{it is Capacitor}
-                    .sortedBy{it.displayId.toString()}
-                    .forEach{item{ onePortItem(it) }}
+                    eList.addAll( bondGraph.getElementList()
+                        .filter{it is Capacitor}
+                        .sortedBy{it.displayId.toString()})
 
-                bondGraph.getElementList()
-                    .filter{it is Inertia}
-                    .sortedBy{it.displayId.toString()}
-                    .forEach{item{ onePortItem(it) }}
 
-                bondGraph.getElementList()
-                    .filter{it is Resistor}
-                    .sortedBy{it.displayId.toString()}
-                    .forEach{item{ onePortItem(it) }}
+                    eList.addAll(bondGraph.getElementList()
+                        .filter{it is Inertia}
+                        .sortedBy{it.displayId.toString()})
 
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter{it is Resistor}
+                        .sortedBy{it.displayId.toString()})
+
+                val focusRequesterList = arrayListOf<FocusRequester>()
+                for (index in 0 until eList.size){
+                    focusRequesterList.add(FocusRequester())
+                }
+                focusRequesterList.add(focusRequesterList[0])
+                for (index in 0 until eList.size) {
+                    item { onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1]) }
+
+                }
 
             }
 
         }
     }
 }
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun onePortItem(element: Element){
+fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester){
 
     var valueInput by remember { mutableStateOf("") }
     var unitsInput by remember { mutableStateOf("") }
     var descriptionInput by remember { mutableStateOf("") }
+    //val valueFocusRequester = FocusRequester()
+    val unitsFocusRequester = FocusRequester()
+    val descriptionFocusRequester = FocusRequester()
     Row(modifier = Modifier
         .border(BorderStroke(width = 1.dp, Color.Black))
         //.padding(6.dp)
@@ -296,10 +317,15 @@ fun onePortItem(element: Element){
                 , fontSize = MyConstants.valuesFontSize)
             BasicTextField(modifier = Modifier
                 .width(MyConstants.valueColumnWidth)
+                .focusRequester(valueFocusRequester)
+                .onKeyEvent { if (it.key == Key.Tab) {
+                    unitsFocusRequester.requestFocus()
+                }
+                    true
+                }
                 , value = valueInput
                 , onValueChange = {newText ->
                     var periodCount = 0
-                    var zeroCount = 0
                     valueInput = buildString {
                         newText.forEach {
                             when {
@@ -310,7 +336,6 @@ fun onePortItem(element: Element){
                                 }
 
                                 it == '0' -> {
-                                    println("cap")
                                     if ((length == 1 && get(0) != '0') || length != 1  ) {
                                         append(it)
                                     }
@@ -341,8 +366,20 @@ fun onePortItem(element: Element){
 
             BasicTextField(modifier = Modifier
                 .width(MyConstants.unitsColumnWidth)
+                .focusRequester(unitsFocusRequester)
+                .onKeyEvent { if (it.key == Key.Tab) {
+                        descriptionFocusRequester.requestFocus()
+                        }
+                    true
+                    }
                 , value = unitsInput
-                , onValueChange = {newText -> unitsInput = newText}
+                , onValueChange = {newText ->
+                    unitsInput = buildString {
+                        newText.forEach {
+                            if (it != '\t') append(it)
+                        }
+                    }
+                }
             )
             Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.unitsColumnWidth))
         }
@@ -359,8 +396,20 @@ fun onePortItem(element: Element){
 
             BasicTextField(modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(descriptionFocusRequester)
+                .onKeyEvent { if (it.key == Key.Tab) {
+                    valueFocusRequester.requestFocus()
+                }
+                    true
+                }
                 , value = descriptionInput
-                , onValueChange = {newText -> descriptionInput = newText}
+                , onValueChange = {newText ->
+                    descriptionInput = buildString {
+                        newText.forEach {
+                            if (it != '\t') append(it)
+                        }
+                    }
+                }
             )
             Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = 6.dp))
         }
