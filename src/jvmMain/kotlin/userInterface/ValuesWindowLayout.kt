@@ -243,8 +243,7 @@ fun valuesColumn() {
             if (currentState.newSet) {
                 var eList = arrayListOf<Element>()
                 var focusRequesterOriginal = FocusRequester()
-                var focusRequester1 = focusRequesterOriginal
-                var focusRequester2 = FocusRequester()
+                val focusRequesterList = arrayListOf<FocusRequester>()
 
                     eList.addAll( bondGraph.getElementList()
                         .filter{it is Capacitor}
@@ -260,18 +259,15 @@ fun valuesColumn() {
                         .filter{it is Resistor}
                         .sortedBy{it.displayId.toString()})
 
-                val focusRequesterList = arrayListOf<FocusRequester>()
+
                 for (index in 0 until eList.size){
                     focusRequesterList.add(FocusRequester())
                 }
                 focusRequesterList.add(focusRequesterList[0])
                 for (index in 0 until eList.size) {
                     item { onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1]) }
-
                 }
-
             }
-
         }
     }
 }
@@ -318,9 +314,13 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
             BasicTextField(modifier = Modifier
                 .width(MyConstants.valueColumnWidth)
                 .focusRequester(valueFocusRequester)
-                .onKeyEvent { if (it.key == Key.Tab) {
+                .onKeyEvent {
+                    if (it.key == Key.Tab) {
                     unitsFocusRequester.requestFocus()
-                }
+                    }
+                    if (it.key == Key.Enter){
+                        nextItemFocusRequester.requestFocus()
+                    }
                     true
                 }
                 , value = valueInput
@@ -367,16 +367,20 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
             BasicTextField(modifier = Modifier
                 .width(MyConstants.unitsColumnWidth)
                 .focusRequester(unitsFocusRequester)
-                .onKeyEvent { if (it.key == Key.Tab) {
+                .onKeyEvent {
+                    if (it.key == Key.Tab) {
                         descriptionFocusRequester.requestFocus()
                         }
-                    true
+                    if (it.key == Key.Enter){
+                        nextItemFocusRequester.requestFocus()
                     }
+                    true
+                }
                 , value = unitsInput
                 , onValueChange = {newText ->
                     unitsInput = buildString {
                         newText.forEach {
-                            if (it != '\t') append(it)
+                            if ( ! (it == '\t' || it == '\n')) append(it)
                         }
                     }
                 }
@@ -397,16 +401,20 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
             BasicTextField(modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(descriptionFocusRequester)
-                .onKeyEvent { if (it.key == Key.Tab) {
-                    valueFocusRequester.requestFocus()
-                }
+                .onKeyEvent {
+                    if (it.key == Key.Tab) {
+                        valueFocusRequester.requestFocus()
+                    }
+                    if (it.key == Key.Enter){
+                        nextItemFocusRequester.requestFocus()
+                    }
                     true
                 }
                 , value = descriptionInput
                 , onValueChange = {newText ->
                     descriptionInput = buildString {
                         newText.forEach {
-                            if (it != '\t') append(it)
+                            if ( ! (it == '\t' || it == '\n')) append(it)
                         }
                     }
                 }
