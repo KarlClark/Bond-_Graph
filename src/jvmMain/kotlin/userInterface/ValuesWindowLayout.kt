@@ -281,152 +281,173 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     var descriptionInput by remember { mutableStateOf("") }
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
-    Row(modifier = Modifier
-        .border(BorderStroke(width = 1.dp, Color.Black))
-        //.padding(6.dp)
+    Box (modifier = Modifier
         .background(Color.LightGray)
-        , horizontalArrangement = Arrangement.spacedBy(6.dp)
-
 
     ) {
-        Column (modifier = Modifier
-            .padding(top = 6.dp)
-            .width(50.dp)
-            , horizontalAlignment =  Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier
+                .border(BorderStroke(width = 1.dp, Color.Black))
+                .padding(12.dp)
+                .background(Color.LightGray)
+            , horizontalArrangement = Arrangement.spacedBy(6.dp)
+            , verticalAlignment = Alignment.CenterVertically
+
 
         ) {
-            Text ("Name", modifier = Modifier
-                .padding(vertical = 6.dp)
-                , textAlign = TextAlign.Center
-                , fontSize = MyConstants.valuesFontSize)
-            Text(element.displayId)
-        }
 
-        Column (modifier = Modifier
-            .padding(top = 6.dp)
-            ,horizontalAlignment =  Alignment.CenterHorizontally
+            Text(element.displayId
+                , modifier = Modifier
+                    .width(MyConstants.diplayNameWidth)
+                    ,textAlign = TextAlign.Center,
+            )
 
-        ) {
-            Text ("Value", modifier = Modifier
-                .padding(vertical = 6.dp)
-                , textAlign = TextAlign.Center
-                , fontSize = MyConstants.valuesFontSize)
-            BasicTextField(modifier = Modifier
-                .width(MyConstants.valueColumnWidth)
-                .focusRequester(valueFocusRequester)
-                .onKeyEvent {
-                    if (it.key == Key.Tab) {
-                    unitsFocusRequester.requestFocus()
-                    }
-                    if (it.key == Key.Enter){
-                        nextItemFocusRequester.requestFocus()
-                    }
-                    true
-                }
-                , value = valueInput
-                , onValueChange = {newText ->
-                    var periodCount = 0
-                    valueInput = buildString {
-                        newText.forEach {
-                            when {
-                                it == '.' -> {
-                                    if (periodCount++ == 0) {
+            Row(
+                modifier = Modifier
+                    .background(MyConstants.myWhite)
+                //.padding(MyConstants.valuesGeneralPadding)
+                , horizontalArrangement = Arrangement.spacedBy(6.dp)
+
+            ) {
+
+                Column(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .absolutePadding(left = MyConstants.valuesGeneralPadding)
+                    , horizontalAlignment = Alignment.CenterHorizontally
+
+                ) {
+                    Text(
+                        "Value",
+                        modifier = Modifier
+                            .padding(vertical = 6.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = MyConstants.valuesFontSize
+                    )
+                    BasicTextField(modifier = Modifier
+                        .width(MyConstants.valueColumnWidth)
+                        .focusRequester(valueFocusRequester)
+                        .onKeyEvent {
+                            if (it.key == Key.Tab) {
+                                unitsFocusRequester.requestFocus()
+                            }
+                            if (it.key == Key.Enter) {
+                                nextItemFocusRequester.requestFocus()
+                            }
+                            true
+                        }, value = valueInput, onValueChange = { newText ->
+                        var periodCount = 0
+                        valueInput = buildString {
+                            newText.forEach {
+                                when {
+                                    it == '.' -> {
+                                        if (periodCount++ == 0) {
+                                            append(it)
+                                        }
+                                    }
+
+                                    it == '0' -> {
+                                        if ((length == 1 && get(0) != '0') || length != 1) {
+                                            append(it)
+                                        }
+                                    }
+
+                                    it.isDigit() -> {
+                                        if (length == 1 && get(0) == '0') {
+                                            deleteAt(0)
+                                        }
                                         append(it)
                                     }
-                                }
-
-                                it == '0' -> {
-                                    if ((length == 1 && get(0) != '0') || length != 1  ) {
-                                        append(it)
-                                    }
-                                }
-
-                                it.isDigit() -> {
-                                    if (length == 1 && get(0) == '0'){
-                                        deleteAt(0)
-                                    }
-                                    append(it)
                                 }
                             }
                         }
                     }
+                    )
+                    Divider(
+                        thickness = 1.dp,
+                        color = Color.Black,
+                        modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp)
+                    )
                 }
-            )
-            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp))
-        }
 
-        Column (modifier = Modifier
-            .padding(top = 6.dp)
-            , horizontalAlignment =  Alignment.CenterHorizontally
+                Column(
+                    modifier = Modifier
+                        .padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally
 
-        ) {
-            Text ("Units", modifier = Modifier
-                .padding(vertical = 6.dp)
-                , fontSize = MyConstants.valuesFontSize)
+                ) {
+                    Text(
+                        "Units", modifier = Modifier
+                            .padding(vertical = 6.dp), fontSize = MyConstants.valuesFontSize
+                    )
 
-            BasicTextField(modifier = Modifier
-                .width(MyConstants.unitsColumnWidth)
-                .focusRequester(unitsFocusRequester)
-                .onKeyEvent {
-                    if (it.key == Key.Tab) {
-                        descriptionFocusRequester.requestFocus()
-                        }
-                    if (it.key == Key.Enter){
-                        nextItemFocusRequester.requestFocus()
-                    }
-                    true
-                }
-                , value = unitsInput
-                , onValueChange = {newText ->
-                    unitsInput = buildString {
-                        newText.forEach {
-                            if ( ! (it == '\t' || it == '\n')) append(it)
-                        }
-                    }
-                }
-            )
-            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.width(MyConstants.unitsColumnWidth))
-        }
-
-        Column (modifier = Modifier
-            .padding(top = 6.dp)
-            , horizontalAlignment =  Alignment.CenterHorizontally
-
-        ) {
-            Text ("Description", modifier = Modifier
-                .padding(vertical = 6.dp)
-                , textAlign = TextAlign.Center
-                , fontSize = MyConstants.valuesFontSize)
-
-            BasicTextField(modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(descriptionFocusRequester)
-                .onKeyEvent {
-                    if (it.key == Key.Tab) {
-                        valueFocusRequester.requestFocus()
-                    }
-                    if (it.key == Key.Enter){
-                        nextItemFocusRequester.requestFocus()
-                    }
-                    true
-                }
-                , value = descriptionInput
-                , onValueChange = {newText ->
-                    descriptionInput = buildString {
-                        newText.forEach {
-                            if ( ! (it == '\t' || it == '\n')) append(it)
+                    BasicTextField(modifier = Modifier
+                        .width(MyConstants.unitsColumnWidth)
+                        .focusRequester(unitsFocusRequester)
+                        .onKeyEvent {
+                            if (it.key == Key.Tab) {
+                                descriptionFocusRequester.requestFocus()
+                            }
+                            if (it.key == Key.Enter) {
+                                nextItemFocusRequester.requestFocus()
+                            }
+                            true
+                        }, value = unitsInput, onValueChange = { newText ->
+                        unitsInput = buildString {
+                            newText.forEach {
+                                if (!(it == '\t' || it == '\n')) append(it)
+                            }
                         }
                     }
+                    )
+                    Divider(
+                        thickness = 1.dp,
+                        color = Color.Black,
+                        modifier = Modifier.width(MyConstants.unitsColumnWidth)
+                    )
                 }
-            )
-            Divider( thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = 6.dp))
+
+                Column(
+                    modifier = Modifier
+                        .padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally
+
+                ) {
+                    Text(
+                        "Description",
+                        modifier = Modifier
+                            .padding(vertical = 6.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = MyConstants.valuesFontSize
+                    )
+
+                    BasicTextField(modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(descriptionFocusRequester)
+                        .onKeyEvent {
+                            if (it.key == Key.Tab) {
+                                valueFocusRequester.requestFocus()
+                            }
+                            if (it.key == Key.Enter) {
+                                nextItemFocusRequester.requestFocus()
+                            }
+                            true
+                        }, value = descriptionInput, onValueChange = { newText ->
+                        descriptionInput = buildString {
+                            newText.forEach {
+                                if (!(it == '\t' || it == '\n')) append(it)
+                            }
+                        }
+                    }
+                    )
+                    Divider(thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding))
+                }
+            }
+
+
         }
-
-
-    }
-    LaunchedEffect(Unit){
-        if (initialFocus){
-            valueFocusRequester.requestFocus()
+        LaunchedEffect(Unit) {
+            if (initialFocus) {
+                valueFocusRequester.requestFocus()
+            }
         }
     }
 }
