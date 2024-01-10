@@ -245,28 +245,41 @@ fun valuesColumn() {
                 var focusRequesterOriginal = FocusRequester()
                 val focusRequesterList = arrayListOf<FocusRequester>()
 
-                    eList.addAll( bondGraph.getElementList()
-                        .filter{it is Capacitor}
-                        .sortedBy{it.displayId.toString()})
+                eList.addAll( bondGraph.getElementList()
+                    .filter{it is Capacitor}
+                    .sortedBy{it.displayId.toString()})
 
 
-                    eList.addAll(bondGraph.getElementList()
-                        .filter{it is Inertia}
-                        .sortedBy{it.displayId.toString()})
+                eList.addAll(bondGraph.getElementList()
+                    .filter{it is Inertia}
+                    .sortedBy{it.displayId.toString()})
 
 
-                    eList.addAll(bondGraph.getElementList()
-                        .filter{it is Resistor}
-                        .sortedBy{it.displayId.toString()})
+                eList.addAll(bondGraph.getElementList()
+                    .filter{it is Resistor}
+                    .sortedBy{it.displayId.toString()})
+
+                eList.addAll(bondGraph.getElementList()
+                    .filter{it is Transformer}
+                    .sortedBy{it.displayId.toString()})
+
+                eList.addAll(bondGraph.getElementList()
+                    .filter{it is Gyrator}
+                    .sortedBy{it.displayId.toString()})
 
 
+                println("elist.size =${eList.size}")
                 for (index in 0 until eList.size){
                     focusRequesterList.add(FocusRequester())
                 }
                 focusRequesterList.add(focusRequesterList[0])
                 for (index in 0 until eList.size) {
-                    item { onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1], index == 0
-                    ) }
+                    println("element = ${eList[index].displayId} : ${eList[index]::class.simpleName}")
+                    if (eList[index] is Capacitor || eList[index] is Inertia || eList[index] is Resistor) {
+                        item {onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1], index == 0)}
+                    } else {
+                        item {twoPortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1])}
+                    }
                 }
             }
         }
@@ -430,12 +443,14 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                 nextItemFocusRequester.requestFocus()
                             }
                             true
-                        }, value = descriptionInput, onValueChange = { newText ->
-                        descriptionInput = buildString {
-                            newText.forEach {
-                                if (!(it == '\t' || it == '\n')) append(it)
-                            }
                         }
+                        , value = descriptionInput
+                        , onValueChange = { newText ->
+                            descriptionInput = buildString {
+                                newText.forEach {
+                                    if (!(it == '\t' || it == '\n')) append(it)
+                                }
+                            }
                     }
                     )
                     Divider(thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding))
@@ -451,8 +466,170 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
         }
     }
 }
+@Composable
+@OptIn(ExperimentalComposeUiApi::class)
+fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester){
+    var valueInput by remember { mutableStateOf("") }
+    var unitsInput by remember { mutableStateOf("") }
+    var descriptionInput by remember { mutableStateOf("") }
+    val unitsFocusRequester = FocusRequester()
+    val descriptionFocusRequester = FocusRequester()
+
+    Box (modifier = Modifier
+        .background(Color.LightGray)
+
+    ) {
+        Row(
+            modifier = Modifier
+                .border(BorderStroke(width = 1.dp, Color.Black))
+                .padding(12.dp)
+                .background(Color.LightGray)
+            , horizontalArrangement = Arrangement.spacedBy(6.dp)
+            , verticalAlignment = Alignment.CenterVertically
 
 
+        ) {
+
+            Text(element.displayId
+                , modifier = Modifier
+                    .width(MyConstants.diplayNameWidth)
+                ,textAlign = TextAlign.Center,
+            )
+
+            Column(
+                modifier = Modifier
+                    .background(MyConstants.myWhite)
+                //.padding(MyConstants.valuesGeneralPadding)
+
+
+            ) {
+                Row (
+
+                ){
+                    Column (
+
+                    ){
+                        BasicTextField(modifier = Modifier
+                            .width(MyConstants.valueColumnWidth)
+                            .focusRequester(valueFocusRequester)
+                            .onKeyEvent {
+                                if (it.key == Key.Tab) {
+                                    unitsFocusRequester.requestFocus()
+                                }
+                                if (it.key == Key.Enter) {
+                                    nextItemFocusRequester.requestFocus()
+                                }
+                                true
+                            }, value = valueInput, onValueChange = { newText ->
+                            var periodCount = 0
+                            valueInput = buildString {
+                                newText.forEach {
+                                    when {
+                                        it == '.' -> {
+                                            if (periodCount++ == 0) {
+                                                append(it)
+                                            }
+                                        }
+
+                                        it == '0' -> {
+                                            if ((length == 1 && get(0) != '0') || length != 1) {
+                                                append(it)
+                                            }
+                                        }
+
+                                        it.isDigit() -> {
+                                            if (length == 1 && get(0) == '0') {
+                                                deleteAt(0)
+                                            }
+                                            append(it)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        )
+                        Divider(
+                            thickness = 1.dp,
+                            color = Color.Black,
+                            modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp)
+                        )
+                    }
+                }
+                Row (
+
+                ){
+                    Text(
+                        "Units", modifier = Modifier
+                            .padding(vertical = 6.dp), fontSize = MyConstants.valuesFontSize
+                    )
+                    Column (
+
+                    ){
+                        BasicTextField(modifier = Modifier
+                            .width(MyConstants.unitsColumnWidth)
+                            .focusRequester(unitsFocusRequester)
+                            .onKeyEvent {
+                                if (it.key == Key.Tab) {
+                                    descriptionFocusRequester.requestFocus()
+                                }
+                                if (it.key == Key.Enter) {
+                                    nextItemFocusRequester.requestFocus()
+                                }
+                                true
+                            }, value = unitsInput, onValueChange = { newText ->
+                            unitsInput = buildString {
+                                newText.forEach {
+                                    if (!(it == '\t' || it == '\n')) append(it)
+                                }
+                            }
+                        }
+                        )
+                        Divider(
+                            thickness = 1.dp,
+                            color = Color.Black,
+                            modifier = Modifier.width(MyConstants.unitsColumnWidth)
+                        )
+                    }
+
+                    Text(
+                        "Description",
+                        modifier = Modifier
+                            .padding(vertical = 6.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = MyConstants.valuesFontSize
+                    )
+
+                    Column (
+
+                    ){
+                        BasicTextField(modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(descriptionFocusRequester)
+                            .onKeyEvent {
+                                if (it.key == Key.Tab) {
+                                    valueFocusRequester.requestFocus()
+                                }
+                                if (it.key == Key.Enter) {
+                                    nextItemFocusRequester.requestFocus()
+                                }
+                                true
+                            }
+                            , value = descriptionInput
+                            , onValueChange = { newText ->
+                                descriptionInput = buildString {
+                                    newText.forEach {
+                                        if (!(it == '\t' || it == '\n')) append(it)
+                                    }
+                                }
+                            }
+                        )
+                        Divider(thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding))
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun valuesWindow() {

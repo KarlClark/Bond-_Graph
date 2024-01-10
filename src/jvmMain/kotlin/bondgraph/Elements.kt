@@ -423,8 +423,9 @@ abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         if (bondList.size == 1) throw BadGraphException("Error: The 2-port on bond ${bondList[0].displayId} is missing a bond")
         if (bondList.isNotEmpty()){
             displayId = buildAnnotatedString {
-                append(bondList[0].displayId)
                 append(elementType.toAnnotatedString())
+                append(bondList[0].displayId)
+                append(",")
                 append(bondList[1].displayId)
                 toAnnotatedString()
             }
