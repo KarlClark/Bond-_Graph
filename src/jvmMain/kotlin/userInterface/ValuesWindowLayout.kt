@@ -474,6 +474,9 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     var descriptionInput by remember { mutableStateOf("") }
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
+    val operations = arrayOf("multiply", "divide")
+    var operationExpanded by remember { mutableStateOf(false) }
+    var selectedOperation  by remember { mutableStateOf(operations[0]) }
 
     Box (modifier = Modifier
         .background(Color.LightGray)
@@ -504,6 +507,8 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
             ) {
                 Row (
+
+
 
                 ){
                     Column (
@@ -551,7 +556,9 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                         Divider(
                             thickness = 1.dp,
                             color = Color.Black,
-                            modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp)
+                            modifier = Modifier
+                                .width(MyConstants.valueColumnWidth)
+                                .padding(bottom = 12.dp)
                         )
                     }
                 }
@@ -560,7 +567,7 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                 ){
                     Text(
                         "Units", modifier = Modifier
-                            .padding(vertical = 6.dp), fontSize = MyConstants.valuesFontSize
+                            .padding(horizontal = 6.dp), fontSize = MyConstants.valuesFontSize
                     )
                     Column (
 
@@ -587,14 +594,16 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                         Divider(
                             thickness = 1.dp,
                             color = Color.Black,
-                            modifier = Modifier.width(MyConstants.unitsColumnWidth)
+                            modifier = Modifier
+                                .width(MyConstants.unitsColumnWidth)
+                                .padding(bottom = 12.dp)
                         )
                     }
 
                     Text(
                         "Description",
                         modifier = Modifier
-                            .padding(vertical = 6.dp),
+                            .padding(horizontal = 6.dp),
                         textAlign = TextAlign.Center,
                         fontSize = MyConstants.valuesFontSize
                     )
