@@ -265,7 +265,8 @@ fun valuesColumn() {
                 }
                 focusRequesterList.add(focusRequesterList[0])
                 for (index in 0 until eList.size) {
-                    item { onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1]) }
+                    item { onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1], index == 0
+                    ) }
                 }
             }
         }
@@ -273,12 +274,11 @@ fun valuesColumn() {
 }
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester){
+fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester, initialFocus: Boolean){
 
     var valueInput by remember { mutableStateOf("") }
     var unitsInput by remember { mutableStateOf("") }
     var descriptionInput by remember { mutableStateOf("") }
-    //val valueFocusRequester = FocusRequester()
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
     Row(modifier = Modifier
@@ -423,6 +423,11 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
         }
 
 
+    }
+    LaunchedEffect(Unit){
+        if (initialFocus){
+            valueFocusRequester.requestFocus()
+        }
     }
 }
 
