@@ -1,15 +1,11 @@
 package userInterface
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
-import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -20,9 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
@@ -477,6 +474,9 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     val operations = arrayOf("multiply", "divide")
     var operationExpanded by remember { mutableStateOf(false) }
     var selectedOperation  by remember { mutableStateOf(operations[0]) }
+    val downArrow = painterResource("arrow-down.png")
+    val upArrow = painterResource("arrow-up.png")
+    var isExpanded by remember { mutableStateOf(false) }
 
     Box (modifier = Modifier
         .background(Color.LightGray)
@@ -506,11 +506,28 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
 
             ) {
-                Row (
-
-
+                Row (modifier = Modifier
+                    .background(Color.LightGray)
+                    .padding(vertical = MyConstants.valuesGeneralPadding)
+                    ,verticalAlignment = Alignment.CenterVertically
 
                 ){
+
+                    Image(  // minimize icon
+                        painter = if (isExpanded) upArrow else downArrow,
+                        contentDescription = "",
+                        contentScale = ContentScale.Inside,
+                        alignment = Alignment.CenterEnd,
+                        modifier = Modifier
+                            .width(10.dp)
+                            .height(10.dp)
+                            //.fillMaxSize()
+                            //.offset { IntOffset(0, -10) }
+                            //.padding(horizontal = 10.dp)
+                            .clickable { isExpanded = !isExpanded }
+
+                    )
+
                     Column (
 
                     ){
@@ -525,33 +542,34 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                     nextItemFocusRequester.requestFocus()
                                 }
                                 true
-                            }, value = valueInput, onValueChange = { newText ->
-                            var periodCount = 0
-                            valueInput = buildString {
-                                newText.forEach {
-                                    when {
-                                        it == '.' -> {
-                                            if (periodCount++ == 0) {
+                            }
+                            , value = valueInput, onValueChange = { newText ->
+                                var periodCount = 0
+                                valueInput = buildString {
+                                    newText.forEach {
+                                        when {
+                                            it == '.' -> {
+                                                if (periodCount++ == 0) {
+                                                    append(it)
+                                                }
+                                            }
+
+                                            it == '0' -> {
+                                                if ((length == 1 && get(0) != '0') || length != 1) {
+                                                    append(it)
+                                                }
+                                            }
+
+                                            it.isDigit() -> {
+                                                if (length == 1 && get(0) == '0') {
+                                                    deleteAt(0)
+                                                }
                                                 append(it)
                                             }
-                                        }
-
-                                        it == '0' -> {
-                                            if ((length == 1 && get(0) != '0') || length != 1) {
-                                                append(it)
-                                            }
-                                        }
-
-                                        it.isDigit() -> {
-                                            if (length == 1 && get(0) == '0') {
-                                                deleteAt(0)
-                                            }
-                                            append(it)
                                         }
                                     }
                                 }
                             }
-                        }
                         )
                         Divider(
                             thickness = 1.dp,
