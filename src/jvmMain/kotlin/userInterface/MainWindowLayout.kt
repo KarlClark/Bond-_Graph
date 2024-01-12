@@ -48,7 +48,7 @@ object MyConstants {
 
     val valuesRowHeight = 35.dp
     val setColumnWidth = 180.dp
-    val valuesColumnWidth = 450.dp
+    val valuesColumnWidth = 550.dp
     val valuesGeneralPadding = 6.dp
     val valueColumnWidth = 100.dp
     val unitsColumnWidth = 60.dp

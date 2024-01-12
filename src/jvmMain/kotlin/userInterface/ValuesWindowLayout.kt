@@ -103,7 +103,7 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
                                 }
                             )
                         }
-                        
+
                         Spacer(modifier = Modifier.height(3.dp))
                     }
                 }
@@ -557,7 +557,14 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     var descriptionInput by remember { mutableStateOf("") }
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
-    val operations = arrayListOf("multiply", "divide", "xxxxxxx", "yyyyyyy")
+    val operations = arrayListOf("multiply", "divide")
+    var operationsIndex by remember { mutableStateOf(0) }
+    val bondList = element.getBondList()
+    val idPair = if (bondList[0].displayId < bondList[1].displayId) Pair(bondList[0].displayId, bondList[1].displayId) else Pair (bondList[1].displayId, bondList[0].displayId)
+    val powerVars = arrayListOf("effort - " + idPair.first, "effort - " + idPair.second, "flow - " + idPair.first, "flow - "  + idPair.second)
+    var powwerVarsIndex by remember { mutableStateOf(0) }
+    val indexMap = if (element is Transformer)
+        mapOf<Int, Int>(0 to 1, 1 to 0, 2 to 3, 3 to 2 ) else mapOf(0 to 3, 1 to 2, 2 to 1, 3 to 0)
 
     Box (modifier = Modifier
         .background(Color.LightGray)
@@ -591,21 +598,31 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                     .background(Color.White)
                     .padding(MyConstants.valuesGeneralPadding)
                     .fillMaxWidth()
-                    ,verticalAlignment = Alignment.CenterVertically
+                    //,verticalAlignment = Alignment.Bottom
+                    , horizontalArrangement = Arrangement.spacedBy(6.dp)
 
                 ){
 
                     dropDownSelectionBox(operations) {
                         println ("index = $it, choice = ${operations[it]}")
+                        operationsIndex = it
                     }
 
-                    Text("kljfkadksljf")
+                    dropDownSelectionBox (powerVars) {
+                        println("index = $it, choice = ${powerVars[it]}")
+                        powwerVarsIndex = it
+                    }
+
+                    Text ("by", modifier = Modifier
+                        .padding(top = 3.dp)
+                    )
 
                     Column (
 
                     ){
                         BasicTextField(modifier = Modifier
                             .width(MyConstants.valueColumnWidth)
+                            .padding(top = 3.dp)
                             .focusRequester(valueFocusRequester)
                             .onKeyEvent {
                                 if (it.key == Key.Tab) {
@@ -652,6 +669,11 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                 .padding(bottom = 12.dp)
                         )
                     }
+
+                    Text(" to get " + powerVars[indexMap[powwerVarsIndex]!!],
+                        modifier = Modifier
+                            .padding(top = 3.dp)
+                    )
                 }
                 Row (
 
