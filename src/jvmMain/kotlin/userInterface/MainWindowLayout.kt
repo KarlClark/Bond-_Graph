@@ -54,6 +54,7 @@ object MyConstants {
     val unitsColumnWidth = 60.dp
     val descriptionColumnWidth = 150.dp
     val diplayNameWidth = 60.dp
+    val expandIconSIze = 10.dp
 
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)

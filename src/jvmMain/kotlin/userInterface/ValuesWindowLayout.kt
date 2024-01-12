@@ -21,10 +21,96 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import bondgraph.*
+@Composable
+fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: Int = 0, width: Dp = 85.dp, color: Color = Color.White, action: (i: Int) -> Unit){
 
+    var isExpanded by remember { mutableStateOf(false) }
+    var currentIndex by remember { mutableStateOf(startIndex) }
+    val downArrow = painterResource("arrow-down.png")
+    val upArrow = painterResource("arrow-up.png")
+    val indicies = arrayListOf<Int>()
+    val expandIconSize = 10.dp
+    for (index in 0 until items.size) {
+        indicies.add(index)
+    }
+
+    indicies.forEach { println (it) }
+
+    Column (modifier = Modifier
+        //.fillMaxWidth()
+
+    ) {
+
+        Box(modifier = Modifier
+            .background(color)
+            //.padding(MyConstants.valuesGeneralPadding)
+            .border(width = 1.dp, color = Color.Black)
+
+        ) {
+            Row(
+                modifier = Modifier
+                    .width(width)
+                    .background(color)
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                , verticalAlignment = Alignment.CenterVertically
+
+            ) {
+                Text(
+                    items[currentIndex], modifier = Modifier
+                        .weight(1f)
+                )
+
+                Image(  // minimize icon
+                    painter = if (isExpanded) upArrow else downArrow,
+                    contentDescription = "",
+                    contentScale = ContentScale.Inside,
+                    alignment = Alignment.CenterEnd,
+                    modifier = Modifier
+                        .width(expandIconSize)
+                        .height(expandIconSize)
+                        .clickable { isExpanded = !isExpanded }
+                )
+            }
+        }
+
+        if (isExpanded) {
+            Box (modifier = Modifier
+                //.padding(horizontal = 6.dp)
+
+            ){
+                Popup {
+                    Column(
+                        modifier = Modifier
+                            .background(color)
+                            .border(width = 1.dp, color = Color.Black)
+                            .padding(horizontal = 6.dp)
+                        , verticalArrangement = Arrangement.spacedBy(3.dp)
+
+                    ) {
+                        Spacer(modifier = Modifier.height(3.dp))
+
+                        for (index in 0 until items.size) {
+                            Text(items[index], modifier = Modifier
+                                //.padding(vertical = 2.dp)
+                                .clickable {
+                                    currentIndex = indicies[index]
+                                    action(currentIndex)
+                                    isExpanded = false
+                                }
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(3.dp))
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 fun setsBar (){
 
@@ -34,7 +120,6 @@ fun setsBar (){
         .background(Color.Red)
         .fillMaxWidth()
     ) {
-
         Divider(
             thickness = 1.dp, color = Color.Black
         )
@@ -125,6 +210,7 @@ fun setItem(valuesSet: ValuesSet) {
                 .fillMaxWidth()
                 .padding(MyConstants.valuesGeneralPadding)
         )
+
     }
 }
 
@@ -471,12 +557,7 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     var descriptionInput by remember { mutableStateOf("") }
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
-    val operations = arrayOf("multiply", "divide")
-    var operationExpanded by remember { mutableStateOf(false) }
-    var selectedOperation  by remember { mutableStateOf(operations[0]) }
-    val downArrow = painterResource("arrow-down.png")
-    val upArrow = painterResource("arrow-up.png")
-    var isExpanded by remember { mutableStateOf(false) }
+    val operations = arrayListOf("multiply", "divide", "xxxxxxx", "yyyyyyy")
 
     Box (modifier = Modifier
         .background(Color.LightGray)
@@ -507,26 +588,18 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
             ) {
                 Row (modifier = Modifier
-                    .background(Color.LightGray)
-                    .padding(vertical = MyConstants.valuesGeneralPadding)
+                    .background(Color.White)
+                    .padding(MyConstants.valuesGeneralPadding)
+                    .fillMaxWidth()
                     ,verticalAlignment = Alignment.CenterVertically
 
                 ){
 
-                    Image(  // minimize icon
-                        painter = if (isExpanded) upArrow else downArrow,
-                        contentDescription = "",
-                        contentScale = ContentScale.Inside,
-                        alignment = Alignment.CenterEnd,
-                        modifier = Modifier
-                            .width(10.dp)
-                            .height(10.dp)
-                            //.fillMaxSize()
-                            //.offset { IntOffset(0, -10) }
-                            //.padding(horizontal = 10.dp)
-                            .clickable { isExpanded = !isExpanded }
+                    dropDownSelectionBox(operations) {
+                        println ("index = $it, choice = ${operations[it]}")
+                    }
 
-                    )
+                    Text("kljfkadksljf")
 
                     Column (
 
