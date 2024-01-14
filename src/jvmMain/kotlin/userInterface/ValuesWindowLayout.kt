@@ -3,6 +3,7 @@ package userInterface
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
@@ -309,6 +310,8 @@ fun valuesBar () {
 fun valuesColumn() {
 
     val currentState = LocalStateInfo.current
+    val lazyColumnState = rememberLazyListState()
+    val eList = arrayListOf<Element>()
 
     Column(modifier = Modifier
         .background(Color.DarkGray)
@@ -317,54 +320,101 @@ fun valuesColumn() {
     ) {
 
         valuesBar()
-        LazyColumn(modifier = Modifier
-            .padding(horizontal = 12.dp)
-            .fillMaxWidth()
-            .padding(MyConstants.valuesGeneralPadding)
-            , verticalArrangement = Arrangement.spacedBy(6.dp)
+
+        Box( modifier = Modifier
+                .fillMaxSize()
+                .background(color = Color(180, 180, 180))
+                .padding(start = 1.dp, end = 12.dp, top = 6.dp, bottom = 14.dp)
+
         ) {
-            if (currentState.newSet) {
-                var eList = arrayListOf<Element>()
-                var focusRequesterOriginal = FocusRequester()
-                val focusRequesterList = arrayListOf<FocusRequester>()
-
-                eList.addAll( bondGraph.getElementList()
-                    .filter{it is Capacitor}
-                    .sortedBy{it.displayId.toString()})
 
 
-                eList.addAll(bondGraph.getElementList()
-                    .filter{it is Inertia}
-                    .sortedBy{it.displayId.toString()})
+
+            LazyColumn(
+                state = lazyColumnState,
+                modifier = Modifier
+                    // Can't use vertical padding or Arrangement.spacedBy on LazyColumn because it messes up the scrollbar.
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+            ) {
+                if (currentState.newSet) {
+
+                    var focusRequesterOriginal = FocusRequester()
+                    val focusRequesterList = arrayListOf<FocusRequester>()
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Capacitor }
+                        .sortedBy { it.displayId.toString() })
 
 
-                eList.addAll(bondGraph.getElementList()
-                    .filter{it is Resistor}
-                    .sortedBy{it.displayId.toString()})
-
-                eList.addAll(bondGraph.getElementList()
-                    .filter{it is Transformer}
-                    .sortedBy{it.displayId.toString()})
-
-                eList.addAll(bondGraph.getElementList()
-                    .filter{it is Gyrator}
-                    .sortedBy{it.displayId.toString()})
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Inertia }
+                        .sortedBy { it.displayId.toString() })
 
 
-                println("elist.size =${eList.size}")
-                for (index in 0 until eList.size){
-                    focusRequesterList.add(FocusRequester())
-                }
-                focusRequesterList.add(focusRequesterList[0])
-                for (index in 0 until eList.size) {
-                    println("element = ${eList[index].displayId} : ${eList[index]::class.simpleName}")
-                    if (eList[index] is Capacitor || eList[index] is Inertia || eList[index] is Resistor) {
-                        item {onePortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1], index == 0)}
-                    } else {
-                        item {twoPortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1])}
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Resistor }
+                        .sortedBy { it.displayId.toString() })
+
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Capacitor }
+                        .sortedBy { it.displayId.toString() })
+
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Inertia }
+                        .sortedBy { it.displayId.toString() })
+
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Resistor }
+                        .sortedBy { it.displayId.toString() })
+
+
+
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Transformer }
+                        .sortedBy { it.displayId.toString() })
+
+                    eList.addAll(bondGraph.getElementList()
+                        .filter { it is Gyrator }
+                        .sortedBy { it.displayId.toString() })
+
+
+                    println("elist.size =${eList.size}")
+                    for (index in 0 until eList.size) {
+                        focusRequesterList.add(FocusRequester())
+                    }
+                    focusRequesterList.add(focusRequesterList[0])
+                    for (index in 0 until eList.size) {
+                        println("element = ${eList[index].displayId} : ${eList[index]::class.simpleName}")
+                        if (eList[index] is Capacitor || eList[index] is Inertia || eList[index] is Resistor) {
+                            item {
+                                onePortItem(
+                                    eList[index],
+                                    focusRequesterList[index],
+                                    focusRequesterList[index + 1],
+                                    index == 0
+                                )
+                            }
+                        } else {
+                            item { twoPortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1]) }
+                        }
                     }
                 }
             }
+            VerticalScrollbar(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(14.dp)
+                    .fillMaxHeight()
+                    
+                , adapter = rememberScrollbarAdapter(
+                    scrollState = lazyColumnState
+                )
+            )
         }
     }
 }
@@ -378,173 +428,180 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
     Box (modifier = Modifier
-        .background(Color.LightGray)
+        .padding(6.dp)
 
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .border(BorderStroke(width = 1.dp, Color.Black))
-                .padding(12.dp)
                 .background(Color.LightGray)
-            , horizontalArrangement = Arrangement.spacedBy(6.dp)
-            , verticalAlignment = Alignment.CenterVertically
-
 
         ) {
-
-            Text(element.displayId
-                , modifier = Modifier
-                    .width(MyConstants.diplayNameWidth)
-                    ,textAlign = TextAlign.Center,
-            )
-
             Row(
                 modifier = Modifier
-                    .background(MyConstants.myWhite)
-                //.padding(MyConstants.valuesGeneralPadding)
-                , horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    .border(BorderStroke(width = 1.dp, Color.Black))
+                    .background(Color.LightGray),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+
 
             ) {
 
-                Column(
+                Text(
+                    element.displayId,
                     modifier = Modifier
-                        .padding(top = 6.dp)
-                        .absolutePadding(left = MyConstants.valuesGeneralPadding)
-                    , horizontalAlignment = Alignment.CenterHorizontally
+                        .width(MyConstants.diplayNameWidth),
+                    textAlign = TextAlign.Center,
+                )
+
+                Row(
+                    modifier = Modifier
+                        .background(MyConstants.myWhite)
+                    , horizontalArrangement = Arrangement.spacedBy(6.dp)
 
                 ) {
-                    Text(
-                        "Value",
+
+                    Column(
                         modifier = Modifier
-                            .padding(vertical = 6.dp),
-                        textAlign = TextAlign.Center,
-                        fontSize = MyConstants.valuesFontSize
-                    )
-                    BasicTextField(modifier = Modifier
-                        .width(MyConstants.valueColumnWidth)
-                        .focusRequester(valueFocusRequester)
-                        .onKeyEvent {
-                            if (it.key == Key.Tab) {
-                                unitsFocusRequester.requestFocus()
-                            }
-                            if (it.key == Key.Enter) {
-                                nextItemFocusRequester.requestFocus()
-                            }
-                            true
-                        }, value = valueInput, onValueChange = { newText ->
-                        var periodCount = 0
-                        valueInput = buildString {
-                            newText.forEach {
-                                when {
-                                    it == '.' -> {
-                                        if (periodCount++ == 0) {
+                            .padding(top = 6.dp)
+                            .absolutePadding(left = MyConstants.valuesGeneralPadding),
+                        horizontalAlignment = Alignment.CenterHorizontally
+
+                    ) {
+                        Text(
+                            "Value",
+                            modifier = Modifier
+                                .padding(vertical = 6.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = MyConstants.valuesFontSize
+                        )
+                        BasicTextField(modifier = Modifier
+                            .width(MyConstants.valueColumnWidth)
+                            .focusRequester(valueFocusRequester)
+                            .onKeyEvent {
+                                if (it.key == Key.Tab) {
+                                    unitsFocusRequester.requestFocus()
+                                }
+                                if (it.key == Key.Enter) {
+                                    //nextItemFocusRequester.requestFocus()
+                                }
+                                true
+                            }, value = valueInput, onValueChange = { newText ->
+                            var periodCount = 0
+                            valueInput = buildString {
+                                newText.forEach {
+                                    when {
+                                        it == '.' -> {
+                                            if (periodCount++ == 0) {
+                                                append(it)
+                                            }
+                                        }
+
+                                        it == '0' -> {
+                                            if ((length == 1 && get(0) != '0') || length != 1) {
+                                                append(it)
+                                            }
+                                        }
+
+                                        it.isDigit() -> {
+                                            if (length == 1 && get(0) == '0') {
+                                                deleteAt(0)
+                                            }
                                             append(it)
                                         }
-                                    }
-
-                                    it == '0' -> {
-                                        if ((length == 1 && get(0) != '0') || length != 1) {
-                                            append(it)
-                                        }
-                                    }
-
-                                    it.isDigit() -> {
-                                        if (length == 1 && get(0) == '0') {
-                                            deleteAt(0)
-                                        }
-                                        append(it)
                                     }
                                 }
                             }
                         }
+                        )
+                        Divider(
+                            thickness = 1.dp,
+                            color = Color.Black,
+                            modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp)
+                        )
                     }
-                    )
-                    Divider(
-                        thickness = 1.dp,
-                        color = Color.Black,
-                        modifier = Modifier.width(MyConstants.valueColumnWidth).padding(bottom = 12.dp)
-                    )
-                }
 
-                Column(
-                    modifier = Modifier
-                        .padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally
-
-                ) {
-                    Text(
-                        "Units", modifier = Modifier
-                            .padding(vertical = 6.dp), fontSize = MyConstants.valuesFontSize
-                    )
-
-                    BasicTextField(modifier = Modifier
-                        .width(MyConstants.unitsColumnWidth)
-                        .focusRequester(unitsFocusRequester)
-                        .onKeyEvent {
-                            if (it.key == Key.Tab) {
-                                descriptionFocusRequester.requestFocus()
-                            }
-                            if (it.key == Key.Enter) {
-                                nextItemFocusRequester.requestFocus()
-                            }
-                            true
-                        }, value = unitsInput, onValueChange = { newText ->
-                        unitsInput = buildString {
-                            newText.forEach {
-                                if (!(it == '\t' || it == '\n')) append(it)
-                            }
-                        }
-                    }
-                    )
-                    Divider(
-                        thickness = 1.dp,
-                        color = Color.Black,
-                        modifier = Modifier.width(MyConstants.unitsColumnWidth)
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally
-
-                ) {
-                    Text(
-                        "Description",
+                    Column(
                         modifier = Modifier
-                            .padding(vertical = 6.dp),
-                        textAlign = TextAlign.Center,
-                        fontSize = MyConstants.valuesFontSize
-                    )
+                            .padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally
 
-                    BasicTextField(modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(descriptionFocusRequester)
-                        .onKeyEvent {
-                            if (it.key == Key.Tab) {
-                                valueFocusRequester.requestFocus()
+                    ) {
+                        Text(
+                            "Units", modifier = Modifier
+                                .padding(vertical = 6.dp), fontSize = MyConstants.valuesFontSize
+                        )
+
+                        BasicTextField(modifier = Modifier
+                            .width(MyConstants.unitsColumnWidth)
+                            .focusRequester(unitsFocusRequester)
+                            .onKeyEvent {
+                                if (it.key == Key.Tab) {
+                                    descriptionFocusRequester.requestFocus()
+                                }
+                                if (it.key == Key.Enter) {
+                                    nextItemFocusRequester.requestFocus()
+                                }
+                                true
+                            }, value = unitsInput, onValueChange = { newText ->
+                            unitsInput = buildString {
+                                newText.forEach {
+                                    if (!(it == '\t' || it == '\n')) append(it)
+                                }
                             }
-                            if (it.key == Key.Enter) {
-                                nextItemFocusRequester.requestFocus()
-                            }
-                            true
                         }
-                        , value = descriptionInput
-                        , onValueChange = { newText ->
+                        )
+                        Divider(
+                            thickness = 1.dp,
+                            color = Color.Black,
+                            modifier = Modifier.width(MyConstants.unitsColumnWidth)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally
+
+                    ) {
+                        Text(
+                            "Description",
+                            modifier = Modifier
+                                .padding(vertical = 6.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = MyConstants.valuesFontSize
+                        )
+
+                        BasicTextField(modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(descriptionFocusRequester)
+                            .onKeyEvent {
+                                if (it.key == Key.Tab) {
+                                    valueFocusRequester.requestFocus()
+                                }
+                                if (it.key == Key.Enter) {
+                                    nextItemFocusRequester.requestFocus()
+                                }
+                                true
+                            }, value = descriptionInput, onValueChange = { newText ->
                             descriptionInput = buildString {
                                 newText.forEach {
                                     if (!(it == '\t' || it == '\n')) append(it)
                                 }
                             }
+                        }
+                        )
+                        Divider(
+                            thickness = 1.dp,
+                            color = Color.Black,
+                            modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding)
+                        )
                     }
-                    )
-                    Divider(thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding))
                 }
+
+
             }
-
-
-        }
-        LaunchedEffect(Unit) {
-            if (initialFocus) {
-                valueFocusRequester.requestFocus()
+            LaunchedEffect(Unit) {
+                if (initialFocus) {
+                    //valueFocusRequester.requestFocus()
+                }
             }
         }
     }
@@ -567,73 +624,76 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
         mapOf<Int, Int>(0 to 1, 1 to 0, 2 to 3, 3 to 2 ) else mapOf(0 to 3, 1 to 2, 2 to 1, 3 to 0)
 
     Box (modifier = Modifier
-        .background(Color.LightGray)
+        .padding(6.dp)
 
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .border(BorderStroke(width = 1.dp, Color.Black))
-                .padding(12.dp)
                 .background(Color.LightGray)
-            , horizontalArrangement = Arrangement.spacedBy(6.dp)
-            , verticalAlignment = Alignment.CenterVertically
-
 
         ) {
-
-            Text(element.displayId
-                , modifier = Modifier
-                    .width(MyConstants.diplayNameWidth)
-                ,textAlign = TextAlign.Center,
-            )
-
-            Column(
+            Row(
                 modifier = Modifier
-                    .background(MyConstants.myWhite)
-                //.padding(MyConstants.valuesGeneralPadding)
+                    .border(BorderStroke(width = 1.dp, Color.Black))
+                    .background(Color.LightGray),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
 
 
             ) {
-                Row (modifier = Modifier
-                    .background(Color.White)
-                    .padding(MyConstants.valuesGeneralPadding)
-                    .fillMaxWidth()
-                    //,verticalAlignment = Alignment.Bottom
-                    , horizontalArrangement = Arrangement.spacedBy(6.dp)
 
-                ){
+                Text(
+                    element.displayId,
+                    modifier = Modifier
+                        .width(MyConstants.diplayNameWidth),
+                    textAlign = TextAlign.Center,
+                )
 
-                    dropDownSelectionBox(operations) {
-                        println ("index = $it, choice = ${operations[it]}")
-                        operationsIndex = it
-                    }
+                Column(
+                    modifier = Modifier
+                        .background(MyConstants.myWhite)
 
-                    dropDownSelectionBox (powerVars) {
-                        println("index = $it, choice = ${powerVars[it]}")
-                        powwerVarsIndex = it
-                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .background(Color.White)
+                            .padding(MyConstants.valuesGeneralPadding)
+                            .fillMaxWidth()
+                        , horizontalArrangement = Arrangement.spacedBy(6.dp)
 
-                    Text ("by", modifier = Modifier
-                        .padding(top = 3.dp)
-                    )
+                    ) {
 
-                    Column (
+                        dropDownSelectionBox(operations) {
+                            println("index = $it, choice = ${operations[it]}")
+                            operationsIndex = it
+                        }
 
-                    ){
-                        BasicTextField(modifier = Modifier
-                            .width(MyConstants.valueColumnWidth)
-                            .padding(top = 3.dp)
-                            .focusRequester(valueFocusRequester)
-                            .onKeyEvent {
-                                if (it.key == Key.Tab) {
-                                    unitsFocusRequester.requestFocus()
-                                }
-                                if (it.key == Key.Enter) {
-                                    nextItemFocusRequester.requestFocus()
-                                }
-                                true
-                            }
-                            , value = valueInput, onValueChange = { newText ->
+                        dropDownSelectionBox(powerVars) {
+                            println("index = $it, choice = ${powerVars[it]}")
+                            powwerVarsIndex = it
+                        }
+
+                        Text(
+                            "by", modifier = Modifier
+                                .padding(top = 3.dp)
+                        )
+
+                        Column(
+
+                        ) {
+                            BasicTextField(modifier = Modifier
+                                .width(MyConstants.valueColumnWidth)
+                                .padding(top = 3.dp)
+                                .focusRequester(valueFocusRequester)
+                                .onKeyEvent {
+                                    if (it.key == Key.Tab) {
+                                        unitsFocusRequester.requestFocus()
+                                    }
+                                    if (it.key == Key.Enter) {
+                                        nextItemFocusRequester.requestFocus()
+                                    }
+                                    true
+                                }, value = valueInput, onValueChange = { newText ->
                                 var periodCount = 0
                                 valueInput = buildString {
                                     newText.forEach {
@@ -660,92 +720,96 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                     }
                                 }
                             }
-                        )
-                        Divider(
-                            thickness = 1.dp,
-                            color = Color.Black,
-                            modifier = Modifier
-                                .width(MyConstants.valueColumnWidth)
-                                .padding(bottom = 12.dp)
-                        )
-                    }
-
-                    Text(" to get " + powerVars[indexMap[powwerVarsIndex]!!],
-                        modifier = Modifier
-                            .padding(top = 3.dp)
-                    )
-                }
-                Row (
-
-                ){
-                    Text(
-                        "Units", modifier = Modifier
-                            .padding(horizontal = 6.dp), fontSize = MyConstants.valuesFontSize
-                    )
-                    Column (
-
-                    ){
-                        BasicTextField(modifier = Modifier
-                            .width(MyConstants.unitsColumnWidth)
-                            .focusRequester(unitsFocusRequester)
-                            .onKeyEvent {
-                                if (it.key == Key.Tab) {
-                                    descriptionFocusRequester.requestFocus()
-                                }
-                                if (it.key == Key.Enter) {
-                                    nextItemFocusRequester.requestFocus()
-                                }
-                                true
-                            }, value = unitsInput, onValueChange = { newText ->
-                            unitsInput = buildString {
-                                newText.forEach {
-                                    if (!(it == '\t' || it == '\n')) append(it)
-                                }
-                            }
+                            )
+                            Divider(
+                                thickness = 1.dp,
+                                color = Color.Black,
+                                modifier = Modifier
+                                    .width(MyConstants.valueColumnWidth)
+                                    .padding(bottom = 12.dp)
+                            )
                         }
-                        )
-                        Divider(
-                            thickness = 1.dp,
-                            color = Color.Black,
+
+                        Text(
+                            " to get " + powerVars[indexMap[powwerVarsIndex]!!],
                             modifier = Modifier
-                                .width(MyConstants.unitsColumnWidth)
-                                .padding(bottom = 12.dp)
+                                .padding(top = 3.dp)
                         )
                     }
+                    Row(
 
-                    Text(
-                        "Description",
-                        modifier = Modifier
-                            .padding(horizontal = 6.dp),
-                        textAlign = TextAlign.Center,
-                        fontSize = MyConstants.valuesFontSize
-                    )
+                    ) {
+                        Text(
+                            "Units", modifier = Modifier
+                                .padding(horizontal = 6.dp), fontSize = MyConstants.valuesFontSize
+                        )
+                        Column(
 
-                    Column (
-
-                    ){
-                        BasicTextField(modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(descriptionFocusRequester)
-                            .onKeyEvent {
-                                if (it.key == Key.Tab) {
-                                    valueFocusRequester.requestFocus()
+                        ) {
+                            BasicTextField(modifier = Modifier
+                                .width(MyConstants.unitsColumnWidth)
+                                .focusRequester(unitsFocusRequester)
+                                .onKeyEvent {
+                                    if (it.key == Key.Tab) {
+                                        descriptionFocusRequester.requestFocus()
+                                    }
+                                    if (it.key == Key.Enter) {
+                                        nextItemFocusRequester.requestFocus()
+                                    }
+                                    true
+                                }, value = unitsInput, onValueChange = { newText ->
+                                unitsInput = buildString {
+                                    newText.forEach {
+                                        if (!(it == '\t' || it == '\n')) append(it)
+                                    }
                                 }
-                                if (it.key == Key.Enter) {
-                                    nextItemFocusRequester.requestFocus()
-                                }
-                                true
                             }
-                            , value = descriptionInput
-                            , onValueChange = { newText ->
+                            )
+                            Divider(
+                                thickness = 1.dp,
+                                color = Color.Black,
+                                modifier = Modifier
+                                    .width(MyConstants.unitsColumnWidth)
+                                    .padding(bottom = 12.dp)
+                            )
+                        }
+
+                        Text(
+                            "Description",
+                            modifier = Modifier
+                                .padding(horizontal = 6.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = MyConstants.valuesFontSize
+                        )
+
+                        Column(
+
+                        ) {
+                            BasicTextField(modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(descriptionFocusRequester)
+                                .onKeyEvent {
+                                    if (it.key == Key.Tab) {
+                                        valueFocusRequester.requestFocus()
+                                    }
+                                    if (it.key == Key.Enter) {
+                                        nextItemFocusRequester.requestFocus()
+                                    }
+                                    true
+                                }, value = descriptionInput, onValueChange = { newText ->
                                 descriptionInput = buildString {
                                     newText.forEach {
                                         if (!(it == '\t' || it == '\n')) append(it)
                                     }
                                 }
                             }
-                        )
-                        Divider(thickness = 1.dp, color = Color.Black, modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding))
+                            )
+                            Divider(
+                                thickness = 1.dp,
+                                color = Color.Black,
+                                modifier = Modifier.absolutePadding(right = MyConstants.valuesGeneralPadding)
+                            )
+                        }
                     }
                 }
             }

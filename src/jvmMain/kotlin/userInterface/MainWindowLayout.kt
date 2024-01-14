@@ -48,7 +48,7 @@ object MyConstants {
 
     val valuesRowHeight = 35.dp
     val setColumnWidth = 180.dp
-    val valuesColumnWidth = 550.dp
+    val valuesColumnWidth = 600.dp
     val valuesGeneralPadding = 6.dp
     val valueColumnWidth = 100.dp
     val unitsColumnWidth = 60.dp
@@ -104,6 +104,7 @@ fun sideBar() {
             Column (Modifier  // Contains two Texts each of which can respond to tap gestures.
                 .background(MyConstants.myWhite)
                 .fillMaxWidth()
+                .padding(end = 12.dp)
                 ,horizontalAlignment = Alignment.CenterHorizontally
                 ,verticalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.CenterVertically)
 
