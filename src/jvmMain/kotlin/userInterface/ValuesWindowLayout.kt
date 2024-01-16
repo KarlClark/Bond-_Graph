@@ -3,7 +3,6 @@ package userInterface
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Divider
 import androidx.compose.material.Text
@@ -11,13 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -310,7 +309,7 @@ fun valuesBar () {
 fun valuesColumn() {
 
     val currentState = LocalStateInfo.current
-    val lazyColumnState = rememberLazyListState()
+    val scrollState = rememberScrollState()
     val eList = arrayListOf<Element>()
 
     Column(modifier = Modifier
@@ -329,13 +328,19 @@ fun valuesColumn() {
         ) {
 
 
-
-            LazyColumn(
-                state = lazyColumnState,
+            /*
+                Used regular column because I couldn't get a lazyColumn to work with my desired focus switching and
+                the scrolling.  Switching focus to a component not currently visible is difficult because the component
+                isn't composed yet.  Switching focus during composition cause a crash.  With a regular column all
+                the components are already composed even if they are not visible.
+            */
+            Column(
+               //state = lazyColumnState,
                 modifier = Modifier
                     // Can't use vertical padding or Arrangement.spacedBy on LazyColumn because it messes up the scrollbar.
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
+                    .verticalScroll(scrollState)
             ) {
                 if (currentState.newSet) {
 
@@ -391,16 +396,18 @@ fun valuesColumn() {
                     for (index in 0 until eList.size) {
                         println("element = ${eList[index].displayId} : ${eList[index]::class.simpleName}")
                         if (eList[index] is Capacitor || eList[index] is Inertia || eList[index] is Resistor) {
-                            item {
-                                onePortItem(
-                                    eList[index],
-                                    focusRequesterList[index],
-                                    focusRequesterList[index + 1],
-                                    index == 0
-                                )
-                            }
+                            onePortItem(
+                                eList[index],
+                                focusRequesterList[index],
+                                focusRequesterList[index + 1],
+                                index == 0
+                            )
                         } else {
-                            item { twoPortItem(eList[index], focusRequesterList[index], focusRequesterList[index + 1]) }
+                            twoPortItem(
+                            eList[index]
+                            , focusRequesterList[index]
+                            , focusRequesterList[index + 1]
+                            )
                         }
                     }
                 }
@@ -410,9 +417,9 @@ fun valuesColumn() {
                     .align(Alignment.CenterEnd)
                     .width(14.dp)
                     .fillMaxHeight()
-                    
+
                 , adapter = rememberScrollbarAdapter(
-                    scrollState = lazyColumnState
+                    scrollState = scrollState
                 )
             )
         }
@@ -425,8 +432,9 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     var valueInput by remember { mutableStateOf("") }
     var unitsInput by remember { mutableStateOf("") }
     var descriptionInput by remember { mutableStateOf("") }
-    val unitsFocusRequester = FocusRequester()
-    val descriptionFocusRequester = FocusRequester()
+    var initialFocus = initialFocus
+    val focusManager = LocalFocusManager.current
+    //val (first, last) = FocusRequester.createRefs()
     Box (modifier = Modifier
         .padding(6.dp)
 
@@ -476,13 +484,16 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                         )
                         BasicTextField(modifier = Modifier
                             .width(MyConstants.valueColumnWidth)
+                            .focusProperties {
+                                down = nextItemFocusRequester
+                            }
                             .focusRequester(valueFocusRequester)
                             .onKeyEvent {
                                 if (it.key == Key.Tab) {
-                                    unitsFocusRequester.requestFocus()
+                                    focusManager.moveFocus(FocusDirection.Right)
                                 }
                                 if (it.key == Key.Enter) {
-                                    //nextItemFocusRequester.requestFocus()
+                                    focusManager.moveFocus(FocusDirection.Down)
                                 }
                                 true
                             }, value = valueInput, onValueChange = { newText ->
@@ -532,13 +543,16 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
                         BasicTextField(modifier = Modifier
                             .width(MyConstants.unitsColumnWidth)
-                            .focusRequester(unitsFocusRequester)
+                            .focusProperties {
+                                down = nextItemFocusRequester
+                            }
+
                             .onKeyEvent {
                                 if (it.key == Key.Tab) {
-                                    descriptionFocusRequester.requestFocus()
+                                    focusManager.moveFocus(FocusDirection.Right)
                                 }
                                 if (it.key == Key.Enter) {
-                                    nextItemFocusRequester.requestFocus()
+                                    focusManager.moveFocus(FocusDirection.Down)
                                 }
                                 true
                             }, value = unitsInput, onValueChange = { newText ->
@@ -571,13 +585,16 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
                         BasicTextField(modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(descriptionFocusRequester)
+                            .focusProperties {
+                                right = valueFocusRequester
+                                down = nextItemFocusRequester
+                            }
                             .onKeyEvent {
                                 if (it.key == Key.Tab) {
-                                    valueFocusRequester.requestFocus()
+                                    focusManager.moveFocus(FocusDirection.Right)
                                 }
                                 if (it.key == Key.Enter) {
-                                    nextItemFocusRequester.requestFocus()
+                                    focusManager.moveFocus(FocusDirection.Down)
                                 }
                                 true
                             }, value = descriptionInput, onValueChange = { newText ->
@@ -598,11 +615,7 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
 
             }
-            LaunchedEffect(Unit) {
-                if (initialFocus) {
-                    //valueFocusRequester.requestFocus()
-                }
-            }
+
         }
     }
 }
@@ -616,6 +629,7 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
     val descriptionFocusRequester = FocusRequester()
     val operations = arrayListOf("multiply", "divide")
     var operationsIndex by remember { mutableStateOf(0) }
+    val focusManager = LocalFocusManager.current
     val bondList = element.getBondList()
     val idPair = if (bondList[0].displayId < bondList[1].displayId) Pair(bondList[0].displayId, bondList[1].displayId) else Pair (bondList[1].displayId, bondList[0].displayId)
     val powerVars = arrayListOf("effort - " + idPair.first, "effort - " + idPair.second, "flow - " + idPair.first, "flow - "  + idPair.second)
@@ -684,13 +698,17 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                             BasicTextField(modifier = Modifier
                                 .width(MyConstants.valueColumnWidth)
                                 .padding(top = 3.dp)
+                                .focusProperties {
+                                    right = unitsFocusRequester
+                                    down = nextItemFocusRequester
+                                }
                                 .focusRequester(valueFocusRequester)
                                 .onKeyEvent {
                                     if (it.key == Key.Tab) {
-                                        unitsFocusRequester.requestFocus()
+                                        focusManager.moveFocus(FocusDirection.Right)
                                     }
                                     if (it.key == Key.Enter) {
-                                        nextItemFocusRequester.requestFocus()
+                                        focusManager.moveFocus(FocusDirection.Down)
                                     }
                                     true
                                 }, value = valueInput, onValueChange = { newText ->
@@ -748,13 +766,16 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                         ) {
                             BasicTextField(modifier = Modifier
                                 .width(MyConstants.unitsColumnWidth)
+                                .focusProperties {
+                                    down = nextItemFocusRequester
+                                }
                                 .focusRequester(unitsFocusRequester)
                                 .onKeyEvent {
                                     if (it.key == Key.Tab) {
-                                        descriptionFocusRequester.requestFocus()
+                                        focusManager.moveFocus(FocusDirection.Right)
                                     }
                                     if (it.key == Key.Enter) {
-                                        nextItemFocusRequester.requestFocus()
+                                        focusManager.moveFocus(FocusDirection.Down)
                                     }
                                     true
                                 }, value = unitsInput, onValueChange = { newText ->
@@ -787,13 +808,17 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                         ) {
                             BasicTextField(modifier = Modifier
                                 .fillMaxWidth()
+                                .focusProperties {
+                                    right = valueFocusRequester
+                                    down = nextItemFocusRequester
+                                }
                                 .focusRequester(descriptionFocusRequester)
                                 .onKeyEvent {
                                     if (it.key == Key.Tab) {
-                                        valueFocusRequester.requestFocus()
+                                        focusManager.moveFocus(FocusDirection.Right)
                                     }
                                     if (it.key == Key.Enter) {
-                                        nextItemFocusRequester.requestFocus()
+                                        focusManager.moveFocus(FocusDirection.Down)
                                     }
                                     true
                                 }, value = descriptionInput, onValueChange = { newText ->
