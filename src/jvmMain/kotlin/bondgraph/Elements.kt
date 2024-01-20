@@ -1,6 +1,7 @@
 package bondgraph
 
 import algebra.*
+import algebra.Number
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -10,6 +11,8 @@ import androidx.compose.ui.text.font.FontFamily
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import userInterface.MyConstants
+import bondgraph.PowerVar.*
+import bondgraph.Operation.*
 
 /*
 An enum  for the different elements used in a bond graph, with the
@@ -119,10 +122,10 @@ enum class ElementTypes {
     }
 }
 
-enum class powerVar {
+enum class PowerVar {
     EFFORT {
         override fun toString() = "effort"
-           }
+   }
     ,FLOW {
         override fun toString() = "flow"
     }
@@ -131,21 +134,115 @@ enum class powerVar {
     };
 
     companion object{
-        fun toEnum(string: String): powerVar {
-            when  {
-                string.equals("effort") -> return EFFORT
-                string.equals("flow") -> return FLOW
+        fun toEnum(string: String): PowerVar {
+            when  (string){
+                "effort" -> return EFFORT
+                "flow" -> return FLOW
                 else -> return UNKNOWN
             }
         }
     }
 }
-class OnePortValueData(val element: Element, var description: String = "", var value: Double, units: String = "")
+
+enum class Operation {
+    MULTIPLY {
+        override fun toString() = "multiply"
+    }
+    ,DIVIDE {
+        override fun toString() = "divide"
+    }
+    ,UNKNOWN {
+        override fun toString() = "unknown"
+    };
+
+    companion object{
+        fun toEnum(string: String): Operation {
+            when (string){
+                "multiply" -> return MULTIPLY
+                "divide" -> return DIVIDE
+                else -> return UNKNOWN
+            }
+        }
+    }
+}
+class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null, units: String = "")
 class TwoPortValueData(val element: Element, var description: String = "", var operation: ((Double, Double) -> Double),
-                       var powerVar1: powerVar, var bond1:Bond, var value: Double? = null, var powerVar2: powerVar, var bond2:Bond)
-class ValuesSet(val id: Int, var description: String = "no description") {
-    val onePorts = arrayListOf<OnePortValueData>()
-    val twoPorts = arrayListOf<TwoPortValueData>()
+                       var powerVar1: PowerVar, var bond1:Bond, var value: Double? = null, var powerVar2: PowerVar, var bond2:Bond)
+class ValuesSet(val id: Int, var description: String = "no description", bondGraph: BondGraph? = null) {
+    val onePortValues = hashMapOf<Element, OnePortValueData>()
+    val twoPortValues = hashMapOf<Element, TwoPortValueData>()
+
+    init {
+        if (bondGraph != null ) {
+            val eList = arrayListOf<Element>()
+            eList.addAll(
+                userInterface.bondGraph.getElementList()
+                    .filter { it is Capacitor }
+                    .sortedBy { it.displayId.toString() }
+            )
+
+
+            eList.addAll(
+                userInterface.bondGraph.getElementList()
+                    .filter { it is Inertia }
+                    .sortedBy { it.displayId.toString() }
+            )
+
+
+            eList.addAll(
+                userInterface.bondGraph.getElementList()
+                    .filter { it is Resistor }
+                    .sortedBy { it.displayId.toString() }
+            )
+
+            eList.forEach { onePortValues[it] = OnePortValueData(it) }
+
+            eList.clear()
+
+            eList.addAll(
+                userInterface.bondGraph.getElementList()
+                    .filter { it is Transformer }
+                    .sortedBy { it.displayId.toString() }
+            )
+
+            eList.addAll(
+                userInterface.bondGraph.getElementList()
+                    .filter { it is Gyrator }
+                    .sortedBy { it.displayId.toString() }
+            )
+
+            eList.forEach {
+                val bondList = it.getBondList()
+                val bondPair = if (bondList[0].displayId < bondList[1].displayId) Pair(
+                    bondList[0],
+                    bondList[1]
+                ) else Pair(bondList[1], bondList[0])
+                if (it is Transformer) {
+                    twoPortValues[it] =
+                        TwoPortValueData(
+                            element = it,
+                            operation = Double::times,
+                            powerVar1 = EFFORT,
+                            bond1 = bondPair.first,
+                            powerVar2 = EFFORT,
+                            bond2 = bondPair.second
+                        )
+                } else {
+                    twoPortValues[it] =
+                        TwoPortValueData(
+                            element = it,
+                            operation = Double::times,
+                            powerVar1 = EFFORT,
+                            bond1 = bondPair.first,
+                            powerVar2 = FLOW,
+                            bond2 = bondPair.second
+                        )
+                }
+            }
+        }
+    }
+
+
 }
 /*
 The data needed to display a representation of the element on the screen.  The id, text and location are
@@ -206,6 +303,79 @@ class ElementSerializationData(val id: Int, val type: ElementTypes,  val display
     }
 }
 
+class Modulator () {
+    var mToken: Token? = null
+
+    /*
+        TF  e1 = me2
+        GY e1 = rf2
+        The valueNumber and bondToMultiply below represent the right side of the
+        above equations. The other forms of the equations such as such rf1 = e2 will be derived
+        from the below values.
+    */
+    var value: Double? = null
+    var bomdToMulitply: Bond? = null
+
+    fun createToken(bondList: ArrayList<Bond>) {
+        val bondIdPair = if (bondList[0].displayId < bondList[1].displayId)
+            Pair(bondList[0], bondList[1]) else
+            Pair(bondList[1], bondList[0])
+        mToken = Token(
+            bondIdPair.first.displayId,
+            bondIdPair.second.displayId,
+            AnnotatedString("M"),
+            false,
+            false,
+            false,
+            false
+        )
+        bomdToMulitply = bondIdPair.first
+    }
+
+    fun setValue(
+        powerVar2: PowerVar,
+        bond2: Bond,
+        value: Double,
+        powerVar1: PowerVar,
+        bond1: Bond,
+        operation: Operation
+    ) {
+        // perform operation on powerVar2 to get powerVar1
+        this.value = value
+        if (powerVar2 == powerVar1) {
+            // Transformer
+            if (powerVar1 == EFFORT) {
+                bomdToMulitply = if (operation == MULTIPLY) bond2 else bond1
+            } else {
+                bomdToMulitply = if (operation == MULTIPLY) bond1 else bond2
+            }
+        } else {
+            // Gyrator
+            bomdToMulitply = if (operation == MULTIPLY) bond2 else bond1
+        }
+    }
+
+    fun getEffortModulator(bond: Bond): Expr {
+
+        if (bomdToMulitply == null) throw BadGraphException("Error: Call to getEffortModulator on un-initialize modulator.  Bond = ${bond.displayId}")
+
+        if (value != null) {
+            if (bond == bomdToMulitply) Number(1.0 / value!!) else Number(value!!)
+        }
+
+        return if (bond == bomdToMulitply) mToken!! else Term().divide(mToken!!)
+    }
+
+    fun getFlowModulator(bond: Bond):Expr {
+        if (bomdToMulitply == null) throw BadGraphException("Error: Call to getFlowModulator on un-initialize modulator.  Bond = ${bond.displayId}")
+
+        if (value != null) {
+            if (bond == bomdToMulitply) Number(value!!) else Number(1.0/value!!)
+        }
+
+        return if (bond == bomdToMulitply) Term().divide(mToken!!) else mToken!!
+    }
+}
 abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: ElementTypes, var displayData: ElementDisplayData){
 
     var displayId: @Contextual AnnotatedString = AnnotatedString(id.toString())
@@ -237,7 +407,8 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
     }
 
     // Convert bondsMap to a list
-    fun getBondList(): List<Bond> = ArrayList(bondsMap.values)
+    //fun getBondList(): List<Bond> = ArrayList(bondsMap.values)
+    fun getBondList() = ArrayList(bondsMap.values)
 
     /*
     Return any other elements this element is attached to other than the given element. To do
@@ -368,7 +539,8 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     // Expression to use in place of constitutive law in the case of resistors with arbitrarily assigned
     // causality or dependent inertias or capacitors with derivative causality.
-     var substituteExprssion: Expr? = null
+    var substituteExprssion: Expr? = null
+    var elementValue: Double? = null
 
     abstract fun deriveEquation(): Equation
 
@@ -422,11 +594,16 @@ abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         val bondList = getBondList()
         if (bondList.size == 1) throw BadGraphException("Error: The 2-port on bond ${bondList[0].displayId} is missing a bond")
         if (bondList.isNotEmpty()){
+
+            val bondIdPair = if (bondList[0].displayId < bondList[1].displayId)
+                Pair(bondList[0].displayId , bondList[1].displayId) else
+                Pair(bondList[1].displayId , bondList[0].displayId)
+
             displayId = buildAnnotatedString {
                 append(elementType.toAnnotatedString())
-                append(bondList[0].displayId)
+                append(bondIdPair.first)
                 append(",")
-                append(bondList[1].displayId)
+                append(bondIdPair.second)
                 toAnnotatedString()
             }
         }
@@ -896,22 +1073,15 @@ class SourceOfFlow (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
 open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): TwoPort(bondGraph, id, elementType, displayData) {
 
     //var tToken = Token()
-    var mToken = Token()
+    //var mToken = Token()
+    val modulator = Modulator()
 
     override fun createTokens() {
         val bondsList = getBondList()
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         //tToken = Token(bondsList[0].displayId, bondsList[1].displayId , elementType.toAnnotatedString(), false, false, false, false)
-        mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
-    }
-
-
-
-    class Modulator(private val element1: Element, val token: Token){
-        fun getEffortModulator(elementToMultiply: Element) = if (elementToMultiply === element1) Term().multiply(token) else Term().divide(token)
-
-        fun getFlowModulator (elementToMultiply: Element) = if (elementToMultiply === element1) Term().divide(token) else Term().multiply(token)
-
+        //mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
+        modulator.createToken(bondsList)
     }
 
     /*
@@ -942,16 +1112,18 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     }
 
     override fun getEffort(bond: Bond): Expr {
-        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), mToken)
-        val mod = modulator.getEffortModulator(getOtherElement(this, bond))
+        //val modulator  = Modulator(getOtherElement(this, getBondList()[0]), mToken)
+        //val mod = modulator.getEffortModulator(getOtherElement(this, bond))
+        val mod = modulator.getEffortModulator(bond)
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
         return mod.multiply(otherElement.getEffort(otherBond))
     }
 
     override fun getFlow(bond: Bond): Expr {
-        val modulator  = Modulator(getOtherElement(this, getBondList()[0]), mToken)
-        val mod = modulator.getFlowModulator(getOtherElement(this, bond))
+        //val modulator  = Modulator(getOtherElement(this, getBondList()[0]), mToken)
+        //val mod = modulator.getFlowModulator(getOtherElement(this, bond))
+        val mod = modulator.getFlowModulator(bond)
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
         return mod.multiply(otherElement.getFlow(otherBond))
@@ -962,24 +1134,15 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
 
     //var gToken = Token()
     var mToken = Token()
+    val modulator = Modulator()
 
     override fun createTokens() {
         val bondsList = getBondList()
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         //gToken = Token(bondsList[0].displayId, bondsList[1].displayId, elementType.toAnnotatedString(), false, false, false, false )
-        mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
+        //mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
+        modulator.createToken(bondsList)
     }
-
-
-    class Modulator(private val element1: Element, private val token: Token) {
-        fun getEffortModulator(elementToMultiply: Element) =
-            if (elementToMultiply === element1) Term().multiply(token) else Term().divide(token)
-
-        fun getFlowModulator(elementToMultiply: Element) =
-            if (elementToMultiply === element1) Term().divide(token) else Term().multiply(token)
-
-    }
-
 
     /*
        A gyrator has two bonds.  Some other element has set the causality on one of the bonds and then
@@ -1009,16 +1172,14 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     }
 
     override fun getEffort(bond: Bond): Expr {
-        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), mToken)
-        val mod = modulator.getEffortModulator(getOtherElement(this, bond))
+        val mod = modulator.getEffortModulator(bond)
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
         return mod.multiply(otherElement.getFlow(otherBond))
     }
 
     override fun getFlow(bond: Bond): Expr {
-        val modulator = Transformer.Modulator(getOtherElement(this, getBondList()[0]), mToken)
-        val mod = modulator.getFlowModulator(getOtherElement(this, bond))
+        val mod = modulator.getFlowModulator(bond)
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
         return mod.multiply(otherElement.getEffort(otherBond))
