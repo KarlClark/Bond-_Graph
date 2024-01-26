@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
+import bondgraph.Operation.*
+import bondgraph.PowerVar.*
 import bondgraph.*
 @Composable
 fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: Int = 0, width: Dp = 85.dp, color: Color = Color.White, action: (i: Int) -> Unit){
@@ -38,7 +40,6 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
         indicies.add(index)
     }
 
-    indicies.forEach { println (it) }
 
     Column (modifier = Modifier
         //.fillMaxWidth()
@@ -148,7 +149,9 @@ fun setsBar (){
                 textAlign = TextAlign.Center,
                 color = MyConstants.valuesBarsTextColor,
                 modifier = Modifier
-                    .clickable { currentState.newSet = true; println("newSet clicked") }
+                    .clickable {
+                        currentState.selectedSetId = bondGraph.createValueSet()
+                    }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
             )
@@ -163,6 +166,8 @@ fun setsBar (){
 @Composable
 fun setColumn () {
 
+    val currentState = LocalStateInfo.current
+
     Column(
         modifier = Modifier
             .background(Color.DarkGray)
@@ -171,11 +176,6 @@ fun setColumn () {
 
 
     ) {
-
-        if (bondGraph.valuesSetsMap.isEmpty()) {
-            val id = bondGraph.getNextValueSetId()
-            bondGraph.valuesSetsMap[id] = ValuesSet(id, "No Values Set")
-        }
 
         setsBar()
 
@@ -201,7 +201,9 @@ fun setItem(valuesSet: ValuesSet) {
         .border(BorderStroke(width = 1.dp, color = Color.Black))
         .background(color = if (currentState.selectedSetId == valuesSet.id) MyConstants.setSelectedColor else MyConstants.setDefaultColor)
         .fillMaxWidth()
-        .clickable { println("${valuesSet.description} clicked") }
+        .clickable {
+            currentState.selectedSetId = valuesSet.id
+        }
 
 
     ) {
@@ -304,13 +306,53 @@ fun valuesBar () {
     }
 }
 
+@Composable
+fun setDescriptionBar(valuesSet: ValuesSet){
+    var description by remember(valuesSet.description) { mutableStateOf(valuesSet.description) }
+    //description = valuesSet.description
+    println("setDescriptionBar valuesSet id = ${valuesSet.id} , description = $description  description = ${valuesSet.description}")
+    Column (modifier = Modifier
+        .fillMaxWidth()
+
+    ) {
+        Row(
+            modifier = Modifier
+                .height(MyConstants.valuesRowHeight)
+                .background(MyConstants.valuesBarsColor)
+                .fillMaxWidth()
+
+        ) {
+            Text(
+                "Description", fontSize = MyConstants.valuesBarFontSize, modifier = Modifier
+                    .padding(horizontal = 6.dp)
+
+            )
+
+            BasicTextField(modifier = Modifier
+                .fillMaxWidth()
+                , value = description
+                , onValueChange = {
+                    description = it
+                    valuesSet.description = description
+                }
+            )
+        }
+
+        Divider(
+            thickness = 1.dp, color = Color.Black
+        )
+    }
+}
 
 @Composable
-fun valuesColumn() {
-
+fun valuesColumn(valuesSet: ValuesSet) {
+    //remember{valuesSet}
+    var valueSet by remember { mutableStateOf(valuesSet) }
     val currentState = LocalStateInfo.current
     val scrollState = rememberScrollState()
     val eList = arrayListOf<Element>()
+
+    println("valuesColumn valuesSet id = ${valueSet.id}  description =${valuesSet.description}  valuesSet id = ${valuesSet.id}")
 
     Column(modifier = Modifier
         .background(Color.DarkGray)
@@ -319,6 +361,8 @@ fun valuesColumn() {
     ) {
 
         valuesBar()
+
+        setDescriptionBar(valuesSet)
 
         Box( modifier = Modifier
                 .fillMaxSize()
@@ -342,73 +386,25 @@ fun valuesColumn() {
                     .fillMaxWidth()
                     .verticalScroll(scrollState)
             ) {
-                if (currentState.newSet) {
 
-                    var focusRequesterOriginal = FocusRequester()
-                    val focusRequesterList = arrayListOf<FocusRequester>()
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Capacitor }
-                        .sortedBy { it.displayId.toString() })
-
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Inertia }
-                        .sortedBy { it.displayId.toString() })
-
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Resistor }
-                        .sortedBy { it.displayId.toString() })
-
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Capacitor }
-                        .sortedBy { it.displayId.toString() })
-
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Inertia }
-                        .sortedBy { it.displayId.toString() })
-
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Resistor }
-                        .sortedBy { it.displayId.toString() })
-
-
-
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Transformer }
-                        .sortedBy { it.displayId.toString() })
-
-                    eList.addAll(bondGraph.getElementList()
-                        .filter { it is Gyrator }
-                        .sortedBy { it.displayId.toString() })
-
-
-                    println("elist.size =${eList.size}")
-                    for (index in 0 until eList.size) {
+                val focusRequesterList = arrayListOf<FocusRequester>()
+                val onePortValueDataList = bondGraph.getOnePortValueDataList(currentState.selectedSetId)
+                val twoPortValueDataList = bondGraph.getTwoPortValueDataList(currentState.selectedSetId)
+                if (onePortValueDataList.size + twoPortValueDataList.size > 0) {
+                    for (index in 0 until onePortValueDataList.size + twoPortValueDataList.size) {
                         focusRequesterList.add(FocusRequester())
                     }
                     focusRequesterList.add(focusRequesterList[0])
-                    for (index in 0 until eList.size) {
-                        println("element = ${eList[index].displayId} : ${eList[index]::class.simpleName}")
-                        if (eList[index] is Capacitor || eList[index] is Inertia || eList[index] is Resistor) {
-                            onePortItem(
-                                eList[index],
-                                focusRequesterList[index],
-                                focusRequesterList[index + 1],
-                                index == 0
-                            )
-                        } else {
-                            twoPortItem(
-                            eList[index]
-                            , focusRequesterList[index]
-                            , focusRequesterList[index + 1]
-                            )
-                        }
+
+                    var count = 0
+                    onePortValueDataList.forEach {
+                        onePortItem(it, focusRequesterList[count], focusRequesterList[count + 1], count == 0)
+                        count++
+                    }
+
+                    twoPortValueDataList.forEach {
+                        twoPortItem(it, focusRequesterList[count], focusRequesterList[count + 1])
+                        count++
                     }
                 }
             }
@@ -427,11 +423,12 @@ fun valuesColumn() {
 }
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester, initialFocus: Boolean){
+fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester, initialFocus: Boolean){
 
-    var valueInput by remember { mutableStateOf("") }
-    var unitsInput by remember { mutableStateOf("") }
-    var descriptionInput by remember { mutableStateOf("") }
+    var valueInput by remember { mutableStateOf(if (onePortValueData.value == null) "" else onePortValueData.value.toString()) }
+
+    var unitsInput by remember { mutableStateOf(if (onePortValueData.units == null) "" else onePortValueData.units) }
+    var descriptionInput by remember { mutableStateOf(if (onePortValueData.description == null) "" else onePortValueData.description) }
     var initialFocus = initialFocus
     val focusManager = LocalFocusManager.current
     //val (first, last) = FocusRequester.createRefs()
@@ -455,7 +452,7 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
             ) {
 
                 Text(
-                    element.displayId,
+                    onePortValueData.element.displayId,
                     modifier = Modifier
                         .width(MyConstants.diplayNameWidth),
                     textAlign = TextAlign.Center,
@@ -496,33 +493,38 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                     focusManager.moveFocus(FocusDirection.Down)
                                 }
                                 true
-                            }, value = valueInput, onValueChange = { newText ->
-                            var periodCount = 0
-                            valueInput = buildString {
-                                newText.forEach {
-                                    when {
-                                        it == '.' -> {
-                                            if (periodCount++ == 0) {
+                            }
+                            , value = valueInput
+                            , onValueChange = { newText ->
+                                var periodCount = 0
+                                valueInput = buildString {
+                                    newText.forEach {
+                                        when {
+                                            it == '.' -> {
+                                                if (periodCount++ == 0) {
+                                                    append(it)
+                                                }
+                                            }
+
+                                            it == '0' -> {
+                                                if ((length == 1 && get(0) != '0') || length != 1) {
+                                                    append(it)
+                                                }
+                                            }
+
+                                            it.isDigit() -> {
+                                                if (length == 1 && get(0) == '0') {
+                                                    deleteAt(0)
+                                                }
                                                 append(it)
                                             }
-                                        }
-
-                                        it == '0' -> {
-                                            if ((length == 1 && get(0) != '0') || length != 1) {
-                                                append(it)
-                                            }
-                                        }
-
-                                        it.isDigit() -> {
-                                            if (length == 1 && get(0) == '0') {
-                                                deleteAt(0)
-                                            }
-                                            append(it)
                                         }
                                     }
                                 }
+                                if (valueInput != "") {
+                                    onePortValueData.value = valueInput.toDouble()
+                                }
                             }
-                        }
                         )
                         Divider(
                             thickness = 1.dp,
@@ -555,13 +557,16 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                     focusManager.moveFocus(FocusDirection.Down)
                                 }
                                 true
-                            }, value = unitsInput, onValueChange = { newText ->
-                            unitsInput = buildString {
-                                newText.forEach {
-                                    if (!(it == '\t' || it == '\n')) append(it)
-                                }
                             }
-                        }
+                            , value = unitsInput
+                            , onValueChange = { newText ->
+                                unitsInput = buildString {
+                                    newText.forEach {
+                                        if (!(it == '\t' || it == '\n')) append(it)
+                                    }
+                                }
+                                onePortValueData.units = unitsInput
+                            }
                         )
                         Divider(
                             thickness = 1.dp,
@@ -597,11 +602,14 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                     focusManager.moveFocus(FocusDirection.Down)
                                 }
                                 true
-                            }, value = descriptionInput, onValueChange = { newText ->
-                            descriptionInput = buildString {
-                                newText.forEach {
+                            }
+                            ,value = descriptionInput
+                            ,onValueChange = { newText ->
+                                descriptionInput = buildString {
+                                    newText.forEach {
                                     if (!(it == '\t' || it == '\n')) append(it)
                                 }
+                                onePortValueData.description = descriptionInput
                             }
                         }
                         )
@@ -621,21 +629,22 @@ fun onePortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 }
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
-fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester){
-    var valueInput by remember { mutableStateOf("") }
-    var unitsInput by remember { mutableStateOf("") }
-    var descriptionInput by remember { mutableStateOf("") }
+fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester){
+    var valueInput by remember { mutableStateOf(if (twoPortValueData.value == null) "" else twoPortValueData.value.toString()) }
+    var unitsInput by remember { mutableStateOf(if (twoPortValueData.units == null) "" else twoPortValueData.units) }
+    var descriptionInput by remember { mutableStateOf(if (twoPortValueData.description == null) "" else twoPortValueData.description) }
     val unitsFocusRequester = FocusRequester()
     val descriptionFocusRequester = FocusRequester()
-    val operations = arrayListOf("multiply", "divide")
-    var operationsIndex by remember { mutableStateOf(0) }
+    val operationStrings = arrayListOf(MULTIPLY.toString(), DIVIDE.toString())
+    var operationsIndex by remember { mutableStateOf(if (twoPortValueData.operation == MULTIPLY) 0 else 1) }
     val focusManager = LocalFocusManager.current
-    val bondList = element.getBondList()
-    val idPair = if (bondList[0].displayId < bondList[1].displayId) Pair(bondList[0].displayId, bondList[1].displayId) else Pair (bondList[1].displayId, bondList[0].displayId)
-    val powerVars = arrayListOf("effort - " + idPair.first, "effort - " + idPair.second, "flow - " + idPair.first, "flow - "  + idPair.second)
-    var powwerVarsIndex by remember { mutableStateOf(0) }
-    val indexMap = if (element is Transformer)
+    val bondPair = if (twoPortValueData.bond1.displayId < twoPortValueData.bond2.displayId) Pair(twoPortValueData.bond1, twoPortValueData.bond2) else Pair(twoPortValueData.bond2, twoPortValueData.bond1)
+    val powerVars = arrayListOf("effort - " + bondPair.first.displayId, "effort - " + bondPair.second.displayId, "flow - " + bondPair.first.displayId, "flow - "  + bondPair.second.displayId)
+    val currentPowerVarString = twoPortValueData.powerVar1.toString() + " - " + twoPortValueData.bond1.displayId
+    var powerVarsIndex by remember { mutableStateOf(powerVars.indexOf(currentPowerVarString)) }
+    val indexMap = if (twoPortValueData.element is Transformer)
         mapOf<Int, Int>(0 to 1, 1 to 0, 2 to 3, 3 to 2 ) else mapOf(0 to 3, 1 to 2, 2 to 1, 3 to 0)
+
 
     Box (modifier = Modifier
         .padding(6.dp)
@@ -657,7 +666,7 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
             ) {
 
                 Text(
-                    element.displayId,
+                    twoPortValueData.element.displayId,
                     modifier = Modifier
                         .width(MyConstants.diplayNameWidth),
                     textAlign = TextAlign.Center,
@@ -677,14 +686,32 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
 
                     ) {
 
-                        dropDownSelectionBox(operations) {
-                            println("index = $it, choice = ${operations[it]}")
+                        dropDownSelectionBox(operationStrings, operationsIndex) {
                             operationsIndex = it
+                            twoPortValueData.operation = Operation.toEnum(operationStrings[it])
                         }
 
-                        dropDownSelectionBox(powerVars) {
-                            println("index = $it, choice = ${powerVars[it]}")
-                            powwerVarsIndex = it
+                        dropDownSelectionBox(powerVars, powerVarsIndex) {
+                            powerVarsIndex = it
+                            if (it == 0 || it == 2){
+                                twoPortValueData.bond1 = bondPair.first
+                                twoPortValueData.bond2 = bondPair.second
+                            } else {
+                                twoPortValueData.bond1 = bondPair.second
+                                twoPortValueData.bond2 = bondPair.first
+                            }
+
+                            if (it == 0 || it == 1) {
+                                twoPortValueData.powerVar1 = EFFORT
+                            } else {
+                                twoPortValueData.powerVar1 = FLOW
+                            }
+
+                            if (indexMap[it] == 0 || indexMap[it] == 1) {
+                                twoPortValueData.powerVar2 = EFFORT
+                            } else {
+                                twoPortValueData.powerVar2 = FLOW
+                            }
                         }
 
                         Text(
@@ -711,7 +738,9 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                         focusManager.moveFocus(FocusDirection.Down)
                                     }
                                     true
-                                }, value = valueInput, onValueChange = { newText ->
+                                }
+                                , value = valueInput
+                                , onValueChange = { newText ->
                                 var periodCount = 0
                                 valueInput = buildString {
                                     newText.forEach {
@@ -737,6 +766,9 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                         }
                                     }
                                 }
+                                if (valueInput != "") {
+                                    twoPortValueData.value = valueInput.toDouble()
+                                }
                             }
                             )
                             Divider(
@@ -747,9 +779,8 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                     .padding(bottom = 12.dp)
                             )
                         }
-
                         Text(
-                            " to get " + powerVars[indexMap[powwerVarsIndex]!!],
+                            " to get " + powerVars[indexMap[powerVarsIndex]!!],
                             modifier = Modifier
                                 .padding(top = 3.dp)
                         )
@@ -778,13 +809,16 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                         focusManager.moveFocus(FocusDirection.Down)
                                     }
                                     true
-                                }, value = unitsInput, onValueChange = { newText ->
-                                unitsInput = buildString {
-                                    newText.forEach {
-                                        if (!(it == '\t' || it == '\n')) append(it)
-                                    }
                                 }
-                            }
+                                , value = unitsInput
+                                , onValueChange = { newText ->
+                                    unitsInput = buildString {
+                                        newText.forEach {
+                                            if (!(it == '\t' || it == '\n')) append(it)
+                                        }
+                                    }
+                                    twoPortValueData.units = unitsInput
+                                }
                             )
                             Divider(
                                 thickness = 1.dp,
@@ -821,13 +855,16 @@ fun twoPortItem(element: Element, valueFocusRequester: FocusRequester, nextItemF
                                         focusManager.moveFocus(FocusDirection.Down)
                                     }
                                     true
-                                }, value = descriptionInput, onValueChange = { newText ->
-                                descriptionInput = buildString {
-                                    newText.forEach {
-                                        if (!(it == '\t' || it == '\n')) append(it)
-                                    }
                                 }
-                            }
+                                , value = descriptionInput
+                                , onValueChange = { newText ->
+                                    descriptionInput = buildString {
+                                        newText.forEach {
+                                            if (!(it == '\t' || it == '\n')) append(it)
+                                        }
+                                    }
+                                    twoPortValueData.description = descriptionInput
+                                }
                             )
                             Divider(
                                 thickness = 1.dp,
@@ -872,7 +909,12 @@ fun valuesWindow() {
 
                 )
 
-                valuesColumn()
+
+                bondGraph.valuesSetsMap[currentState.selectedSetId]?.let {
+                    println("calling valuesColumn selectedSetId = ${currentState.selectedSetId}  id = ${bondGraph.valuesSetsMap[currentState.selectedSetId]?.id}")
+                    println("it value = ${it.id}")
+                    valuesColumn(it)
+                }
             }
         }
     }

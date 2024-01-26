@@ -268,7 +268,7 @@ class BondGraph(var name: String) {
      */
     private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
-    val valuesSetsMap = linkedMapOf<Int, ValuesSet>()
+    val valuesSetsMap = mutableStateMapOf(0 to ValuesSet(0, "set with no values"))
     val stateEquationsMap = linkedMapOf<Element, Equation>()
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
 
@@ -283,7 +283,7 @@ class BondGraph(var name: String) {
     var graphHasChanged = false
     var newElementId = 0
     var newBondId = 0
-    var newValueSetId = 0
+    var newValueSetId = 1
 
 
 
@@ -351,6 +351,31 @@ class BondGraph(var name: String) {
     fun getNextElementId() = newElementId++
     fun getNextBondId() = newBondId++
     fun getNextValueSetId() = newValueSetId++
+
+    fun createValueSet(): Int {
+        val id = getNextValueSetId()
+        println("BondGraph.createvaluesSet id = $id")
+        valuesSetsMap[id] = ValuesSet(id, "new set" + id.toString(), this)
+        return id
+    }
+
+    fun getOnePortValueDataList(id: Int): ArrayList<OnePortValueData>{
+        val list = arrayListOf<OnePortValueData>()
+        val valueSet = valuesSetsMap[id]
+        valueSet?.onePortValues?.keys?.forEach {
+            list.add(valueSet.onePortValues[it]!!)
+        }
+        return list
+    }
+
+    fun getTwoPortValueDataList(id: Int): ArrayList<TwoPortValueData>{
+        val list = arrayListOf<TwoPortValueData>()
+        val valueSet = valuesSetsMap[id]
+        valueSet?.twoPortValues?.keys?.forEach {
+            list.add(valueSet.twoPortValues[it]!!)
+        }
+        return list
+    }
 
     // Add or update an element in the bond graph.
     fun addElement(id: Int, elementType: ElementTypes, location: Offset, centerOffset: Offset) {

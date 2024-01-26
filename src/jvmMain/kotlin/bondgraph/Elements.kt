@@ -165,8 +165,8 @@ enum class Operation {
         }
     }
 }
-class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null, units: String = "")
-class TwoPortValueData(val element: Element, var description: String = "", var operation: ((Double, Double) -> Double),
+class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null, var units: String = "")
+class TwoPortValueData(val element: Element, var units: String = "", var description: String = "", var operation: Operation,
                        var powerVar1: PowerVar, var bond1:Bond, var value: Double? = null, var powerVar2: PowerVar, var bond2:Bond)
 class ValuesSet(val id: Int, var description: String = "no description", bondGraph: BondGraph? = null) {
     val onePortValues = hashMapOf<Element, OnePortValueData>()
@@ -213,15 +213,13 @@ class ValuesSet(val id: Int, var description: String = "no description", bondGra
 
             eList.forEach {
                 val bondList = it.getBondList()
-                val bondPair = if (bondList[0].displayId < bondList[1].displayId) Pair(
-                    bondList[0],
-                    bondList[1]
-                ) else Pair(bondList[1], bondList[0])
+                val bondPair = if (bondList[0].displayId < bondList[1].displayId)
+                    Pair(bondList[0], bondList[1]) else Pair(bondList[1], bondList[0])
                 if (it is Transformer) {
                     twoPortValues[it] =
                         TwoPortValueData(
                             element = it,
-                            operation = Double::times,
+                            operation = MULTIPLY,
                             powerVar1 = EFFORT,
                             bond1 = bondPair.first,
                             powerVar2 = EFFORT,
@@ -231,7 +229,7 @@ class ValuesSet(val id: Int, var description: String = "no description", bondGra
                     twoPortValues[it] =
                         TwoPortValueData(
                             element = it,
-                            operation = Double::times,
+                            operation = MULTIPLY,
                             powerVar1 = EFFORT,
                             bond1 = bondPair.first,
                             powerVar2 = FLOW,
@@ -1087,7 +1085,7 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     /*
         A transformer has two bonds.  Some other element has set the causality on one of the bonds and then
         called assignCausality on this element.  We have to set the causality on the other bond.  A transformer
-        has two allowable causalities   :--- TF :---   or   ---: TF ---:
+        has two allowable causalities   |--- TF |---   or   ---| TF ---|
         So find the bond that has been set and set the other one appropriately.
      */
     override fun assignCausality() {
@@ -1147,7 +1145,7 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
     /*
        A gyrator has two bonds.  Some other element has set the causality on one of the bonds and then
        called assignCausality on this element.  We have to set the causality on the other bond.  A gyrator
-       has two allowable causalities   :--- GY ---:   or   ---: GY :---
+       has two allowable causalities   |--- GY ---|   or   ---| GY |---
        So find the bond that has been set and set the other one appropriately.
     */
     override fun assignCausality() {

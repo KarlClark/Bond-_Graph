@@ -611,5 +611,6 @@ internal class StateInfo {
     var showValuesWindow by mutableStateOf(false)
     var setName by mutableStateOf("Default Set")
     var selectedSetId by mutableStateOf(0)
-    var newSet by mutableStateOf(false)
+    //val valueSetMap by mutableStateMapOf(bondGraph.valuesSetsMap)
+    val xmap by mutableStateMapOf(1 to 'b', 2 to 'c' )
 }
