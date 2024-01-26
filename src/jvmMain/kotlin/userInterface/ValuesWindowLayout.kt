@@ -27,6 +27,7 @@ import androidx.compose.ui.window.rememberWindowState
 import bondgraph.Operation.*
 import bondgraph.PowerVar.*
 import bondgraph.*
+
 @Composable
 fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: Int = 0, width: Dp = 85.dp, color: Color = Color.White, action: (i: Int) -> Unit){
 
@@ -200,7 +201,7 @@ fun setItem(valuesSet: ValuesSet) {
 
 
     ) {
-        Text(valuesSet.description
+        Text(if (currentState.selectedSetId == valuesSet.id) currentState.setDescription else valuesSet.description
             , modifier = Modifier
                 .fillMaxWidth()
                 .padding(MyConstants.valuesGeneralPadding)
@@ -213,7 +214,6 @@ fun setItem(valuesSet: ValuesSet) {
 fun valuesBar () {
 
     val currentState = LocalStateInfo.current
-
     var save by remember { mutableStateOf(false) }
     var saveAs by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf(false) }
@@ -239,7 +239,7 @@ fun valuesBar () {
             ) {
 
                 Text(
-                    currentState.setName,
+                    currentState.setDescription,
                     textAlign = TextAlign.Center,
                     fontSize = MyConstants.valuesBarFontSize,
                     color = MyConstants.valuesBarsTextColor,
@@ -301,8 +301,8 @@ fun valuesBar () {
 
 @Composable
 fun setDescriptionBar(valuesSet: ValuesSet){
+    val currentState = LocalStateInfo.current
     var description by remember(valuesSet.description) { mutableStateOf(valuesSet.description) }
-    //description = valuesSet.description
     println("setDescriptionBar valuesSet id = ${valuesSet.id} , description = $description  description = ${valuesSet.description}")
     Column (modifier = Modifier
         .fillMaxWidth()
@@ -332,6 +332,7 @@ fun setDescriptionBar(valuesSet: ValuesSet){
                     .fillMaxWidth(), value = description, onValueChange = {
                     description = it
                     valuesSet.description = description
+                    currentState.setDescription = description
                     }
                 )
 
@@ -350,14 +351,12 @@ fun setDescriptionBar(valuesSet: ValuesSet){
 
 @Composable
 fun valuesColumn(valuesSet: ValuesSet) {
-    //remember{valuesSet}
-    var valueSet by remember { mutableStateOf(valuesSet) }
+    var description by remember(valuesSet.description) { mutableStateOf(valuesSet.description) }
     val currentState = LocalStateInfo.current
     val scrollState = rememberScrollState()
     val eList = arrayListOf<Element>()
 
-    println("valuesColumn valuesSet id = ${valueSet.id}  description =${valuesSet.description}  valuesSet id = ${valuesSet.id}")
-
+    currentState.setDescription = description
     Column(modifier = Modifier
         .background(Color.DarkGray)
         .width(MyConstants.valuesColumnWidth)
@@ -383,7 +382,6 @@ fun valuesColumn(valuesSet: ValuesSet) {
                 the components are already composed even if they are not visible.
             */
             Column(
-               //state = lazyColumnState,
                 modifier = Modifier
                     // Can't use vertical padding or Arrangement.spacedBy on LazyColumn because it messes up the scrollbar.
                     .padding(horizontal = 16.dp)
