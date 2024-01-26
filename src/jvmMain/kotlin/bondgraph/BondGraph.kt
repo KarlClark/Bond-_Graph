@@ -355,7 +355,7 @@ class BondGraph(var name: String) {
     fun createValueSet(): Int {
         val id = getNextValueSetId()
         println("BondGraph.createvaluesSet id = $id")
-        valuesSetsMap[id] = ValuesSet(id, "new set" + id.toString(), this)
+        valuesSetsMap[id] = ValuesSet(id, "new set " + id.toString(), this)
         return id
     }
 

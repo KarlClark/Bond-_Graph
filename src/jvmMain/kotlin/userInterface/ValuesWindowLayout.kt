@@ -42,20 +42,16 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
 
 
     Column (modifier = Modifier
-        //.fillMaxWidth()
 
     ) {
 
         Box(modifier = Modifier
-            .background(color)
-            //.padding(MyConstants.valuesGeneralPadding)
             .border(width = 1.dp, color = Color.Black)
 
         ) {
             Row(
                 modifier = Modifier
                     .width(width)
-                    .background(color)
                     .padding(horizontal = 6.dp, vertical = 3.dp)
                 , verticalAlignment = Alignment.CenterVertically
 
@@ -80,13 +76,11 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
 
         if (isExpanded) {
             Box (modifier = Modifier
-                //.padding(horizontal = 6.dp)
 
             ){
                 Popup {
                     Column(
                         modifier = Modifier
-                            .background(color)
                             .border(width = 1.dp, color = Color.Black)
                             .padding(horizontal = 6.dp)
                         , verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -96,7 +90,6 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
 
                         for (index in 0 until items.size) {
                             Text(items[index], modifier = Modifier
-                                //.padding(vertical = 2.dp)
                                 .clickable {
                                     currentIndex = indicies[index]
                                     action(currentIndex)
@@ -313,34 +306,45 @@ fun setDescriptionBar(valuesSet: ValuesSet){
     println("setDescriptionBar valuesSet id = ${valuesSet.id} , description = $description  description = ${valuesSet.description}")
     Column (modifier = Modifier
         .fillMaxWidth()
+        .background(MyConstants.mediumGray)
+        .padding( 6.dp)
 
     ) {
         Row(
             modifier = Modifier
                 .height(MyConstants.valuesRowHeight)
-                .background(MyConstants.valuesBarsColor)
+                .background(MyConstants.myWhite)
                 .fillMaxWidth()
+                .border(BorderStroke(width = 1.dp, Color.Black))
+                , verticalAlignment = Alignment.CenterVertically
 
         ) {
             Text(
-                "Description", fontSize = MyConstants.valuesBarFontSize, modifier = Modifier
+                "Description:", fontSize = MyConstants.valuesBarFontSize, modifier = Modifier
                     .padding(horizontal = 6.dp)
 
             )
 
-            BasicTextField(modifier = Modifier
-                .fillMaxWidth()
-                , value = description
-                , onValueChange = {
+            Column(
+
+            ) {
+                BasicTextField(modifier = Modifier
+                    .fillMaxWidth(), value = description, onValueChange = {
                     description = it
                     valuesSet.description = description
-                }
-            )
+                    }
+                )
+
+                Divider(modifier = Modifier
+                    .padding(end = 6.dp)
+                    , thickness = 1.dp
+                    , color = Color.Black
+                )
+            }
+
         }
 
-        Divider(
-            thickness = 1.dp, color = Color.Black
-        )
+
     }
 }
 
@@ -366,7 +370,7 @@ fun valuesColumn(valuesSet: ValuesSet) {
 
         Box( modifier = Modifier
                 .fillMaxSize()
-                .background(color = Color(180, 180, 180))
+                .background(MyConstants.mediumGray)
                 .padding(start = 1.dp, end = 12.dp, top = 6.dp, bottom = 14.dp)
 
         ) {
@@ -431,7 +435,6 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
     var descriptionInput by remember { mutableStateOf(if (onePortValueData.description == null) "" else onePortValueData.description) }
     var initialFocus = initialFocus
     val focusManager = LocalFocusManager.current
-    //val (first, last) = FocusRequester.createRefs()
     Box (modifier = Modifier
         .padding(6.dp)
 
@@ -679,7 +682,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                 ) {
                     Row(
                         modifier = Modifier
-                            .background(Color.White)
+                            .background(MyConstants.myWhite)
                             .padding(MyConstants.valuesGeneralPadding)
                             .fillMaxWidth()
                         , horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -785,12 +788,14 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 .padding(top = 3.dp)
                         )
                     }
-                    Row(
+                    Row(modifier = Modifier
+                        .background(MyConstants.myWhite)
 
                     ) {
                         Text(
                             "Units", modifier = Modifier
-                                .padding(horizontal = 6.dp), fontSize = MyConstants.valuesFontSize
+                                .padding(horizontal = 6.dp)
+                            , fontSize = MyConstants.valuesFontSize
                         )
                         Column(
 

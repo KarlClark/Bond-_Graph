@@ -63,6 +63,7 @@ object MyConstants {
     val onColor = myGreen
     val lightBlue = Color(144, 190, 248)
     val mediumBlue = Color(53, 135, 237)
+    val mediumGray = Color(180, 180, 180)
     val draggingColor = Color.Red
     val notDraggingColor = Color.Black
     val defaultElementColor = Color.Black
