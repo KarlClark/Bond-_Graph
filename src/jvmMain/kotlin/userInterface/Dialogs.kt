@@ -15,7 +15,6 @@ import androidx.compose.ui.window.FrameWindowScope
 import java.awt.FileDialog
 import java.io.File
 import java.nio.file.Path
-import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 fun FrameWindowScope.fileDialog(
@@ -53,8 +52,10 @@ fun FrameWindowScope.fileDialog(
 )
 
 @Composable
-fun saveFileDialog(
+fun saveDialog(
+    message:String,
     onSave:  () -> Unit,
+    onSaveAs: () -> Unit,
     onDontSave: () -> Unit,
     onCancel: () -> Unit,
     onCloseRequest: () -> Unit,
@@ -75,7 +76,7 @@ fun saveFileDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Save changes to this bond graph?",
+                    text = message,
                     modifier = Modifier.padding(16.dp),
                 )
                 Row(
@@ -88,6 +89,13 @@ fun saveFileDialog(
                         modifier = Modifier.padding(8.dp),
                     ) {
                         Text("Save")
+                    }
+
+                    TextButton(
+                        onClick = { onSaveAs() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Save As")
                     }
 
                     TextButton(

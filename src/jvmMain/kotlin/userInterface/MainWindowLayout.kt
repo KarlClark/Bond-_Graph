@@ -543,9 +543,14 @@ fun mainWindow() {
 
             if (currentState.showSaveFileDialog) {
 
-                saveFileDialog(
+                saveDialog(
+                    message = "Save changes to this bond graph?",
                     onSave = {
                         save = true
+                        currentState.showSaveFileDialog = false
+                    },
+                    onSaveAs = {
+                        saveAs = true
                         currentState.showSaveFileDialog = false
                     },
                     onDontSave = {
