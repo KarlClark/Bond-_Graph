@@ -5,29 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2366e1a6-d664-4953-8ba0-3c93284ce241" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/artifacts/Bond_Graph_jvm_1_0_SNAPSHOT.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/artifacts/Bond_Graph_jvm_1_0_SNAPSHOT.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid1224.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid14728.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid14816.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid16476.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid1768.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid19460.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid21612.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid2316.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid23296.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid25256.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid26528.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid3860.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid4612.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid7240.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid808.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hs_err_pid8404.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/replay_pid1224.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/replay_pid14816.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/replay_pid2316.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/replay_pid23296.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/replay_pid25256.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/replay_pid26528.log" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/ValuesWindowLayout.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/ValuesWindowLayout.kt" afterDir="false" />
@@ -41,6 +20,18 @@
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
     </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <projects_view>
+          <tree_state>
+            <expand />
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -77,7 +68,7 @@
     &quot;project.structure.last.edited&quot;: &quot;SDKs&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.50229883&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.projectsettings.compiler.javacompiler&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.sync&quot;
   }
 }</component>
   <component name="RecentsManager">
@@ -93,10 +84,19 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Kotlin.MainKt" />
-        <item itemvalue="Kotlin.MainKt" />
         <item itemvalue="Kotlin.MainKt" />
       </list>
     </recent_temporary>
@@ -137,7 +137,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="kotlin-line">
           <url>file://$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt</url>
-          <line>467</line>
+          <line>577</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
       </breakpoints>

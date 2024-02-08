@@ -151,6 +151,11 @@ class BondGraphSerializationData(val elementData: List<ElementSerializationData>
 @Serializable
 class BondGraphSerializationData2(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializationData>, val arbitrarilyAssignedResistorsIds: List<Int>)
 
+@Serializable
+class BondGraphSerializationData3(val elementData: List<ElementSerializationData>, val bondData: List<BondSerializationData>,
+                                  val unAssignedResistorIds: List<Pair<Int, Int?>>, val arbitrarilyAssignedResistorsIds: List<Int>,
+                                  val valuesSetsData: ValuesSetsSerializationDataList)
+
 
 class BondGraph(var name: String) {
 
@@ -276,7 +281,7 @@ class BondGraph(var name: String) {
     List of resistors that were not assigned causality after sources and storage elements
     were processed. If the user has picked a preferred causality the effort element is
     stored in the second element of the pair. The elements the user has chosen the causality
-    for are stored it the front of the list so they are processed first.
+    for are stored in the front of the list so they are processed first.
     */
     val unAssignedResistors = LinkedList<Pair<Element, Element?>>()
     val results = Results()
@@ -291,15 +296,70 @@ class BondGraph(var name: String) {
 
         val elementData = elementsMap.values.map{ElementSerializationData.getData(it)}
         val bondData = bondsMap.values.map{BondSerializationData.getData(it)}
+        val unAssignedResistorsIds = arrayListOf<Pair<Int, Int?>>()
         val arbitrarilyAssignedResistorsIds = arrayListOf<Int>()
-
+        val valuesSetsData = ValuesSetsSerializationDataList.getData(this)
 
         arbitrarilyAssignedResistors.forEach { arbitrarilyAssignedResistorsIds.add(it.id) }
-        return Cbor.encodeToHexString( BondGraphSerializationData2(elementData, bondData, arbitrarilyAssignedResistorsIds))
+        unAssignedResistors.forEach { unAssignedResistorsIds.add(Pair(it.first.id, if (it.second != null) it.second!!.id else null)) }
+        return Cbor.encodeToHexString( BondGraphSerializationData3(elementData, bondData, unAssignedResistorsIds, arbitrarilyAssignedResistorsIds, valuesSetsData))
         }
 
-@Composable
+// new one
+    @Composable
     fun fromSerializedStrings(serializedString: String) {
+
+        val state = LocalStateInfo.current
+        val data:BondGraphSerializationData3 = Cbor.decodeFromHexString(serializedString)
+
+        elementsMap.clear()
+        bondsMap.clear()
+        arbitrarilyAssignedResistors.clear()
+        results.clear()
+
+        for (elementDatum in data.elementData) {
+            val element = ElementSerializationData.makeElement(this, elementDatum)
+            key(element.id){elementsMap[element.id] = element}
+        }
+
+        for (bondDatum in data.bondData){
+            val bond = BondSerializationData.makeBond(bondDatum, elementsMap)
+            if (bond != null) {
+                bondsMap[bond.id] = bond
+                bond.element1.addBond(bond)
+                bond.element2.addBond(bond)
+            }
+        }
+
+        println("data.arbitrarilyAssignedResistorsIds.size = ${data.arbitrarilyAssignedResistorsIds.size}")
+        data.unAssignedResistorIds.forEach { unAssignedResistors.add(Pair(elementsMap[it.first]!!, if (it.second == null) null else elementsMap[it.second])) }
+
+        data.arbitrarilyAssignedResistorsIds.forEach{
+            elementsMap.get(it)?.let { it1 ->
+                arbitrarilyAssignedResistors.add(it1)
+                println ("fromSerialization:  element ${it1.displayId} setting isCausalityArbitrarilyAssigned to true ")
+                (it1 as Resistor).isCausalityArbitrarilyAssigned = true
+                /*val effortElement = it1.getBondList()[0].effortElement
+                if (effortElement != null) {
+                    unAssignedResistors.removeAndAddToFront(Pair(it1, effortElement))
+                }*/
+            }
+        }
+
+        ValuesSetsSerializationDataList.MakeValuesSets(this, data.valuesSetsData)
+
+        elementsMap.values.forEach{it.createDisplayId()}
+
+        newElementId = elementsMap.values.maxOf{it.id} + 1
+        newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
+        newValueSetId = valuesSetsMap.values.maxOf{it.id} + 1
+        results.clear()
+        state.showResults = false
+        state.needsElementUpdate = true
+    }
+//old one
+@Composable
+    fun fromSerializedStrings_old(serializedString: String) {
 
         val state = LocalStateInfo.current
         val data:BondGraphSerializationData2 = Cbor.decodeFromHexString(serializedString)
@@ -747,7 +807,7 @@ class BondGraph(var name: String) {
 
            if ( ! done){
                /*
-                    We want to generate a new leist of un-assigned resistors.  But we want to keep any values
+                    We want to generate a new list of un-assigned resistors.  But we want to keep any values
                     from the old list that are still in the current list.  Likewise, we want to delete any elements
                     from the old list that are not in the current list.
                 */

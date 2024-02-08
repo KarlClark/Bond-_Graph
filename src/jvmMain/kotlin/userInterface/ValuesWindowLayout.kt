@@ -196,6 +196,7 @@ fun setItem(valuesSet: ValuesSet) {
         .background(color = if (currentState.selectedSetId == valuesSet.id) MyConstants.setSelectedColor else MyConstants.setDefaultColor)
         .fillMaxWidth()
         .clickable {
+            println("setItem clicked, set id = ${valuesSet.id} ")
             currentState.selectedSetId = valuesSet.id
         }
 
@@ -356,6 +357,8 @@ fun valuesColumn(valuesSet: ValuesSet) {
     val scrollState = rememberScrollState()
     val eList = arrayListOf<Element>()
 
+    println("valuesColumn valueSet id = ${valuesSet.id}")
+    valuesSet.onePortValues.values.forEach { println("${it.element.displayId} value = ${it.value}") }
     currentState.setDescription = description
     Column(modifier = Modifier
         .background(Color.DarkGray)
@@ -390,8 +393,12 @@ fun valuesColumn(valuesSet: ValuesSet) {
             ) {
 
                 val focusRequesterList = arrayListOf<FocusRequester>()
-                val onePortValueDataList = bondGraph.getOnePortValueDataList(currentState.selectedSetId)
-                val twoPortValueDataList = bondGraph.getTwoPortValueDataList(currentState.selectedSetId)
+                //val onePortValueDataList = bondGraph.getOnePortValueDataList(currentState.selectedSetId)
+                //val twoPortValueDataList = bondGraph.getTwoPortValueDataList(currentState.selectedSetId)
+                val onePortValueDataList = arrayListOf<OnePortValueData>()
+                val twoPortValueDataList = arrayListOf<TwoPortValueData>()
+                valuesSet.onePortValues.values.forEach { onePortValueDataList.add(it)}
+                valuesSet.twoPortValues.values.forEach { twoPortValueDataList.add(it) }
                 if (onePortValueDataList.size + twoPortValueDataList.size > 0) {
                     for (index in 0 until onePortValueDataList.size + twoPortValueDataList.size) {
                         focusRequesterList.add(FocusRequester())
@@ -400,6 +407,7 @@ fun valuesColumn(valuesSet: ValuesSet) {
 
                     var count = 0
                     onePortValueDataList.forEach {
+                        println("passing ${it.element.displayId}  value = ${it.value} to onePortItem")
                         onePortItem(it, focusRequesterList[count], focusRequesterList[count + 1], count == 0)
                         count++
                     }
@@ -427,10 +435,11 @@ fun valuesColumn(valuesSet: ValuesSet) {
 @Composable
 fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester, initialFocus: Boolean){
 
-    var valueInput by remember { mutableStateOf(if (onePortValueData.value == null) "" else onePortValueData.value.toString()) }
-
-    var unitsInput by remember { mutableStateOf(if (onePortValueData.units == null) "" else onePortValueData.units) }
-    var descriptionInput by remember { mutableStateOf(if (onePortValueData.description == null) "" else onePortValueData.description) }
+    println("onePortItem called with ${onePortValueData.element.displayId}  value = ${onePortValueData.value}")
+    var valueInput by remember(onePortValueData.value) { mutableStateOf(if (onePortValueData.value == null) "" else onePortValueData.value.toString()) }
+    println("valueInput = $valueInput")
+    var unitsInput by remember(onePortValueData.units) { mutableStateOf(if (onePortValueData.units == null) "" else onePortValueData.units) }
+    var descriptionInput by remember(onePortValueData.description) { mutableStateOf(if (onePortValueData.description == null) "" else onePortValueData.description) }
     var initialFocus = initialFocus
     val focusManager = LocalFocusManager.current
     Box (modifier = Modifier
@@ -563,7 +572,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             , onValueChange = { newText ->
                                 unitsInput = buildString {
                                     newText.forEach {
-                                        if (!(it == '\t' || it == '\n')) append(it)
+                                        if ( ! (it == '\t' || it == '\n')) append(it)
                                     }
                                 }
                                 onePortValueData.units = unitsInput
@@ -608,11 +617,11 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             ,onValueChange = { newText ->
                                 descriptionInput = buildString {
                                     newText.forEach {
-                                    if (!(it == '\t' || it == '\n')) append(it)
+                                    if ( ! (it == '\t' || it == '\n')) append(it)
+                                    }
                                 }
                                 onePortValueData.description = descriptionInput
                             }
-                        }
                         )
                         Divider(
                             thickness = 1.dp,
@@ -916,6 +925,7 @@ fun valuesWindow() {
                 bondGraph.valuesSetsMap[currentState.selectedSetId]?.let {
                     println("calling valuesColumn selectedSetId = ${currentState.selectedSetId}  id = ${bondGraph.valuesSetsMap[currentState.selectedSetId]?.id}")
                     println("it value = ${it.id}")
+                    it.onePortValues.values.forEach{opv -> println("${opv.element.displayId} value = ${opv.value}")}
                     valuesColumn(it)
                 }
             }

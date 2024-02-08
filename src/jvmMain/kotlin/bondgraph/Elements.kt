@@ -165,9 +165,112 @@ enum class Operation {
         }
     }
 }
-class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null, var units: String = "")
-class TwoPortValueData(val element: Element, var units: String = "", var description: String = "", var operation: Operation,
+data class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null, var units: String = "")
+data class TwoPortValueData(val element: Element, var units: String = "", var description: String = "", var operation: Operation,
                        var powerVar1: PowerVar, var bond1:Bond, var value: Double? = null, var powerVar2: PowerVar, var bond2:Bond)
+@Serializable
+class OnePortValueSerializationData(val elementId: Int, val description: String, val value: Double?, val units: String) {
+
+    companion object {
+        fun getData(onePortValueData: OnePortValueData): OnePortValueSerializationData {
+            return with(onePortValueData) {
+                OnePortValueSerializationData(
+                    elementId = element.id,
+                    description = description,
+                    value = value,
+                    units = units
+                )
+            }
+        }
+
+        fun makeOnePortValueData(bondGraph: BondGraph,  data: OnePortValueSerializationData): OnePortValueData{
+            return with (data){
+                OnePortValueData(
+                    element = bondGraph.getElement(elementId)!!
+                    ,description = description
+                    ,value = value
+                    ,units = units
+                )
+            }
+        }
+    }
+}
+@Serializable
+class TwoPortValueSerializationData(val elementId: Int, val units: String, val description: String, val operation: String,
+                                    val powerVar1: String, val bondId1: Int, val value: Double?, val powerVar2: String, val bondId2: Int) {
+    companion object {
+        fun getData(twoPortValueData: TwoPortValueData): TwoPortValueSerializationData {
+            return with (twoPortValueData) {
+                TwoPortValueSerializationData(
+                    elementId = element.id
+                    ,units = units
+                    ,description = description
+                    ,operation = operation.toString()
+                    ,powerVar1 = powerVar1.toString()
+                    ,bondId1 = bond1.id
+                    ,value = value
+                    ,powerVar2 = powerVar2.toString()
+                    ,bondId2 = bond2.id
+                )
+            }
+        }
+
+        fun makeTwoPortValueData(bondGraph: BondGraph, data: TwoPortValueSerializationData): TwoPortValueData{
+            return with(data) {
+                TwoPortValueData(
+                    element = bondGraph.getElement(elementId)!!
+                    ,units = units
+                    ,description = description
+                    ,operation = Operation.toEnum(operation)
+                    ,powerVar1 = PowerVar.toEnum(powerVar1)
+                    ,bond1 =  bondGraph.getBond(bondId1)!!
+                    ,value = value
+                    ,powerVar2 = PowerVar.toEnum(powerVar2)
+                    ,bond2 = bondGraph.getBond(bondId2)!!
+                )
+            }
+        }
+    }
+}
+
+@Serializable
+class ValuesSetSerializationData (val id :Int, val description: String, val onePortData: List<OnePortValueSerializationData>, val twoPortData: List<TwoPortValueSerializationData>){
+    companion object {
+        fun getData(valuesSet: ValuesSet): ValuesSetSerializationData {
+            with(valuesSet) {
+                val onePortData = onePortValues.values.map { OnePortValueSerializationData.getData(it) }
+                val twoPortData = twoPortValues.values.map { TwoPortValueSerializationData.getData(it) }
+                println("getData onePortData.size = ${onePortData.size}")
+                return ValuesSetSerializationData(id, description, onePortData, twoPortData)
+            }
+        }
+
+        fun makeValuesSet(bondGraph: BondGraph, data: ValuesSetSerializationData): ValuesSet {
+            with (data) {
+                val valuesSet = ValuesSet(id, description)
+                println("makeValuesSet onePortData.size = ${onePortData.size}")
+                onePortData.forEach { valuesSet.onePortValues[bondGraph.getElement(it.elementId)!!] = OnePortValueSerializationData.makeOnePortValueData(bondGraph, it) }
+                twoPortData.forEach { valuesSet.twoPortValues[bondGraph.getElement(it.elementId)!!] = TwoPortValueSerializationData.makeTwoPortValueData(bondGraph, it) }
+                return valuesSet
+            }
+        }
+    }
+}
+@Serializable
+class ValuesSetsSerializationDataList (val dataList: List<ValuesSetSerializationData>){
+
+    companion object {
+        fun getData(bondGraph: BondGraph): ValuesSetsSerializationDataList {
+            val dataList = bondGraph.valuesSetsMap.values.map{ValuesSetSerializationData.getData(it)}
+            return ValuesSetsSerializationDataList(dataList)
+        }
+
+        fun MakeValuesSets(bondGraph: BondGraph, dataList: ValuesSetsSerializationDataList){
+            dataList.dataList.forEach { bondGraph.valuesSetsMap[it.id] = ValuesSetSerializationData.makeValuesSet(bondGraph, it) }
+        }
+    }
+}
+
 class ValuesSet(val id: Int, var description: String = "no description", bondGraph: BondGraph? = null) {
     val onePortValues = hashMapOf<Element, OnePortValueData>()
     val twoPortValues = hashMapOf<Element, TwoPortValueData>()
@@ -240,8 +343,15 @@ class ValuesSet(val id: Int, var description: String = "no description", bondGra
         }
     }
 
-
+    fun copy():ValuesSet{
+        val valuesSet = ValuesSet(id, description)
+        onePortValues.forEach { valuesSet.onePortValues[it.key] = it.value.copy() }
+        twoPortValues.forEach{valuesSet.twoPortValues[it.key] = it.value.copy()}
+        return valuesSet
+    }
 }
+
+
 /*
 The data needed to display a representation of the element on the screen.  The id, text and location are
 pretty obvious, the width and height are the size of the text, and the centerLocation is the location of
