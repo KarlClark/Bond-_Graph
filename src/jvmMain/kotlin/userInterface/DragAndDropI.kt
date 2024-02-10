@@ -613,5 +613,6 @@ internal class StateInfo {
     var selectedSetId by mutableStateOf(0)
     //val valueSetMap by mutableStateMapOf(bondGraph.valuesSetsMap)
     var setDescription by mutableStateOf("")
+    var valuesSetCopy by mutableStateOf(bondGraph.valueSetWorkingCopy)
     val xmap by mutableStateMapOf(1 to 'b', 2 to 'c' )
 }

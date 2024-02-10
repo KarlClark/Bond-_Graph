@@ -343,7 +343,7 @@ class ValuesSet(val id: Int, var description: String = "no description", bondGra
         }
     }
 
-    fun copy():ValuesSet{
+    fun copy(id: Int = this.id, description: String = this.description): ValuesSet{
         val valuesSet = ValuesSet(id, description)
         onePortValues.forEach { valuesSet.onePortValues[it.key] = it.value.copy() }
         twoPortValues.forEach{valuesSet.twoPortValues[it.key] = it.value.copy()}

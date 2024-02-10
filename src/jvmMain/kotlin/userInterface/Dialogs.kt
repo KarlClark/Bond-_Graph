@@ -1,17 +1,30 @@
 package userInterface
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Card
+import androidx.compose.material.Divider
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.AwtWindow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.FrameWindowScope
+import androidx.compose.ui.window.rememberDialogState
 import java.awt.FileDialog
 import java.io.File
 import java.nio.file.Path
@@ -51,6 +64,69 @@ fun FrameWindowScope.fileDialog(
     dispose = FileDialog::dispose
 )
 
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun enterTextDialog(message: String, currentText: String, onSubmit: (text: String) -> Unit, onCloseRequest: () -> Unit) {
+
+    var inputString by remember {mutableStateOf(currentText)}
+    val dialogState = rememberDialogState(size = DpSize(250.dp, 250.dp))
+    val focusRequester = FocusRequester()
+
+    Dialog(visible = true
+        , onCloseRequest = {onCloseRequest()}
+        , state = dialogState
+
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(16.dp)
+                //.background(Color.Red)
+            //,shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    //.background(Color.Blue)
+                ,verticalArrangement = Arrangement.Center
+                ,horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(16.dp),
+                )
+
+                BasicTextField(modifier = Modifier
+                    .width(200.dp)
+                    .onKeyEvent {
+                        if (it.key == Key.Enter) {
+                            onSubmit(inputString)
+                        }
+                        true
+                    }
+                    .focusRequester(focusRequester)
+                    , value = inputString
+                    , onValueChange = {newtext -> inputString = newtext
+
+                    }
+
+                )
+                Divider(
+                    thickness = 1.dp,
+                    color = Color.Black,
+                    modifier = Modifier
+                        .absolutePadding(right = MyConstants.valuesGeneralPadding)
+                        .width(200.dp)
+                )
+            }
+
+        }
+    }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}
 @Composable
 fun saveDialog(
     message:String,

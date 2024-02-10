@@ -145,6 +145,8 @@ fun setsBar (){
                 modifier = Modifier
                     .clickable {
                         currentState.selectedSetId = bondGraph.createValueSet()
+                        bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+                        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
                     }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
@@ -180,7 +182,7 @@ fun setColumn () {
             , verticalArrangement = Arrangement.spacedBy(MyConstants.valuesGeneralPadding)
         ) {
             bondGraph.valuesSetsMap.values.forEach {
-                item { setItem(it) }
+                item { setItem(it)  }
             }
         }
     }
@@ -198,11 +200,13 @@ fun setItem(valuesSet: ValuesSet) {
         .clickable {
             println("setItem clicked, set id = ${valuesSet.id} ")
             currentState.selectedSetId = valuesSet.id
+            bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+            currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
         }
 
 
     ) {
-        Text(if (currentState.selectedSetId == valuesSet.id) currentState.setDescription else valuesSet.description
+        Text(valuesSet.description //if (currentState.selectedSetId == valuesSet.id) currentState.setDescription else valuesSet.description
             , modifier = Modifier
                 .fillMaxWidth()
                 .padding(MyConstants.valuesGeneralPadding)
@@ -215,9 +219,30 @@ fun setItem(valuesSet: ValuesSet) {
 fun valuesBar () {
 
     val currentState = LocalStateInfo.current
-    var save by remember { mutableStateOf(false) }
     var saveAs by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf(false) }
+    var showEnterTextDialog by remember { mutableStateOf(false) }
+
+    fun processSaveAs (description: String) {
+        val id = bondGraph.getNextValueSetId()
+        bondGraph.valuesSetsMap[id] = bondGraph.valueSetWorkingCopy!!.copy(id, description)
+        currentState.selectedSetId = id
+        bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+    }
+
+    if (showEnterTextDialog){
+        enterTextDialog("Enter New Description"
+            , bondGraph.valueSetWorkingCopy!!.description
+            , {
+                processSaveAs(it)
+                showEnterTextDialog = false
+              }
+            , {
+                processSaveAs(bondGraph.valueSetWorkingCopy!!.description)
+                showEnterTextDialog = false}
+            )
+    }
 
     Column( modifier = Modifier
         .fillMaxWidth()
@@ -255,7 +280,10 @@ fun valuesBar () {
                         fontSize = MyConstants.valuesBarFontSizeSmall,
                         color = MyConstants.valuesBarsTextColor,
                         modifier = Modifier
-                            .clickable { save = true }
+                            .clickable {
+                                bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
+                                bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
+                            }
                             .padding(horizontal = 14.dp)
                     )
 
@@ -284,14 +312,13 @@ fun valuesBar () {
         )
     }
 
-    if (save){
-        save = false
-        println("save clicked")
-    }
-
     if (saveAs) {
         saveAs = false
-        println("saveAs clicked")
+        if (bondGraph.valueSetWorkingCopy!!.description == bondGraph.valuesSetsMap[currentState.selectedSetId]!!.description) {
+            showEnterTextDialog = true
+        } else {
+            processSaveAs(bondGraph.valueSetWorkingCopy!!.description)
+        }
     }
 
     if (delete){
@@ -330,10 +357,12 @@ fun setDescriptionBar(valuesSet: ValuesSet){
 
             ) {
                 BasicTextField(modifier = Modifier
-                    .fillMaxWidth(), value = description, onValueChange = {
-                    description = it
-                    valuesSet.description = description
-                    currentState.setDescription = description
+                    .fillMaxWidth()
+                    , value = description
+                    , onValueChange = {
+                        description = it
+                        valuesSet.description = description
+                        currentState.setDescription = description
                     }
                 )
 
@@ -895,7 +924,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
 fun valuesWindow() {
 
     val currentState = LocalStateInfo.current
-
+    //var valuesSetCopy by remember(bondGraph.valueSetWorkingCopy) { mutableStateOf( bondGraph.valueSetWorkingCopy) }
     Window(
         onCloseRequest = {currentState.showValuesWindow = false}
         ,state = rememberWindowState(width = Dp.Unspecified),
@@ -922,10 +951,15 @@ fun valuesWindow() {
                 )
 
 
-                bondGraph.valuesSetsMap[currentState.selectedSetId]?.let {
+               /* bondGraph.valuesSetsMap[currentState.selectedSetId]?.let {
                     println("calling valuesColumn selectedSetId = ${currentState.selectedSetId}  id = ${bondGraph.valuesSetsMap[currentState.selectedSetId]?.id}")
                     println("it value = ${it.id}")
                     it.onePortValues.values.forEach{opv -> println("${opv.element.displayId} value = ${opv.value}")}
+                    valuesColumn(it)
+                }*/
+
+                currentState.valuesSetCopy?.let {
+                    println("calling valuesColumn")
                     valuesColumn(it)
                 }
             }
