@@ -4,10 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.Card
-import androidx.compose.material.Divider
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -64,12 +61,51 @@ fun FrameWindowScope.fileDialog(
     dispose = FileDialog::dispose
 )
 
+@Composable
+fun oneButtonAlertDialog(message: String, buttonText: String, onClick: () -> Unit, onCloseRequest: () -> Unit) {
+
+    val dialogState = rememberDialogState(size = DpSize(MyConstants.smallDialogWidth, MyConstants.smallDialogHeight))
+
+    Dialog(visible = true
+        , onCloseRequest = {onCloseRequest()}
+        , state = dialogState
+
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(16.dp)
+            //.background(Color.Red)
+            //,shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                //.background(Color.Blue)
+                ,verticalArrangement = Arrangement.Center
+                ,horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(16.dp),
+                )
+
+                TextButton(onClick = onClick){
+                    Text(buttonText)
+                }
+            }
+
+        }
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun enterTextDialog(message: String, currentText: String, onSubmit: (text: String) -> Unit, onCloseRequest: () -> Unit) {
 
     var inputString by remember {mutableStateOf(currentText)}
-    val dialogState = rememberDialogState(size = DpSize(250.dp, 250.dp))
+    val dialogState = rememberDialogState(size = DpSize(MyConstants.smallDialogWidth, MyConstants.smallDialogHeight))
     val focusRequester = FocusRequester()
 
     Dialog(visible = true

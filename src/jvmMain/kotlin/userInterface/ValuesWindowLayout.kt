@@ -222,6 +222,7 @@ fun valuesBar () {
     var saveAs by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf(false) }
     var showEnterTextDialog by remember { mutableStateOf(false) }
+    var showAlert by remember {mutableStateOf(false)}
 
     fun processSaveAs (description: String) {
         val id = bondGraph.getNextValueSetId()
@@ -242,6 +243,10 @@ fun valuesBar () {
                 processSaveAs(bondGraph.valueSetWorkingCopy!!.description)
                 showEnterTextDialog = false}
             )
+    }
+
+    if (showAlert){
+        oneButtonAlertDialog("Can't delete the set with no values", "OK", {showAlert = false}, {showAlert = false})
     }
 
     Column( modifier = Modifier
@@ -323,7 +328,22 @@ fun valuesBar () {
 
     if (delete){
         delete = false
-        println("delete clicked")
+        val valuesSet = bondGraph.valuesSetsMap[currentState.selectedSetId]
+        if (valuesSet!!.onePortValues.isEmpty() and valuesSet.twoPortValues.isEmpty()) {
+            showAlert = true
+        } else {
+            val valuesSetList = arrayListOf<ValuesSet>()
+            bondGraph.valuesSetsMap.values.forEach { valuesSetList.add(it) }
+            var nextId = valuesSetList[0].id
+            for (index in 1 until valuesSetList.size){
+                if (valuesSetList[index].id == currentState.selectedSetId) break
+                nextId = valuesSetList[index].id
+            }
+            bondGraph.valuesSetsMap.remove(currentState.selectedSetId)
+            currentState.selectedSetId = nextId
+            bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+            currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+        }
     }
 }
 
