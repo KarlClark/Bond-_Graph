@@ -57,6 +57,8 @@ object MyConstants {
     val expandIconSIze = 10.dp
     val smallDialogWidth = 250.dp
     val smallDialogHeight = 180.dp
+    val largeDialogWidth = 450.dp
+    val largeDialogHeight = 250.dp
 
     val myGreen = Color(10, 140, 10)
     val myWhite = Color(250, 250, 250)

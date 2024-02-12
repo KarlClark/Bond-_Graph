@@ -1,6 +1,5 @@
 package userInterface
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -9,7 +8,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -172,7 +170,15 @@ fun saveDialog(
     onCancel: () -> Unit,
     onCloseRequest: () -> Unit,
 ) {
-    Dialog(visible = true, onCloseRequest = {onCloseRequest()}) {
+
+    val dialogState = rememberDialogState(size = DpSize(MyConstants.largeDialogWidth, MyConstants.largeDialogHeight))
+
+    Dialog(
+
+        visible = true
+        ,onCloseRequest = {onCloseRequest()}
+        , state = dialogState
+    ) {
         // Draw a rectangle shape with rounded corners inside the dialog
         Card(
             modifier = Modifier

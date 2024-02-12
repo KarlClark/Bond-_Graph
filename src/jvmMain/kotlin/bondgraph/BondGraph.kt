@@ -287,6 +287,7 @@ class BondGraph(var name: String) {
     val unAssignedResistors = LinkedList<Pair<Element, Element?>>()
     val results = Results()
     var graphHasChanged = false
+    var valuesSetHasChanged = false
     var newElementId = 0
     var newBondId = 0
     var newValueSetId = 1

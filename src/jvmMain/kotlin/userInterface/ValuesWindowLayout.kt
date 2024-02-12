@@ -27,6 +27,121 @@ import androidx.compose.ui.window.rememberWindowState
 import bondgraph.Operation.*
 import bondgraph.PowerVar.*
 import bondgraph.*
+fun markAsChanged(){
+    bondGraph.graphHasChanged = true
+    bondGraph.valuesSetHasChanged = true
+}
+@Composable
+fun processSaveAs (description: String, finishAction: () -> Unit) {
+    println("porcessSaveAs called")
+    val currentState = LocalStateInfo.current
+    val id = bondGraph.getNextValueSetId()
+    bondGraph.valuesSetsMap[id] = bondGraph.valueSetWorkingCopy!!.copy(id, description)
+    currentState.selectedSetId = id
+    bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+    currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+    bondGraph.valuesSetHasChanged = false
+    finishAction.invoke()
+}
+
+@Composable
+fun saveFunction(finishAction: () -> Unit) {
+    val currentState = LocalStateInfo.current
+    println("-------------saveFunctin called")
+    bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
+    //bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
+    bondGraph.valuesSetHasChanged = false
+    println("Save function calling finishAction = $finishAction")
+    finishAction.invoke()
+}
+
+@Composable
+fun saveAsFunction(finishAction: () -> Unit){
+
+    println("saveAsFunction called")
+    val currentState = LocalStateInfo.current
+    var newText by remember { mutableStateOf("") }
+    var onSubmit by remember { mutableStateOf(false) }
+    var onCloseRequest by remember { mutableStateOf(false) }
+    var showEnterTextDialog by remember { mutableStateOf(false) }
+
+
+
+    if (bondGraph.valueSetWorkingCopy!!.description == bondGraph.valuesSetsMap[currentState.selectedSetId]!!.description) {
+        showEnterTextDialog = true
+    } else {
+        processSaveAs(bondGraph.valueSetWorkingCopy!!.description, finishAction)
+    }
+
+    if (showEnterTextDialog){
+        enterTextDialog(
+            message = "Enter New Description"
+            ,currentText = bondGraph.valueSetWorkingCopy!!.description
+            ,onSubmit = {
+                newText = it
+                showEnterTextDialog = false
+                onSubmit = true
+            }
+            , onCloseRequest = {
+                showEnterTextDialog = false
+                onCloseRequest = true
+            }
+        )
+    }
+
+    if (onSubmit) {
+        println("onSubmit called")
+        onSubmit = false
+        processSaveAs(newText, finishAction)
+    }
+
+    if (onCloseRequest){
+        println("onCloseRequest called")
+        onCloseRequest = false
+        processSaveAs(bondGraph.valueSetWorkingCopy!!.description, finishAction)
+    }
+}
+@Composable
+fun deleteFunction(finishAction: () -> Unit){
+
+    val currentState = LocalStateInfo.current
+    var showAlert by remember { mutableStateOf(false) }
+
+
+
+    val valuesSet = bondGraph.valuesSetsMap[currentState.selectedSetId]
+    if (valuesSet!!.onePortValues.isEmpty() and valuesSet.twoPortValues.isEmpty()) {
+        showAlert = true
+    } else {
+        val valuesSetList = arrayListOf<ValuesSet>()
+        bondGraph.valuesSetsMap.values.forEach { valuesSetList.add(it) }
+        var nextId = valuesSetList[0].id
+        for (index in 1 until valuesSetList.size){
+            if (valuesSetList[index].id == currentState.selectedSetId) break
+            nextId = valuesSetList[index].id
+        }
+        bondGraph.valuesSetsMap.remove(currentState.selectedSetId)
+        currentState.selectedSetId = nextId
+        bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+        bondGraph.graphHasChanged = true
+        bondGraph.valuesSetHasChanged = false
+        finishAction.invoke()
+    }
+
+    if (showAlert){
+        oneButtonAlertDialog("Can't delete the set with no values", "OK"
+            , {
+                showAlert = false
+                finishAction.invoke()
+              }
+            , {showAlert = false
+                finishAction.invoke()
+            })
+    }
+
+
+}
 
 @Composable
 fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: Int = 0, width: Dp = 85.dp, color: Color = Color.White, action: (i: Int) -> Unit){
@@ -147,6 +262,7 @@ fun setsBar (){
                         currentState.selectedSetId = bondGraph.createValueSet()
                         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
                         currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+                        markAsChanged()
                     }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
@@ -192,16 +308,80 @@ fun setColumn () {
 fun setItem(valuesSet: ValuesSet) {
 
     val currentState = LocalStateInfo.current
+    var itemClicked by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var save by remember {mutableStateOf(false)}
+    var saveAs by remember { mutableStateOf(false) }
+    var dontSave by remember { mutableStateOf(false) }
+    var cancel by remember { mutableStateOf(false) }
+
+    fun loadValuesSet () {
+        println("______________ loadValuesSet called description = ${valuesSet.description}")
+        currentState.selectedSetId = valuesSet.id
+        bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+        bondGraph.valuesSetHasChanged = false
+    }
+
+
+    if (showDialog) {
+        saveDialog(message = "Save this Values Set?"
+            ,onSave = {
+                save = true
+                showDialog = false
+            }
+            , onSaveAs = {
+                saveAs = true
+                showDialog = false
+             }
+            , onDontSave = {
+                dontSave = true
+                showDialog = false
+           }
+            , onCancel = {
+                showDialog = false
+            }
+            , onCloseRequest = {
+                showDialog = false
+            }
+        )
+    }
+
+    if (itemClicked){
+        itemClicked = false
+        if (bondGraph.valuesSetHasChanged){
+            showDialog = true
+        } else {
+            loadValuesSet()
+        }
+    }
+
+    if (save){
+        save = false
+        saveFunction {
+            println("finish action")
+            loadValuesSet()
+        }
+    }
+
+    if (saveAs) {
+        saveAsFunction {
+            loadValuesSet()
+            saveAs = false
+        }
+    }
+
+    if (dontSave) {
+        dontSave = false
+        loadValuesSet()
+    }
 
     Box(modifier = Modifier
         .border(BorderStroke(width = 1.dp, color = Color.Black))
         .background(color = if (currentState.selectedSetId == valuesSet.id) MyConstants.setSelectedColor else MyConstants.setDefaultColor)
         .fillMaxWidth()
         .clickable {
-            println("setItem clicked, set id = ${valuesSet.id} ")
-            currentState.selectedSetId = valuesSet.id
-            bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-            currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+           itemClicked = true
         }
 
 
@@ -212,6 +392,7 @@ fun setItem(valuesSet: ValuesSet) {
                 .padding(MyConstants.valuesGeneralPadding)
         )
 
+
     }
 }
 
@@ -219,35 +400,17 @@ fun setItem(valuesSet: ValuesSet) {
 fun valuesBar () {
 
     val currentState = LocalStateInfo.current
+    var save by remember { mutableStateOf(false) }
     var saveAs by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf(false) }
     var showEnterTextDialog by remember { mutableStateOf(false) }
     var showAlert by remember {mutableStateOf(false)}
 
-    fun processSaveAs (description: String) {
-        val id = bondGraph.getNextValueSetId()
-        bondGraph.valuesSetsMap[id] = bondGraph.valueSetWorkingCopy!!.copy(id, description)
-        currentState.selectedSetId = id
-        bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
-    }
 
-    if (showEnterTextDialog){
-        enterTextDialog("Enter New Description"
-            , bondGraph.valueSetWorkingCopy!!.description
-            , {
-                processSaveAs(it)
-                showEnterTextDialog = false
-              }
-            , {
-                processSaveAs(bondGraph.valueSetWorkingCopy!!.description)
-                showEnterTextDialog = false}
-            )
-    }
 
-    if (showAlert){
-        oneButtonAlertDialog("Can't delete the set with no values", "OK", {showAlert = false}, {showAlert = false})
-    }
+
+
+
 
     Column( modifier = Modifier
         .fillMaxWidth()
@@ -286,8 +449,7 @@ fun valuesBar () {
                         color = MyConstants.valuesBarsTextColor,
                         modifier = Modifier
                             .clickable {
-                                bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
-                                bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
+                               save = true
                             }
                             .padding(horizontal = 14.dp)
                     )
@@ -317,33 +479,17 @@ fun valuesBar () {
         )
     }
 
+    if (save) {
+        save = false
+        saveFunction(){}
+    }
+
     if (saveAs) {
-        saveAs = false
-        if (bondGraph.valueSetWorkingCopy!!.description == bondGraph.valuesSetsMap[currentState.selectedSetId]!!.description) {
-            showEnterTextDialog = true
-        } else {
-            processSaveAs(bondGraph.valueSetWorkingCopy!!.description)
-        }
+        saveAsFunction(){saveAs = false}
     }
 
     if (delete){
-        delete = false
-        val valuesSet = bondGraph.valuesSetsMap[currentState.selectedSetId]
-        if (valuesSet!!.onePortValues.isEmpty() and valuesSet.twoPortValues.isEmpty()) {
-            showAlert = true
-        } else {
-            val valuesSetList = arrayListOf<ValuesSet>()
-            bondGraph.valuesSetsMap.values.forEach { valuesSetList.add(it) }
-            var nextId = valuesSetList[0].id
-            for (index in 1 until valuesSetList.size){
-                if (valuesSetList[index].id == currentState.selectedSetId) break
-                nextId = valuesSetList[index].id
-            }
-            bondGraph.valuesSetsMap.remove(currentState.selectedSetId)
-            currentState.selectedSetId = nextId
-            bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-            currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
-        }
+        deleteFunction(){delete = false}
     }
 }
 
@@ -383,6 +529,7 @@ fun setDescriptionBar(valuesSet: ValuesSet){
                         description = it
                         valuesSet.description = description
                         currentState.setDescription = description
+                        markAsChanged()
                     }
                 )
 
@@ -556,6 +703,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             , value = valueInput
                             , onValueChange = { newText ->
                                 var periodCount = 0
+                                markAsChanged()
                                 valueInput = buildString {
                                     newText.forEach {
                                         when {
@@ -619,6 +767,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             }
                             , value = unitsInput
                             , onValueChange = { newText ->
+                                markAsChanged()
                                 unitsInput = buildString {
                                     newText.forEach {
                                         if ( ! (it == '\t' || it == '\n')) append(it)
@@ -664,6 +813,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             }
                             ,value = descriptionInput
                             ,onValueChange = { newText ->
+                                markAsChanged()
                                 descriptionInput = buildString {
                                     newText.forEach {
                                     if ( ! (it == '\t' || it == '\n')) append(it)
@@ -746,11 +896,13 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                     ) {
 
                         dropDownSelectionBox(operationStrings, operationsIndex) {
+                            markAsChanged()
                             operationsIndex = it
                             twoPortValueData.operation = Operation.toEnum(operationStrings[it])
                         }
 
                         dropDownSelectionBox(powerVars, powerVarsIndex) {
+                            markAsChanged()
                             powerVarsIndex = it
                             if (it == 0 || it == 2){
                                 twoPortValueData.bond1 = bondPair.first
@@ -800,31 +952,32 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 }
                                 , value = valueInput
                                 , onValueChange = { newText ->
-                                var periodCount = 0
-                                valueInput = buildString {
-                                    newText.forEach {
-                                        when {
-                                            it == '.' -> {
-                                                if (periodCount++ == 0) {
+                                    markAsChanged()
+                                    var periodCount = 0
+                                    valueInput = buildString {
+                                        newText.forEach {
+                                            when {
+                                                it == '.' -> {
+                                                    if (periodCount++ == 0) {
+                                                        append(it)
+                                                    }
+                                                }
+
+                                                it == '0' -> {
+                                                    if ((length == 1 && get(0) != '0') || length != 1) {
+                                                        append(it)
+                                                    }
+                                                }
+
+                                                it.isDigit() -> {
+                                                    if (length == 1 && get(0) == '0') {
+                                                        deleteAt(0)
+                                                    }
                                                     append(it)
                                                 }
-                                            }
-
-                                            it == '0' -> {
-                                                if ((length == 1 && get(0) != '0') || length != 1) {
-                                                    append(it)
-                                                }
-                                            }
-
-                                            it.isDigit() -> {
-                                                if (length == 1 && get(0) == '0') {
-                                                    deleteAt(0)
-                                                }
-                                                append(it)
                                             }
                                         }
                                     }
-                                }
                                 if (valueInput != "") {
                                     twoPortValueData.value = valueInput.toDouble()
                                 }
@@ -873,6 +1026,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 }
                                 , value = unitsInput
                                 , onValueChange = { newText ->
+                                    markAsChanged()
                                     unitsInput = buildString {
                                         newText.forEach {
                                             if (!(it == '\t' || it == '\n')) append(it)
@@ -919,6 +1073,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 }
                                 , value = descriptionInput
                                 , onValueChange = { newText ->
+                                    markAsChanged()
                                     descriptionInput = buildString {
                                         newText.forEach {
                                             if (!(it == '\t' || it == '\n')) append(it)
@@ -942,13 +1097,20 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
 
 @Composable
 fun valuesWindow() {
+    var closeRequest by remember { mutableStateOf(false) }
+    var save by remember {mutableStateOf(false)}
+    var saveAs by remember { mutableStateOf(false) }
+    var dontSave by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
 
     val currentState = LocalStateInfo.current
     //var valuesSetCopy by remember(bondGraph.valueSetWorkingCopy) { mutableStateOf( bondGraph.valueSetWorkingCopy) }
     Window(
-        onCloseRequest = {currentState.showValuesWindow = false}
+        //onCloseRequest = {currentState.showValuesWindow = false}
+        onCloseRequest = {closeRequest = true}
         ,state = rememberWindowState(width = Dp.Unspecified),
     ) {
+
 
         Box  {
 
@@ -983,6 +1145,60 @@ fun valuesWindow() {
                     valuesColumn(it)
                 }
             }
+        }
+
+        if (closeRequest) {
+            if (bondGraph.valuesSetHasChanged) {
+                showDialog = true
+            } else {
+                currentState.showValuesWindow = false
+            }
+        }
+
+        if (showDialog) {
+            saveDialog(message = "Save this Values Set?"
+                ,onSave = {
+                    save = true
+                    showDialog = false
+                }
+                , onSaveAs = {
+                    saveAs = true
+                    showDialog = false
+                }
+                , onDontSave = {
+                    dontSave = true
+
+                }
+                , onCancel = {
+                    showDialog = false
+                    currentState.showValuesWindow = false
+                }
+                , onCloseRequest = {
+                    showDialog = false
+                    currentState.showValuesWindow = false
+                }
+            )
+        }
+
+        if (save) {
+            save = false
+            saveFunction { currentState.showValuesWindow = false }
+        }
+
+        if (saveAs) {
+            saveAsFunction {
+                currentState.showValuesWindow = false
+                saveAs = false
+            }
+        }
+
+        if (dontSave) {
+            println("dont save called")
+            bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+            currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+            bondGraph.valuesSetHasChanged = false
+            dontSave = false
+            currentState.showValuesWindow = false
         }
     }
 }
