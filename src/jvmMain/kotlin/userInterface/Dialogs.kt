@@ -141,7 +141,12 @@ fun enterTextDialog(message: String, currentText: String, onSubmit: (text: Strin
                     }
                     .focusRequester(focusRequester)
                     , value = inputString
-                    , onValueChange = {newtext -> inputString = newtext
+                    , onValueChange = {newtext ->
+                        inputString = buildString {
+                            newtext.forEach {
+                                if ( ! (it == '\t' || it == '\n')) append (it)
+                            }
+                        }
 
                     }
 

@@ -55,18 +55,30 @@ fun getDataFilePath(): Path{
 fun main() = application {
     val state = remember { StateInfo() }
     CompositionLocalProvider(LocalStateInfo provides state) {
+
+        val currentState = LocalStateInfo.current
+        var showDialog by remember { mutableStateOf(false) }
+        var save by remember {mutableStateOf(false)}
+        var saveAs by remember { mutableStateOf(false) }
+        var dontSave by remember { mutableStateOf(false) }
+
         @Composable
         fun runWindows() {
 
-            val currentState = LocalStateInfo.current
+
 
             if (currentState.exit) {
-                if (bondGraph.graphHasChanged) {
-
-                    currentState.afterSaveAction = { exitApplication() }
-                    state.showSaveFileDialog = true;
+                println("exit function valuesSetHasChanged = ${bondGraph.valuesSetHasChanged}")
+                if (bondGraph.valuesSetHasChanged){
                     currentState.exit = false
-                } else {
+                    showDialog = true
+                } else
+                    if (bondGraph.graphHasChanged) {
+
+                        currentState.afterSaveAction = { exitApplication() }
+                        state.showSaveFileDialog = true;
+                        currentState.exit = false
+                    } else {
                     exitApplication()
                 }
             }
@@ -77,6 +89,50 @@ fun main() = application {
         runWindows()
         if (state.showValuesWindow) {
             valuesWindow()
+        }
+
+        if (showDialog) {
+            saveDialog(message = "Save this Values Set?"
+                ,onSave = {
+                    save = true
+                    showDialog = false
+                }
+                , onSaveAs = {
+                    saveAs = true
+                    showDialog = false
+                }
+                , onDontSave = {
+                    dontSave = true
+                    showDialog = false
+                }
+                , onCancel = {
+                    showDialog = false
+                }
+                , onCloseRequest = {
+                    showDialog = false
+                }
+            )
+        }
+
+        if (save){
+            save = false
+            saveFunction {
+                println("finish action")
+                currentState.exit = true
+            }
+        }
+
+        if (saveAs) {
+            saveAsFunction {
+                saveAs = false
+                currentState.exit = true
+            }
+        }
+
+        if (dontSave) {
+            dontSave = false
+            bondGraph.valuesSetHasChanged = false
+            currentState.exit = true
         }
     }
 }

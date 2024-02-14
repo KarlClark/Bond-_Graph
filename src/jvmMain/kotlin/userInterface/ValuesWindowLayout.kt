@@ -27,10 +27,6 @@ import androidx.compose.ui.window.rememberWindowState
 import bondgraph.Operation.*
 import bondgraph.PowerVar.*
 import bondgraph.*
-fun markAsChanged(){
-    bondGraph.graphHasChanged = true
-    bondGraph.valuesSetHasChanged = true
-}
 @Composable
 fun processSaveAs (description: String, finishAction: () -> Unit) {
     println("porcessSaveAs called")
@@ -41,6 +37,7 @@ fun processSaveAs (description: String, finishAction: () -> Unit) {
     bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
     currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
     bondGraph.valuesSetHasChanged = false
+    bondGraph.graphHasChanged = true
     finishAction.invoke()
 }
 
@@ -51,6 +48,7 @@ fun saveFunction(finishAction: () -> Unit) {
     bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
     //bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
     bondGraph.valuesSetHasChanged = false
+    bondGraph.graphHasChanged = true
     println("Save function calling finishAction = $finishAction")
     finishAction.invoke()
 }
@@ -262,7 +260,7 @@ fun setsBar (){
                         currentState.selectedSetId = bondGraph.createValueSet()
                         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
                         currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
-                        markAsChanged()
+                        bondGraph.valuesSetHasChanged = true
                     }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
@@ -525,11 +523,15 @@ fun setDescriptionBar(valuesSet: ValuesSet){
                 BasicTextField(modifier = Modifier
                     .fillMaxWidth()
                     , value = description
-                    , onValueChange = {
-                        description = it
+                    , onValueChange = {newText ->
+                        description = buildString {
+                            newText.forEach {
+                                if ( ! (it == '\t' || it == '\n')) append (it)
+                            }
+                        }
                         valuesSet.description = description
                         currentState.setDescription = description
-                        markAsChanged()
+                        bondGraph.valuesSetHasChanged = true
                     }
                 )
 
@@ -703,7 +705,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             , value = valueInput
                             , onValueChange = { newText ->
                                 var periodCount = 0
-                                markAsChanged()
+                                bondGraph.valuesSetHasChanged = true
                                 valueInput = buildString {
                                     newText.forEach {
                                         when {
@@ -767,7 +769,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             }
                             , value = unitsInput
                             , onValueChange = { newText ->
-                                markAsChanged()
+                                bondGraph.valuesSetHasChanged = true
                                 unitsInput = buildString {
                                     newText.forEach {
                                         if ( ! (it == '\t' || it == '\n')) append(it)
@@ -813,7 +815,7 @@ fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRe
                             }
                             ,value = descriptionInput
                             ,onValueChange = { newText ->
-                                markAsChanged()
+                                bondGraph.valuesSetHasChanged = true
                                 descriptionInput = buildString {
                                     newText.forEach {
                                     if ( ! (it == '\t' || it == '\n')) append(it)
@@ -896,13 +898,13 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                     ) {
 
                         dropDownSelectionBox(operationStrings, operationsIndex) {
-                            markAsChanged()
+                            bondGraph.valuesSetHasChanged = true
                             operationsIndex = it
                             twoPortValueData.operation = Operation.toEnum(operationStrings[it])
                         }
 
                         dropDownSelectionBox(powerVars, powerVarsIndex) {
-                            markAsChanged()
+                            bondGraph.valuesSetHasChanged = true
                             powerVarsIndex = it
                             if (it == 0 || it == 2){
                                 twoPortValueData.bond1 = bondPair.first
@@ -952,7 +954,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 }
                                 , value = valueInput
                                 , onValueChange = { newText ->
-                                    markAsChanged()
+                                    bondGraph.valuesSetHasChanged = true
                                     var periodCount = 0
                                     valueInput = buildString {
                                         newText.forEach {
@@ -1026,7 +1028,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 }
                                 , value = unitsInput
                                 , onValueChange = { newText ->
-                                    markAsChanged()
+                                    bondGraph.valuesSetHasChanged = true
                                     unitsInput = buildString {
                                         newText.forEach {
                                             if (!(it == '\t' || it == '\n')) append(it)
@@ -1073,7 +1075,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
                                 }
                                 , value = descriptionInput
                                 , onValueChange = { newText ->
-                                    markAsChanged()
+                                    bondGraph.valuesSetHasChanged = true
                                     descriptionInput = buildString {
                                         newText.forEach {
                                             if (!(it == '\t' || it == '\n')) append(it)
@@ -1101,7 +1103,7 @@ fun valuesWindow() {
     var save by remember {mutableStateOf(false)}
     var saveAs by remember { mutableStateOf(false) }
     var dontSave by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
+    //var showDialog by remember { mutableStateOf(false) }
 
     val currentState = LocalStateInfo.current
     //var valuesSetCopy by remember(bondGraph.valueSetWorkingCopy) { mutableStateOf( bondGraph.valueSetWorkingCopy) }
@@ -1148,33 +1150,34 @@ fun valuesWindow() {
         }
 
         if (closeRequest) {
+            closeRequest = false
             if (bondGraph.valuesSetHasChanged) {
-                showDialog = true
+                currentState.showSaveValuesSetDialog = true
             } else {
                 currentState.showValuesWindow = false
             }
         }
 
-        if (showDialog) {
+        if (currentState.showSaveValuesSetDialog) {
             saveDialog(message = "Save this Values Set?"
                 ,onSave = {
                     save = true
-                    showDialog = false
+                    currentState.showSaveValuesSetDialog = false
                 }
                 , onSaveAs = {
                     saveAs = true
-                    showDialog = false
+                    currentState.showSaveValuesSetDialog = false
                 }
                 , onDontSave = {
                     dontSave = true
 
                 }
                 , onCancel = {
-                    showDialog = false
+                    currentState.showSaveValuesSetDialog = false
                     currentState.showValuesWindow = false
                 }
                 , onCloseRequest = {
-                    showDialog = false
+                    currentState.showSaveValuesSetDialog = false
                     currentState.showValuesWindow = false
                 }
             )
@@ -1198,6 +1201,7 @@ fun valuesWindow() {
             currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
             bondGraph.valuesSetHasChanged = false
             dontSave = false
+            currentState.showSaveValuesSetDialog = false
             currentState.showValuesWindow = false
         }
     }
