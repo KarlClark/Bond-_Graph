@@ -196,6 +196,7 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
                     Column(
                         modifier = Modifier
                             .border(width = 1.dp, color = Color.Black)
+                            .background(MyConstants.myWhite)
                             .padding(horizontal = 6.dp)
                         , verticalArrangement = Arrangement.spacedBy(3.dp)
 
@@ -260,7 +261,7 @@ fun setsBar (){
                         currentState.selectedSetId = bondGraph.createValueSet()
                         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
                         currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
-                        bondGraph.valuesSetHasChanged = true
+                        //bondGraph.valuesSetHasChanged = true
                     }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
