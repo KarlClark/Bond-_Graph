@@ -274,7 +274,8 @@ class BondGraph(var name: String) {
     private val elementsMap = linkedMapOf<Int, Element>() // map of element ids mapped to their elements
     val bondsMap = mutableStateMapOf<Int, Bond>() // Map of bond ids mapped to their bonds.
     val valuesSetsMap = mutableStateMapOf(0 to ValuesSet(0, "set with no values"))
-    var valueSetWorkingCopy = valuesSetsMap[0]
+    //var valuesSetWorkingCopy = mutableStateOf(valuesSetsMap[0])
+    var valuesSetWorkingCopy = valuesSetsMap[0]
     val stateEquationsMap = linkedMapOf<Element, Equation>()
     val arbitrarilyAssignedResistors = arrayListOf<Element>() // List of resistors that were assigned causality arbitrarily.
 
@@ -318,6 +319,9 @@ class BondGraph(var name: String) {
         bondsMap.clear()
         arbitrarilyAssignedResistors.clear()
         results.clear()
+        valuesSetsMap.clear()
+
+
 
         for (elementDatum in data.elementData) {
             val element = ElementSerializationData.makeElement(this, elementDatum)
@@ -349,6 +353,9 @@ class BondGraph(var name: String) {
         }
 
         ValuesSetsSerializationDataList.MakeValuesSets(this, data.valuesSetsData)
+        valuesSetWorkingCopy = valuesSetsMap[0]
+        println("------ fromSerializedStrings ValuesSets are ")
+        valuesSetsMap.values.forEach { println("${it.description}") }
 
         elementsMap.values.forEach{it.createDisplayId()}
 
@@ -424,8 +431,8 @@ class BondGraph(var name: String) {
     fun copyValuesSet(id: Int): ValuesSet = valuesSetsMap[id]!!.copy()
 
     fun loadValuesSetIntoWorkingCopy(id: Int){
-        valueSetWorkingCopy = valuesSetsMap[id]!!.copy()
-        println("BondGraph.loadValues valueSetWorkingCopy = $valueSetWorkingCopy")
+        valuesSetWorkingCopy = valuesSetsMap[id]!!.copy()
+        println("BondGraph.loadValues valuesSetWorkingCopy = $valuesSetWorkingCopy")
     }
 
     fun getOnePortValueDataList(id: Int): ArrayList<OnePortValueData>{
@@ -906,6 +913,10 @@ class BondGraph(var name: String) {
                 it.createTokens()
                 if (it is Capacitor || it is Inertia) {
                     eTokenToEDotTokenMap[(it as OnePort).eToken] = (it).eDotToken
+                }
+                if (it is OnePort) {
+                    println("Calling assign for element ${it.displayId}")
+                    it.assignValue(valuesSetWorkingCopy!!.onePortValues[it])
                 }
             }
 

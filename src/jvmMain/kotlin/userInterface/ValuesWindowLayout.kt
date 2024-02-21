@@ -33,10 +33,10 @@ fun processSaveAs (description: String, finishAction: () -> Unit) {
     println("porcessSaveAs called")
     val currentState = LocalStateInfo.current
     val id = bondGraph.getNextValueSetId()
-    bondGraph.valuesSetsMap[id] = bondGraph.valueSetWorkingCopy!!.copy(id, description)
+    bondGraph.valuesSetsMap[id] = bondGraph.valuesSetWorkingCopy!!.copy(id, description)
     currentState.selectedSetId = id
     bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-    currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+    currentState.valuesSetCopy = bondGraph.valuesSetWorkingCopy
     bondGraph.valuesSetHasChanged = false
     bondGraph.graphHasChanged = true
     finishAction.invoke()
@@ -46,7 +46,7 @@ fun processSaveAs (description: String, finishAction: () -> Unit) {
 fun saveFunction(finishAction: () -> Unit) {
     val currentState = LocalStateInfo.current
     println("-------------saveFunctin called")
-    bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
+    bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valuesSetWorkingCopy!!
     //bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
     bondGraph.valuesSetHasChanged = false
     bondGraph.graphHasChanged = true
@@ -66,16 +66,16 @@ fun saveAsFunction(finishAction: () -> Unit){
 
 
 
-    if (bondGraph.valueSetWorkingCopy!!.description == bondGraph.valuesSetsMap[currentState.selectedSetId]!!.description) {
+    if (bondGraph.valuesSetWorkingCopy!!.description == bondGraph.valuesSetsMap[currentState.selectedSetId]!!.description) {
         showEnterTextDialog = true
     } else {
-        processSaveAs(bondGraph.valueSetWorkingCopy!!.description, finishAction)
+        processSaveAs(bondGraph.valuesSetWorkingCopy!!.description, finishAction)
     }
 
     if (showEnterTextDialog){
         enterTextDialog(
             message = "Enter New Description"
-            ,currentText = bondGraph.valueSetWorkingCopy!!.description
+            ,currentText = bondGraph.valuesSetWorkingCopy!!.description
             ,onSubmit = {
                 newText = it
                 showEnterTextDialog = false
@@ -97,7 +97,7 @@ fun saveAsFunction(finishAction: () -> Unit){
     if (onCloseRequest){
         println("onCloseRequest called")
         onCloseRequest = false
-        processSaveAs(bondGraph.valueSetWorkingCopy!!.description, finishAction)
+        processSaveAs(bondGraph.valuesSetWorkingCopy!!.description, finishAction)
     }
 }
 @Composable
@@ -122,7 +122,7 @@ fun deleteFunction(finishAction: () -> Unit){
         bondGraph.valuesSetsMap.remove(currentState.selectedSetId)
         currentState.selectedSetId = nextId
         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+        currentState.valuesSetCopy = bondGraph.valuesSetWorkingCopy
         bondGraph.graphHasChanged = true
         bondGraph.valuesSetHasChanged = false
         finishAction.invoke()
@@ -262,7 +262,7 @@ fun setsBar (){
                     .clickable {
                         currentState.selectedSetId = bondGraph.createValueSet()
                         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-                        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+                        currentState.valuesSetCopy = bondGraph.valuesSetWorkingCopy
                         //bondGraph.valuesSetHasChanged = true
                     }
                     .padding(horizontal = 12.dp)
@@ -318,7 +318,7 @@ fun setItem(valuesSet: ValuesSet) {
         println("______________ loadValuesSet called description = ${valuesSet.description}")
         currentState.selectedSetId = valuesSet.id
         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-        currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+        currentState.valuesSetCopy = bondGraph.valuesSetWorkingCopy
         bondGraph.valuesSetHasChanged = false
     }
 
@@ -1145,7 +1145,7 @@ fun valuesWindow() {
 
                 currentState.valuesSetCopy?.let {
                     println("calling valuesColumn")
-                    valuesColumn(it)
+                    valuesColumn(it!!)
                 }
             }
         }
@@ -1188,7 +1188,7 @@ fun valuesWindow() {
 
                 DONT_SAVE -> {
                     bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-                    currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+                    currentState.valuesSetCopy = bondGraph.valuesSetWorkingCopy
                     bondGraph.valuesSetHasChanged = false
                     currentState.showSaveValuesSetDialog = false
                     currentState.showValuesWindow = false
