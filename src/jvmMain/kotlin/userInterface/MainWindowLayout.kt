@@ -31,6 +31,7 @@ import kotlin.io.path.pathString
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
+
 val bondGraph = BondGraph("test graph")
 
 object MyConstants {
@@ -83,6 +84,14 @@ object MyConstants {
     val setSelectedColor = lightBlue
 
 }
+
+enum class SaveOptions {
+    SAVE,
+    SAVE_AS,
+    DONT_SAVE,
+    CANCEL
+}
+
 // This composable builds the sidebar for the window.
 @Composable
 fun sideBar() {

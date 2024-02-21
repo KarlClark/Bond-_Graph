@@ -41,7 +41,7 @@ fun FrameWindowScope.fileDialog(
                             if (index > 0) {
                                 file = file.substring(0,index)
                             }
-                            file = file  + ".bdgh"
+                            file += ".bdgh"
                         }
                         onResult(File(directory).resolve(file).toPath())
                     } else {
@@ -58,6 +58,52 @@ fun FrameWindowScope.fileDialog(
     },
     dispose = FileDialog::dispose
 )
+
+@Composable
+fun multiButtonDailog(message: String, onCloseRequest: () -> Unit, vararg buttonData: Pair<String, () -> Unit>) {
+
+    val dialogState = rememberDialogState(size = DpSize((buttonData.size * 100).dp, MyConstants.smallDialogHeight))
+
+    Dialog(visible = true
+        , onCloseRequest = {onCloseRequest()}
+        , state = dialogState
+
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(16.dp)
+            //.background(Color.Red)
+            //,shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                //.background(Color.Blue)
+                ,verticalArrangement = Arrangement.Center
+                ,horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(16.dp),
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    for (pair in buttonData) {
+                        TextButton(onClick = pair.second) {
+                            Text(pair.first)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun oneButtonAlertDialog(message: String, buttonText: String, onClick: () -> Unit, onCloseRequest: () -> Unit) {
@@ -88,7 +134,6 @@ fun oneButtonAlertDialog(message: String, buttonText: String, onClick: () -> Uni
                     text = message,
                     modifier = Modifier.padding(16.dp),
                 )
-
                 TextButton(onClick = onClick){
                     Text(buttonText)
                 }
@@ -166,6 +211,7 @@ fun enterTextDialog(message: String, currentText: String, onSubmit: (text: Strin
         focusRequester.requestFocus()
     }
 }
+
 @Composable
 fun saveDialog(
     message:String,
@@ -173,69 +219,14 @@ fun saveDialog(
     onSaveAs: () -> Unit,
     onDontSave: () -> Unit,
     onCancel: () -> Unit,
-    onCloseRequest: () -> Unit,
+    onCloseRequest: () -> Unit
 ) {
-
-    val dialogState = rememberDialogState(size = DpSize(MyConstants.largeDialogWidth, MyConstants.largeDialogHeight))
-
-    Dialog(
-
-        visible = true
-        ,onCloseRequest = {onCloseRequest()}
-        , state = dialogState
-    ) {
-        // Draw a rectangle shape with rounded corners inside the dialog
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(375.dp)
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = message,
-                    modifier = Modifier.padding(16.dp),
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    TextButton(
-                        onClick = { onSave() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Save")
-                    }
-
-                    TextButton(
-                        onClick = { onSaveAs() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Save As")
-                    }
-
-                    TextButton(
-                        onClick = { onDontSave() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Don't Save")
-                    }
-
-                    TextButton(
-                        onClick = { onCancel() },
-                        modifier = Modifier.padding(8.dp),
-                    ) {
-                        Text("Cancel")
-                    }
-                }
-            }
-        }
-    }
+    multiButtonDailog(
+        message
+        ,onCloseRequest
+        ,Pair("Save", onSave)
+        ,Pair("Save As", onSaveAs)
+        ,Pair("Don't Save", onDontSave)
+        ,Pair("Cancel", onCancel)
+    )
 }

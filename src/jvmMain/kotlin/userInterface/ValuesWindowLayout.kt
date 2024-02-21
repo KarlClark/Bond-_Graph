@@ -26,6 +26,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import bondgraph.Operation.*
 import bondgraph.PowerVar.*
+import userInterface.SaveOptions.*
 import bondgraph.*
 @Composable
 fun processSaveAs (description: String, finishAction: () -> Unit) {
@@ -161,6 +162,7 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
 
         Box(modifier = Modifier
             .border(width = 1.dp, color = Color.Black)
+            .background(color = color)
 
         ) {
             Row(
@@ -196,7 +198,7 @@ fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: 
                     Column(
                         modifier = Modifier
                             .border(width = 1.dp, color = Color.Black)
-                            .background(MyConstants.myWhite)
+                            .background(color=color)
                             .padding(horizontal = 6.dp)
                         , verticalArrangement = Arrangement.spacedBy(3.dp)
 
@@ -309,9 +311,7 @@ fun setItem(valuesSet: ValuesSet) {
     val currentState = LocalStateInfo.current
     var itemClicked by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
-    var save by remember {mutableStateOf(false)}
-    var saveAs by remember { mutableStateOf(false) }
-    var dontSave by remember { mutableStateOf(false) }
+    var saveOption:SaveOptions? by remember { mutableStateOf(null) }
     var cancel by remember { mutableStateOf(false) }
 
     fun loadValuesSet () {
@@ -324,22 +324,12 @@ fun setItem(valuesSet: ValuesSet) {
 
 
     if (showDialog) {
-        saveDialog(message = "Save this Values Set?"
-            ,onSave = {
-                save = true
-                showDialog = false
-            }
-            , onSaveAs = {
-                saveAs = true
-                showDialog = false
-             }
-            , onDontSave = {
-                dontSave = true
-                showDialog = false
-           }
-            , onCancel = {
-                showDialog = false
-            }
+        saveDialog(
+              message = "Save this Values Set?"
+            , onSave = { saveOption = SAVE }
+            , onSaveAs = { saveOption = SAVE_AS }
+            , onDontSave = { saveOption = DONT_SAVE }
+            , onCancel = { saveOption = CANCEL }
             , onCloseRequest = {
                 showDialog = false
             }
@@ -355,24 +345,36 @@ fun setItem(valuesSet: ValuesSet) {
         }
     }
 
-    if (save){
-        save = false
-        saveFunction {
-            println("finish action")
-            loadValuesSet()
-        }
-    }
+    if (saveOption != null) {
+        when(saveOption){
 
-    if (saveAs) {
-        saveAsFunction {
-            loadValuesSet()
-            saveAs = false
-        }
-    }
+            SAVE -> saveFunction {
+                loadValuesSet()
+                showDialog = false
+                saveOption = null
+            }
 
-    if (dontSave) {
-        dontSave = false
-        loadValuesSet()
+            SAVE_AS ->  saveAsFunction {
+                    loadValuesSet()
+                    showDialog = false
+                saveOption = null
+                }
+
+            DONT_SAVE -> {
+                loadValuesSet()
+                showDialog = false
+                saveOption = null
+            }
+
+            CANCEL -> {
+                showDialog = false
+                saveOption = null
+            }
+
+            null -> {}
+        }
+
+
     }
 
     Box(modifier = Modifier
@@ -1101,9 +1103,7 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
 @Composable
 fun valuesWindow() {
     var closeRequest by remember { mutableStateOf(false) }
-    var save by remember {mutableStateOf(false)}
-    var saveAs by remember { mutableStateOf(false) }
-    var dontSave by remember { mutableStateOf(false) }
+    var saveOption:SaveOptions? by remember { mutableStateOf(null) }
     //var showDialog by remember { mutableStateOf(false) }
 
     val currentState = LocalStateInfo.current
@@ -1160,23 +1160,12 @@ fun valuesWindow() {
         }
 
         if (currentState.showSaveValuesSetDialog) {
-            saveDialog(message = "Save this Values Set?"
-                ,onSave = {
-                    save = true
-                    currentState.showSaveValuesSetDialog = false
-                }
-                , onSaveAs = {
-                    saveAs = true
-                    currentState.showSaveValuesSetDialog = false
-                }
-                , onDontSave = {
-                    dontSave = true
-
-                }
-                , onCancel = {
-                    currentState.showSaveValuesSetDialog = false
-                    currentState.showValuesWindow = false
-                }
+            saveDialog(
+                  message = "Save this Values Set?"
+                , onSave = {saveOption = SAVE}
+                , onSaveAs = {saveOption = SAVE_AS}
+                , onDontSave = {saveOption = DONT_SAVE}
+                , onCancel = {saveOption = CANCEL}
                 , onCloseRequest = {
                     currentState.showSaveValuesSetDialog = false
                     currentState.showValuesWindow = false
@@ -1184,26 +1173,33 @@ fun valuesWindow() {
             )
         }
 
-        if (save) {
-            save = false
-            saveFunction { currentState.showValuesWindow = false }
-        }
+        if (saveOption != null){
+            when (saveOption){
 
-        if (saveAs) {
-            saveAsFunction {
-                currentState.showValuesWindow = false
-                saveAs = false
+                SAVE -> saveFunction {
+                    currentState.showValuesWindow = false
+                    saveOption = null
+                }
+
+                SAVE_AS -> saveAsFunction {
+                    currentState.showValuesWindow = false
+                    saveOption = null
+                }
+
+                DONT_SAVE -> {
+                    bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
+                    currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
+                    bondGraph.valuesSetHasChanged = false
+                    currentState.showSaveValuesSetDialog = false
+                    currentState.showValuesWindow = false
+                    saveOption = null
+                }
+
+                CANCEL -> {saveOption = null}
+
+                null -> {}
             }
-        }
-
-        if (dontSave) {
-            println("dont save called")
-            bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
-            currentState.valuesSetCopy = bondGraph.valueSetWorkingCopy
-            bondGraph.valuesSetHasChanged = false
-            dontSave = false
             currentState.showSaveValuesSetDialog = false
-            currentState.showValuesWindow = false
         }
     }
 }
