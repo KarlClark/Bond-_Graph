@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import bondgraph.Operation.*
 import bondgraph.PowerVar.*
@@ -1111,7 +1112,8 @@ fun valuesWindow() {
     Window(
         //onCloseRequest = {currentState.showValuesWindow = false}
         onCloseRequest = {closeRequest = true}
-        ,state = rememberWindowState(width = Dp.Unspecified),
+        ,state = currentState.valuesWindowState
+        //,state = rememberWindowState(width = Dp.Unspecified),
     ) {
 
 

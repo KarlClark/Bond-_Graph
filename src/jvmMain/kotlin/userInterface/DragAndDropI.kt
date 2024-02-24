@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.window.WindowState
 import bondgraph.*
 import bondgraph.ElementTypes.*
 import bondgraph.BondGraph.Companion.getArrowOffsets
@@ -616,5 +617,6 @@ internal class StateInfo {
     //val valueSetMap by mutableStateMapOf(bondGraph.valuesSetsMap)
     var setDescription by mutableStateOf("")
     var valuesSetCopy by mutableStateOf(bondGraph.valuesSetWorkingCopy)
+    var valuesWindowState by mutableStateOf(WindowState())
     val xmap by mutableStateMapOf(1 to 'b', 2 to 'c' )
 }

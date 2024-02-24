@@ -312,6 +312,8 @@ class BondGraph(var name: String) {
     @Composable
     fun fromSerializedStrings(serializedString: String) {
 
+    val currentState = LocalStateInfo.current
+
         val state = LocalStateInfo.current
         val data:BondGraphSerializationData3 = Cbor.decodeFromHexString(serializedString)
 
@@ -354,6 +356,8 @@ class BondGraph(var name: String) {
 
         ValuesSetsSerializationDataList.MakeValuesSets(this, data.valuesSetsData)
         valuesSetWorkingCopy = valuesSetsMap[0]
+        currentState.valuesSetCopy = valuesSetWorkingCopy
+        currentState.selectedSetId = 0
         println("------ fromSerializedStrings ValuesSets are ")
         valuesSetsMap.values.forEach { println("${it.description}") }
 
@@ -961,6 +965,8 @@ class BondGraph(var name: String) {
 
                 if (derivativeCausalityElements.size > 0) {
                     equation = solve(equation.leftSide as Token, equation)
+                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                    equation = simplifySums(equation)
                     if (displayIntermediateResults) results.add(equation.toAnnotatedString())
                 }
 

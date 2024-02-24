@@ -410,7 +410,10 @@ fun mainWindow() {
                 , fontSize = MyConstants.menuBarFontSize
                 , textAlign = TextAlign.Center
                 , modifier = Modifier
-                    .clickable { currentState.showValuesWindow = true; println("Values clicked") }
+                    .clickable {
+                        currentState.showValuesWindow = true
+                        currentState.valuesWindowState.isMinimized = false
+                        println("Values clicked") }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
             )

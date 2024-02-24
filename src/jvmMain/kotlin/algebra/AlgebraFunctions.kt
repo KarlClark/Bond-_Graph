@@ -76,7 +76,7 @@ function takes a Term (that is not a fraction) and expands it to an arraylist of
 
 Note: A Sum can also mask a single Token.  I call these hanging sums. But we don't deal with that here
 since a Sum can also be controlling the sign of the whole Term.  These Sums crop up when simplifying
-a Sum like (a + b -a). After simplifying we are left with a Sum with just one Token b. The simplifySums
+a Sum like (a + b -a). After simplifying we are left with a Sum with just one Token b. The implifySumss
 function resolves these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
  */
 
@@ -418,8 +418,10 @@ fun resloveHangingSums(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTer
     var localIsPlusTerm = isPlusTerm
 
 
+    println("---------------------------resolveHangingSums()")
     // Check every expression in the list to see if it is a hanging sum
     for (expr in source) {
+        println("expr = ${expr.toAnnotatedString()}")
         if (expr is Sum) {
             when {
                 expr.plusTerms.size == 1 && expr.minusTerms.size == 0 -> {
@@ -441,6 +443,7 @@ fun resloveHangingSums(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTer
             dest.add(expr)
         }
     }
+    println("---------------- returning localIsPlusTerm = $localIsPlusTerm")
     return localIsPlusTerm
 }
 
@@ -695,10 +698,10 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
 
     // break expr apart into a list of Terms and a list o Sums.
     for (e in (expr).numerators){
-        if (e is Token || e is Term) {
-            termList.add(e)
-        } else {
+        if (e is Sum) {
             sumList.add(e)
+        } else {
+            termList.add(e)
         }
     }
 
