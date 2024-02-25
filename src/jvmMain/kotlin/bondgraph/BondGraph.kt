@@ -17,7 +17,7 @@ import kotlinx.serialization.encodeToHexString
 import userInterface.MyConstants
 import java.util.LinkedList
 
-val displayIntermediateResults = true
+val displayIntermediateResults = false
 
 class BadGraphException (message: String) : Exception(message)
 class AlgebraException (message: String) : Exception(message)
@@ -64,17 +64,14 @@ class Results() {
 
     fun add(string: String?) {
 
-        println("results.add(string) $string")
         resultsList.add(AnnotatedString( string ?: "null"))
     }
 
     fun add(string: AnnotatedString?) {
-        println("results.add(AnnotatedString) $string")
         resultsList.add(string ?: AnnotatedString("null"))
     }
 
     fun clear(){
-        println("results.clear() called")
         resultsList.clear()
         resultsList.clear()
     }
@@ -339,13 +336,11 @@ class BondGraph(var name: String) {
             }
         }
 
-        println("data.arbitrarilyAssignedResistorsIds.size = ${data.arbitrarilyAssignedResistorsIds.size}")
         data.unAssignedResistorIds.forEach { unAssignedResistors.add(Pair(elementsMap[it.first]!!, if (it.second == null) null else elementsMap[it.second])) }
 
         data.arbitrarilyAssignedResistorsIds.forEach{
             elementsMap.get(it)?.let { it1 ->
                 arbitrarilyAssignedResistors.add(it1)
-                println ("fromSerialization:  element ${it1.displayId} setting isCausalityArbitrarilyAssigned to true ")
                 (it1 as Resistor).isCausalityArbitrarilyAssigned = true
                 /*val effortElement = it1.getBondList()[0].effortElement
                 if (effortElement != null) {
@@ -358,7 +353,6 @@ class BondGraph(var name: String) {
         valuesSetWorkingCopy = valuesSetsMap[0]
         currentState.valuesSetCopy = valuesSetWorkingCopy
         currentState.selectedSetId = 0
-        println("------ fromSerializedStrings ValuesSets are ")
         valuesSetsMap.values.forEach { println("${it.description}") }
 
         elementsMap.values.forEach{it.createDisplayId()}
@@ -396,14 +390,12 @@ class BondGraph(var name: String) {
             }
         }
 
-        println("data.arbitrarilyAssignedResistorsIds.size = ${data.arbitrarilyAssignedResistorsIds.size}")
         unAssignedResistors.addAll(elementsMap.values
             .filter { it is Resistor && it.displayData.color != MyConstants.defaultElementColor  }
             .map{Pair(it, null)})
         data.arbitrarilyAssignedResistorsIds.forEach{
             elementsMap.get(it)?.let { it1 ->
                 arbitrarilyAssignedResistors.add(it1)
-                println ("fromSerialization:  element ${it1.displayId} setting isCausalityArbitrarilyAssigned to true ")
                 (it1 as Resistor).isCausalityArbitrarilyAssigned = true
                 val effortElement = it1.getBondList()[0].effortElement
                 if (effortElement != null) {
@@ -427,7 +419,6 @@ class BondGraph(var name: String) {
 
     fun createValueSet(): Int {
         val id = getNextValueSetId()
-        println("BondGraph.createvaluesSet id = $id")
         valuesSetsMap[id] = ValuesSet(id, "new set " + id.toString(), this)
         return id
     }
@@ -436,7 +427,6 @@ class BondGraph(var name: String) {
 
     fun loadValuesSetIntoWorkingCopy(id: Int){
         valuesSetWorkingCopy = valuesSetsMap[id]!!.copy()
-        println("BondGraph.loadValues valuesSetWorkingCopy = $valuesSetWorkingCopy")
     }
 
     fun getOnePortValueDataList(id: Int): ArrayList<OnePortValueData>{
@@ -919,7 +909,6 @@ class BondGraph(var name: String) {
                     eTokenToEDotTokenMap[(it as OnePort).eToken] = (it).eDotToken
                 }
                 if (it is OnePort) {
-                    println("Calling assign for element ${it.displayId}")
                     it.assignValue(valuesSetWorkingCopy!!.onePortValues[it])
                 }
             }
@@ -981,6 +970,8 @@ class BondGraph(var name: String) {
                     equation = cancel(equation)
                     if (displayIntermediateResults) results.add(equation.toAnnotatedString())
                 }
+
+                results.add(equation.toAnnotatedString())
             }
             state.showResults = true
 

@@ -8,8 +8,9 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraFunctions.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraFunctions.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/DragAndDropI.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/DragAndDropI.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/MainWindowLayout.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/MainWindowLayout.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/Main.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/Main.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/ValuesWindowLayout.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/ValuesWindowLayout.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

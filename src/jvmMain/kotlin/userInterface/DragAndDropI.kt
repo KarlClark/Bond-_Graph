@@ -286,7 +286,6 @@ fun  dropTarget(
                     if (dragInfo.mode == Mode.BOND_MODE) {  // must be in BOND_MODE to work with bonds
 
                         if (bondId >= 0) { // There was a tap near a bond
-                            println("tap near a bond  isSHifted= $isShifted")
                             if (isShifted){ // if shift tap then switch the end the causal stroke is on
                                 val bond = bondGraph.getBond(bondId)
                                 if (bond != null){
@@ -544,7 +543,6 @@ fun  dropTarget(
 
         if (dragInfo.needsAgument){
             dragInfo.needsAgument = false
-            println("calling augment form dropTarget")
             bondGraph.augment()
         }
     }

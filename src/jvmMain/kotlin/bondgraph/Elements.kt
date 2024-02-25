@@ -240,7 +240,6 @@ class ValuesSetSerializationData (val id :Int, val description: String, val oneP
             with(valuesSet) {
                 val onePortData = onePortValues.values.map { OnePortValueSerializationData.getData(it) }
                 val twoPortData = twoPortValues.values.map { TwoPortValueSerializationData.getData(it) }
-                println("getData onePortData.size = ${onePortData.size}")
                 return ValuesSetSerializationData(id, description, onePortData, twoPortData)
             }
         }
@@ -248,7 +247,6 @@ class ValuesSetSerializationData (val id :Int, val description: String, val oneP
         fun makeValuesSet(bondGraph: BondGraph, data: ValuesSetSerializationData): ValuesSet {
             with (data) {
                 val valuesSet = ValuesSet(id, description)
-                println("makeValuesSet onePortData.size = ${onePortData.size}")
                 onePortData.forEach { valuesSet.onePortValues[bondGraph.getElement(it.elementId)!!] = OnePortValueSerializationData.makeOnePortValueData(bondGraph, it) }
                 twoPortData.forEach { valuesSet.twoPortValues[bondGraph.getElement(it.elementId)!!] = TwoPortValueSerializationData.makeTwoPortValueData(bondGraph, it) }
                 return valuesSet
@@ -665,7 +663,6 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
     override abstract fun getFlow(bond: Bond): Expr
 
     fun assignValue(data: OnePortValueData? = null) {
-        println("assignValue called on $displayId,  vToken = ${vToken.toAnnotatedString()} ")
 
         if (vToken.bondId1.equals("") )throw BadGraphException("Error: Call to assignValue and vToken has not been assigned. createTokens() should be called before assignValue()")
 
@@ -1079,7 +1076,6 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
     }
 
     override fun getFlow(bond: Bond): Expr {
-        println("getFlow called on $displayId,  isCausalityArbitrarilyAssigned = $isCausalityArbitrarilyAssigned  substituteExprssion = ${substituteExprssion?.toAnnotatedString()}")
         if (isCausalityArbitrarilyAssigned){
             if (substituteExprssion == null) {
                 return fToken

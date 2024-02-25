@@ -83,15 +83,24 @@ function resolves these to single Tokens.  But as this code evolves, such sums m
 fun stripCoefficentFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
     var num = startNum
     source.forEach {
-        when (it) {
-            is Token -> dest.add(it)
-            is Number -> num = operation(num, it.value)
+        var expr = it
+        if (it is Sum && it.plusTerms.size == 1 && it.minusTerms.size == 0){
+            expr = it.plusTerms[0]
+        }
+        if (it is Term && it.numerators.size == 1 && it.denominators.size == 0) {
+            expr = it.numerators[0]
+        }
+        when (expr) {
+            is Token -> dest.add(expr)
+            is Number -> num = operation(num, expr.value)
             is Term -> {
-                val p = stripCoefficient(it)
-                dest.add(p.second)
-                num = operation(num, p.first)
+                if (expr.numerators.size != 0 || expr.denominators.size != 0) {
+                    val p = stripCoefficient(expr)
+                    dest.add(p.second)
+                    num = operation(num, p.first)
+                }
             }
-            is Sum -> dest.add(it)
+            is Sum -> dest.add(expr)
         }
     }
     return num
@@ -103,8 +112,10 @@ fun rationalizeCoefficient(term: Term): Term {
     val denominators = arrayListOf<Expr>()
     var num = 1.0
 
+
     num = stripCoefficentFromList(term.numerators, numerators, 1.0, Double::times)
     num = stripCoefficentFromList(term.denominators, denominators, num, Double::div)
+
 
     val newTerm = Term()
     if (num != 1.0) {
@@ -418,10 +429,8 @@ fun resloveHangingSums(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTer
     var localIsPlusTerm = isPlusTerm
 
 
-    println("---------------------------resolveHangingSums()")
     // Check every expression in the list to see if it is a hanging sum
     for (expr in source) {
-        println("expr = ${expr.toAnnotatedString()}")
         if (expr is Sum) {
             when {
                 expr.plusTerms.size == 1 && expr.minusTerms.size == 0 -> {
@@ -443,7 +452,6 @@ fun resloveHangingSums(source: ArrayList<Expr>, dest: ArrayList<Expr>, isPlusTer
             dest.add(expr)
         }
     }
-    println("---------------- returning localIsPlusTerm = $localIsPlusTerm")
     return localIsPlusTerm
 }
 
@@ -476,9 +484,10 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
 
     // Create a new term from the new resolved numerators and denominators and add it to
     // either the newPlusTerms list or the new minusTermsList.
-    val term = Term()
+    var term = Term()
     term.numerators.addAll(newNumerators)
     term.denominators.addAll(newDenominators)
+    term = rationalizeCoefficient(term)
     if (isPlusTerm) {
         newPlusTerms.add(term)
     } else {
@@ -814,7 +823,9 @@ fun commonDenominator(sum: Sum): Expr {
         }
     }
 
-
+    if (commonDenominator.size == 0) {
+        return sum
+    }
 
     // Calculate new numerators for each term in the original sum based on the common denominator. Place
     // them all in a new sum.
@@ -1105,7 +1116,6 @@ fun gatherLikeTerms(sum: Sum):Expr {
  */
 fun solve (token: Token, equation: Equation): Equation {
 
-    println("Solve")
     var leftSide = equation.leftSide
     var rightSide = equation.rightSide
 
@@ -1142,7 +1152,6 @@ fun solve (token: Token, equation: Equation): Equation {
                 minusTerms.remove(it)
             }
 
-            println("leftSIde is Term = ${leftSide is Term}  leftSide is Sum = ${leftSide is Sum}")
 
             var commonFraction: Expr
 

@@ -31,7 +31,6 @@ import userInterface.SaveOptions.*
 import bondgraph.*
 @Composable
 fun processSaveAs (description: String, finishAction: () -> Unit) {
-    println("porcessSaveAs called")
     val currentState = LocalStateInfo.current
     val id = bondGraph.getNextValueSetId()
     bondGraph.valuesSetsMap[id] = bondGraph.valuesSetWorkingCopy!!.copy(id, description)
@@ -46,26 +45,21 @@ fun processSaveAs (description: String, finishAction: () -> Unit) {
 @Composable
 fun saveFunction(finishAction: () -> Unit) {
     val currentState = LocalStateInfo.current
-    println("-------------saveFunctin called")
     bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valuesSetWorkingCopy!!
     //bondGraph.valuesSetsMap[currentState.selectedSetId] = bondGraph.valueSetWorkingCopy!!
     bondGraph.valuesSetHasChanged = false
     bondGraph.graphHasChanged = true
-    println("Save function calling finishAction = $finishAction")
     finishAction.invoke()
 }
 
 @Composable
 fun saveAsFunction(finishAction: () -> Unit){
 
-    println("saveAsFunction called")
     val currentState = LocalStateInfo.current
     var newText by remember { mutableStateOf("") }
     var onSubmit by remember { mutableStateOf(false) }
     var onCloseRequest by remember { mutableStateOf(false) }
     var showEnterTextDialog by remember { mutableStateOf(false) }
-
-
 
     if (bondGraph.valuesSetWorkingCopy!!.description == bondGraph.valuesSetsMap[currentState.selectedSetId]!!.description) {
         showEnterTextDialog = true
@@ -90,13 +84,11 @@ fun saveAsFunction(finishAction: () -> Unit){
     }
 
     if (onSubmit) {
-        println("onSubmit called")
         onSubmit = false
         processSaveAs(newText, finishAction)
     }
 
     if (onCloseRequest){
-        println("onCloseRequest called")
         onCloseRequest = false
         processSaveAs(bondGraph.valuesSetWorkingCopy!!.description, finishAction)
     }
@@ -316,7 +308,6 @@ fun setItem(valuesSet: ValuesSet) {
     var cancel by remember { mutableStateOf(false) }
 
     fun loadValuesSet () {
-        println("______________ loadValuesSet called description = ${valuesSet.description}")
         currentState.selectedSetId = valuesSet.id
         bondGraph.loadValuesSetIntoWorkingCopy(currentState.selectedSetId)
         currentState.valuesSetCopy = bondGraph.valuesSetWorkingCopy
@@ -499,7 +490,6 @@ fun valuesBar () {
 fun setDescriptionBar(valuesSet: ValuesSet){
     val currentState = LocalStateInfo.current
     var description by remember(valuesSet.description) { mutableStateOf(valuesSet.description) }
-    println("setDescriptionBar valuesSet id = ${valuesSet.id} , description = $description  description = ${valuesSet.description}")
     Column (modifier = Modifier
         .fillMaxWidth()
         .background(MyConstants.mediumGray)
@@ -559,8 +549,6 @@ fun valuesColumn(valuesSet: ValuesSet) {
     val scrollState = rememberScrollState()
     val eList = arrayListOf<Element>()
 
-    println("valuesColumn valueSet id = ${valuesSet.id}")
-    valuesSet.onePortValues.values.forEach { println("${it.element.displayId} value = ${it.value}") }
     currentState.setDescription = description
     Column(modifier = Modifier
         .background(Color.DarkGray)
@@ -609,7 +597,6 @@ fun valuesColumn(valuesSet: ValuesSet) {
 
                     var count = 0
                     onePortValueDataList.forEach {
-                        println("passing ${it.element.displayId}  value = ${it.value} to onePortItem")
                         onePortItem(it, focusRequesterList[count], focusRequesterList[count + 1], count == 0)
                         count++
                     }
@@ -637,9 +624,7 @@ fun valuesColumn(valuesSet: ValuesSet) {
 @Composable
 fun onePortItem(onePortValueData: OnePortValueData, valueFocusRequester: FocusRequester, nextItemFocusRequester: FocusRequester, initialFocus: Boolean){
 
-    println("onePortItem called with ${onePortValueData.element.displayId}  value = ${onePortValueData.value}")
     var valueInput by remember(onePortValueData.value) { mutableStateOf(if (onePortValueData.value == null) "" else onePortValueData.value.toString()) }
-    println("valueInput = $valueInput")
     var unitsInput by remember(onePortValueData.units) { mutableStateOf(if (onePortValueData.units == null) "" else onePortValueData.units) }
     var descriptionInput by remember(onePortValueData.description) { mutableStateOf(if (onePortValueData.description == null) "" else onePortValueData.description) }
     var initialFocus = initialFocus
@@ -1137,16 +1122,7 @@ fun valuesWindow() {
 
                 )
 
-
-               /* bondGraph.valuesSetsMap[currentState.selectedSetId]?.let {
-                    println("calling valuesColumn selectedSetId = ${currentState.selectedSetId}  id = ${bondGraph.valuesSetsMap[currentState.selectedSetId]?.id}")
-                    println("it value = ${it.id}")
-                    it.onePortValues.values.forEach{opv -> println("${opv.element.displayId} value = ${opv.value}")}
-                    valuesColumn(it)
-                }*/
-
                 currentState.valuesSetCopy?.let {
-                    println("calling valuesColumn")
                     valuesColumn(it!!)
                 }
             }
