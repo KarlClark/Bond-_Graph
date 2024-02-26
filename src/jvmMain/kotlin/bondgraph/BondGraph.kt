@@ -353,7 +353,6 @@ class BondGraph(var name: String) {
         valuesSetWorkingCopy = valuesSetsMap[0]
         currentState.valuesSetCopy = valuesSetWorkingCopy
         currentState.selectedSetId = 0
-        valuesSetsMap.values.forEach { println("${it.description}") }
 
         elementsMap.values.forEach{it.createDisplayId()}
 
@@ -909,7 +908,10 @@ class BondGraph(var name: String) {
                     eTokenToEDotTokenMap[(it as OnePort).eToken] = (it).eDotToken
                 }
                 if (it is OnePort) {
-                    it.assignValue(valuesSetWorkingCopy!!.onePortValues[it])
+                    it.setValue(valuesSetWorkingCopy!!.onePortValues[it])
+                }
+                if (it is TwoPort) {
+                    it.setValue(valuesSetWorkingCopy!!.twoPortValues[it])
                 }
             }
 

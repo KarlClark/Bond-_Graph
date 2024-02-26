@@ -166,8 +166,15 @@ enum class Operation {
     }
 }
 data class OnePortValueData(val element: Element, var description: String = "", var value: Double? = null, var units: String = "")
+
+/*
+    Typical bond graph convetion is to express the constitutive laws for transformers and gyrators as follows:
+    TF e1 = me2
+    Gy e1 = Rf2
+    Hence the naming convention below, take variable 2 and perform operation on it to get variable 1.
+ */
 data class TwoPortValueData(val element: Element, var units: String = "", var description: String = "", var operation: Operation,
-                       var powerVar1: PowerVar, var bond1:Bond, var value: Double? = null, var powerVar2: PowerVar, var bond2:Bond)
+                       var powerVar2: PowerVar, var bond2:Bond, var value: Double? = null, var powerVar1: PowerVar, var bond1:Bond)
 @Serializable
 class OnePortValueSerializationData(val elementId: Int, val description: String, val value: Double?, val units: String) {
 
@@ -413,6 +420,8 @@ class Modulator () {
     var mToken: Token? = null
 
     /*
+        The general convention for bond graphs is to express the constitutive laws for transformers and
+        gyrators as follows:
         TF  e1 = me2
         GY e1 = rf2
         The valueNumber and bondToMultiply below represent the right side of the
@@ -423,13 +432,14 @@ class Modulator () {
     var bomdToMulitply: Bond? = null
 
     fun createToken(bondList: ArrayList<Bond>) {
+        val tokenString = if (bondList[0].element1 is Transformer || bondList[0].element2 is Transformer) "M" else "R"
         val bondIdPair = if (bondList[0].displayId < bondList[1].displayId)
             Pair(bondList[0], bondList[1]) else
             Pair(bondList[1], bondList[0])
         mToken = Token(
             bondIdPair.first.displayId,
             bondIdPair.second.displayId,
-            AnnotatedString("M"),
+            AnnotatedString(tokenString),
             false,
             false,
             false,
@@ -438,26 +448,24 @@ class Modulator () {
         bomdToMulitply = bondIdPair.first
     }
 
-    fun setValue(
-        powerVar2: PowerVar,
-        bond2: Bond,
-        value: Double,
-        powerVar1: PowerVar,
-        bond1: Bond,
-        operation: Operation
-    ) {
-        // perform operation on powerVar2 to get powerVar1
-        this.value = value
-        if (powerVar2 == powerVar1) {
-            // Transformer
-            if (powerVar1 == EFFORT) {
-                bomdToMulitply = if (operation == MULTIPLY) bond2 else bond1
-            } else {
-                bomdToMulitply = if (operation == MULTIPLY) bond1 else bond2
+    fun setValue(twoPortValueData: TwoPortValueData?) {
+        // perform operation on powerVar2 to get powerVar1.  See comment above
+        if (twoPortValueData != null && twoPortValueData.value != null){
+
+            with(twoPortValueData) {
+                this@Modulator.value = value
+                if (powerVar2 == powerVar1) {
+                    // Transformer
+                    if (powerVar1 == EFFORT) {
+                        bomdToMulitply = if (operation == MULTIPLY) bond2 else bond1
+                    } else {
+                        bomdToMulitply = if (operation == MULTIPLY) bond1 else bond2
+                    }
+                } else {
+                    // Gyrator
+                    bomdToMulitply = if (operation == MULTIPLY) bond2 else bond1
+                }
             }
-        } else {
-            // Gyrator
-            bomdToMulitply = if (operation == MULTIPLY) bond2 else bond1
         }
     }
 
@@ -466,7 +474,7 @@ class Modulator () {
         if (bomdToMulitply == null) throw BadGraphException("Error: Call to getEffortModulator on un-initialize modulator.  Bond = ${bond.displayId}")
 
         if (value != null) {
-            if (bond == bomdToMulitply) Number(1.0 / value!!) else Number(value!!)
+            return if (bond == bomdToMulitply) Number(1.0 / value!!) else Number(value!!)
         }
 
         return if (bond == bomdToMulitply) mToken!! else Term().divide(mToken!!)
@@ -476,7 +484,7 @@ class Modulator () {
         if (bomdToMulitply == null) throw BadGraphException("Error: Call to getFlowModulator on un-initialize modulator.  Bond = ${bond.displayId}")
 
         if (value != null) {
-            if (bond == bomdToMulitply) Number(value!!) else Number(1.0/value!!)
+            return if (bond == bomdToMulitply) Number(value!!) else Number(1.0/value!!)
         }
 
         return if (bond == bomdToMulitply) Term().divide(mToken!!) else mToken!!
@@ -662,7 +670,7 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     override abstract fun getFlow(bond: Bond): Expr
 
-    fun assignValue(data: OnePortValueData? = null) {
+    fun setValue(data: OnePortValueData? = null) {
 
         if (vToken.bondId1.equals("") )throw BadGraphException("Error: Call to assignValue and vToken has not been assigned. createTokens() should be called before assignValue()")
 
@@ -697,9 +705,18 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 }
 abstract class TwoPort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
 
+    val modulator = Modulator()
     override abstract fun getEffort(bond: Bond): Expr
 
     override abstract fun getFlow(bond: Bond): Expr
+
+    override fun createTokens() {
+        modulator.createToken(getBondList())
+    }
+
+    fun setValue(twoPortValueData: TwoPortValueData?) {
+        modulator.setValue(twoPortValueData)
+    }
 
     /*
         Add the bond to this element.  If this element already has two bonds, we need to delete
@@ -1197,15 +1214,15 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     //var tToken = Token()
     //var mToken = Token()
-    val modulator = Modulator()
+    //val modulator = Modulator()
 
-    override fun createTokens() {
+    /*override fun createTokens() {
         val bondsList = getBondList()
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         //tToken = Token(bondsList[0].displayId, bondsList[1].displayId , elementType.toAnnotatedString(), false, false, false, false)
         //mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
         modulator.createToken(bondsList)
-    }
+    }*/
 
     /*
         A transformer has two bonds.  Some other element has set the causality on one of the bonds and then
@@ -1257,15 +1274,15 @@ class Gyrator (bondGraph: BondGraph, id: Int, elementType: ElementTypes, display
 
     //var gToken = Token()
     var mToken = Token()
-    val modulator = Modulator()
+    //val modulator = Modulator()
 
-    override fun createTokens() {
+    /*override fun createTokens() {
         val bondsList = getBondList()
         if (bondsList.isEmpty()) throw BadGraphException("Error: Attempt to create tokens on an element with no bonds. Has createTokens been called before augmentation?")
         //gToken = Token(bondsList[0].displayId, bondsList[1].displayId, elementType.toAnnotatedString(), false, false, false, false )
         //mToken = Token(bondsList[0].displayId, bondsList[1].displayId, AnnotatedString("M"), false, false, false, false)
         modulator.createToken(bondsList)
-    }
+    }*/
 
     /*
        A gyrator has two bonds.  Some other element has set the causality on one of the bonds and then
