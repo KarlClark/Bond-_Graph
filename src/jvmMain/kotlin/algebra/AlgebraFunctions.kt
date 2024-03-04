@@ -133,7 +133,7 @@ fun rationalizeCoefficient(term: Term): Term {
     items in both the numerator and denominator just in case.  In addition, if more than one
     number is found we calculate a new number by multiplying/dividing the numbers together.
  */
-fun stripCoefficient(term: Term): Pair<Double, Term>{
+fun stripCoefficient(term: Term): Pair<Double, Expr>{
 
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
@@ -146,6 +146,9 @@ fun stripCoefficient(term: Term): Pair<Double, Term>{
     val term = Term()
     term.numerators.addAll(numerators)
     term.denominators.addAll(denominators)
+    if (term.numerators.size == 1 && term.denominators.size == 0){
+        return Pair(num, term.numerators[0])
+    }
     return Pair(num, term)
 }
 
@@ -158,10 +161,11 @@ fun combineTerms(sum: Sum): Expr {
     fun processTerms(exprs: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double{
 
         var num = startNum
-        var value1 = 1.0
+        var value1: Double
 
         for (expr in exprs) {
             var expr1 = expr
+            value1 = 1.0
             if (expr is Term){
                 val pair = stripCoefficient(expr)
                 expr1 = pair.second
@@ -1118,6 +1122,7 @@ fun solve (token: Token, equation: Equation): Equation {
 
     var leftSide = equation.leftSide
     var rightSide = equation.rightSide
+
 
     if (equation.rightSide is Term){
         if ((equation.rightSide as Term).numerators.contains(token) || (equation.rightSide as Term).denominators.contains(token)) {

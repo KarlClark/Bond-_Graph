@@ -450,8 +450,9 @@ class Modulator () {
 
     fun setValue(twoPortValueData: TwoPortValueData?) {
         // perform operation on powerVar2 to get powerVar1.  See comment above
-        if (twoPortValueData != null && twoPortValueData.value != null){
-
+        if (twoPortValueData == null || twoPortValueData.value == null) {
+            value = null
+        } else {
             with(twoPortValueData) {
                 this@Modulator.value = value
                 if (powerVar2 == powerVar1) {

@@ -357,9 +357,7 @@ class Term():Expr {
         var newNum = operation (1.0, num.value)
 
 
-        //println ("buildTerm number = ${num.toAnnotatedString()}  value = ${num.value}  term = ${term.toAnnotatedString()}")
         term.numerators.forEach {
-            //println("numerator term = ${it.toAnnotatedString()}  ${it::class.simpleName}")
             if (it is Number){
                 newNum *= it.value
             } else {
@@ -370,7 +368,6 @@ class Term():Expr {
         if (newNum != 1.0) {
             newNumerators.addFirst(Number(newNum.absoluteValue))
         }
-        //println("add $newNum to numerators")
         val newTerm = Term()
         newTerm.numerators.addAll(newNumerators)
         newTerm.denominators.addAll(term.denominators)
@@ -584,6 +581,7 @@ class Sum(): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
         val newMinusTerms = arrayListOf<Expr>()
+
 
         newPlusTerms.addAll(plusTerms)
         newMinusTerms.addAll(minusTerms)

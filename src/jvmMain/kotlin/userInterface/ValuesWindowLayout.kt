@@ -563,7 +563,7 @@ fun valuesColumn(valuesSet: ValuesSet) {
         Box( modifier = Modifier
                 .fillMaxSize()
                 .background(MyConstants.mediumGray)
-                .padding(start = 1.dp, end = 12.dp, top = 6.dp, bottom = 28.dp) // big bottom margin to leave room for drop down menu in twoPortItem composable
+                .padding(start = 1.dp, end = 12.dp, top = 6.dp, bottom = 32.dp) // big bottom margin to leave room for drop down menu in twoPortItem composable
 
         ) {
 
