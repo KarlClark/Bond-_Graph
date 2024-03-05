@@ -616,5 +616,7 @@ internal class StateInfo {
     var setDescription by mutableStateOf("")
     var valuesSetCopy by mutableStateOf(bondGraph.valuesSetWorkingCopy)
     var valuesWindowState by mutableStateOf(WindowState())
+    //var valueWindowIsVisible by mutableStateOf(true)
+    var valuesWindowOnTop by mutableStateOf(false)
     val xmap by mutableStateMapOf(1 to 'b', 2 to 'c' )
 }

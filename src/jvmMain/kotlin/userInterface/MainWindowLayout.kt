@@ -413,6 +413,8 @@ fun mainWindow() {
                     .clickable {
                         currentState.showValuesWindow = true
                         currentState.valuesWindowState.isMinimized = false
+                        currentState.valuesWindowOnTop = true
+                        currentState.valuesWindowOnTop = false
                         println("Values clicked") }
                     .padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)

@@ -1098,6 +1098,7 @@ fun valuesWindow() {
         //onCloseRequest = {currentState.showValuesWindow = false}
         onCloseRequest = {closeRequest = true}
         ,state = currentState.valuesWindowState
+        , alwaysOnTop = currentState.valuesWindowOnTop
         //,state = rememberWindowState(width = Dp.Unspecified),
     ) {
 
