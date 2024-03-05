@@ -647,7 +647,7 @@ abstract class Element(val bondGraph:  BondGraph, val id: Int, val elementType: 
 }
 
 abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displayData: ElementDisplayData): Element(bondGraph, id, elementType, displayData) {
-    // eTOken is the token for the energy variable for a inertia or capacitor
+    // eToken is the token for the energy variable for a inertia or capacitor
     // eDotToken is the token for the time derivative of the energy variable.
     // vToken is for the value of the oneport, the capacitance for example
     var eToken = Token()
@@ -797,7 +797,9 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
     override fun getFlow(bond: Bond): Expr {
         val bondsList = getBondList()
         val flowBond = bondsList.filter{it.effortElement !== this}[0]
-        return getOtherElement(this, flowBond).getFlow(flowBond)
+        val otherElement = getOtherElement(this, flowBond)
+        val flow = otherElement.getFlow(flowBond)
+        return flow
 
     }
 
@@ -816,7 +818,8 @@ class OneJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, dis
         var sum: Expr = Sum()
         for (otherBond in otherBonds ) {
             val otherElement = getOtherElement(thisElement, otherBond)
-            sum = if (sameDirection(thisElement, bond, otherBond)) sum.subtract(otherElement.getEffort(otherBond)) else sum.add(otherElement.getEffort(otherBond))
+            val effort = otherElement.getEffort(otherBond)
+            sum = if (sameDirection(thisElement, bond, otherBond)) sum.subtract(effort) else sum.add(effort)
         }
         return sum
     }
@@ -935,7 +938,6 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
     override fun getEffort(bond: Bond): Expr {
 
         if (valueExpr == null) throw BadGraphException("Error: getEffort called on ${displayId }but value has not been assigned.  Has assignValue() been called?")
-
         return Term().multiply(eToken).divide(valueExpr as Expr)
     }
 
@@ -1258,7 +1260,9 @@ open class Transformer (bondGraph: BondGraph, id: Int, elementType: ElementTypes
         val mod = modulator.getEffortModulator(bond)
         val otherBond = getOtherBonds(bond)[0]
         val otherElement = getOtherElement(this, otherBond)
-        return mod.multiply(otherElement.getEffort(otherBond))
+        val effort = otherElement.getEffort(otherBond)
+        val product = mod.multiply(effort)
+        return product
     }
 
     override fun getFlow(bond: Bond): Expr {

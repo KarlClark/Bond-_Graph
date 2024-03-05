@@ -179,7 +179,7 @@ class Number(val value: Double = 0.0): Expr {
             }
 
             is Sum -> {
-                return Sum().multiply(this).multiply(expr)
+                return Term().multiply(this).multiply(expr)
             }
         }
 
@@ -202,7 +202,7 @@ class Number(val value: Double = 0.0): Expr {
             }
 
             is Sum -> {
-                return Sum().divide(this).multiply(expr)
+                return Term().multiply(this).divide(expr)
             }
         }
 
