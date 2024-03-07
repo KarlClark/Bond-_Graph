@@ -352,7 +352,7 @@ fun mainWindow() {
     var open by remember { mutableStateOf(false) }
     var saveAs by remember { mutableStateOf(false) }
     var save by  remember {mutableStateOf(false)}
-
+    val fileOptions = arrayListOf<String>("Open", "Save", "Save As")
     var processAfterSaveAction by remember { mutableStateOf(false) }
     var buildGraph by remember { mutableStateOf(false) }
     var startUp by remember { mutableStateOf(true) }
@@ -381,28 +381,17 @@ fun mainWindow() {
         ) {
 
 
-            Column (Modifier
+            Column (modifier = Modifier
                 .fillMaxHeight()
                 , verticalArrangement = Arrangement.Center
-                //.fillMaxWidth()
-            )
 
-            {
-
-                Text ("Files"
-                    , fontSize = MyConstants.menuBarFontSize
-                    , textAlign = TextAlign.Center
-                    , modifier = Modifier
-                        .clickable { expandMenu = true }
-                        .padding(horizontal = 12.dp)
-
-
-                )
-
-                DropdownMenu(expanded = expandMenu, onDismissRequest = {expandMenu = false }) {
-                    DropdownMenuItem(onClick = { open = true; expandMenu = false}) { Text("Open", fontSize = MyConstants.menuItemFontSize) }
-                    DropdownMenuItem(onClick = { save = true; expandMenu = false }) { Text("Save", fontSize = MyConstants.menuItemFontSize) }
-                    DropdownMenuItem(onClick = { saveAs = true; expandMenu = false }) { Text("Save As", fontSize = MyConstants.menuItemFontSize) }
+            ) {
+                dropDownSelectionBox(items = fileOptions, title = "Files", fontSize = MyConstants.menuBarFontSize, titleBackgroundColor = Color.LightGray, spacing = 6.dp) {
+                    when (it) {
+                        0 -> open = true
+                        1 -> save = true
+                        2 -> saveAs = true
+                    }
                 }
             }
 

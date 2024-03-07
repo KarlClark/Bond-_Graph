@@ -15,16 +15,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowState
-import androidx.compose.ui.window.rememberWindowState
 import bondgraph.Operation.*
 import bondgraph.PowerVar.*
 import userInterface.SaveOptions.*
@@ -135,86 +129,7 @@ fun deleteFunction(finishAction: () -> Unit){
 
 }
 
-@Composable
-fun dropDownSelectionBox (items: ArrayList<String> = arrayListOf(), startIndex: Int = 0, width: Dp = 85.dp, color: Color = Color.White, action: (i: Int) -> Unit){
 
-    var isExpanded by remember { mutableStateOf(false) }
-    var currentIndex by remember { mutableStateOf(startIndex) }
-    val downArrow = painterResource("arrow-down.png")
-    val upArrow = painterResource("arrow-up.png")
-    val indicies = arrayListOf<Int>()
-    val expandIconSize = 10.dp
-    for (index in 0 until items.size) {
-        indicies.add(index)
-    }
-
-
-    Column (modifier = Modifier
-
-    ) {
-
-        Box(modifier = Modifier
-            .border(width = 1.dp, color = Color.Black)
-            .background(color = color)
-
-        ) {
-            Row(
-                modifier = Modifier
-                    .width(width)
-                    .padding(horizontal = 6.dp, vertical = 3.dp)
-                , verticalAlignment = Alignment.CenterVertically
-
-            ) {
-                Text(
-                    items[currentIndex], modifier = Modifier
-                        .weight(1f)
-                )
-
-                Image(  // minimize icon
-                    painter = if (isExpanded) upArrow else downArrow,
-                    contentDescription = "",
-                    contentScale = ContentScale.Inside,
-                    alignment = Alignment.CenterEnd,
-                    modifier = Modifier
-                        .width(expandIconSize)
-                        .height(expandIconSize)
-                        .clickable { isExpanded = !isExpanded }
-                )
-            }
-        }
-
-        if (isExpanded) {
-            Box (modifier = Modifier
-
-            ){
-                Popup {
-                    Column(
-                        modifier = Modifier
-                            .border(width = 1.dp, color = Color.Black)
-                            .background(color=color)
-                            .padding(horizontal = 6.dp)
-                        , verticalArrangement = Arrangement.spacedBy(3.dp)
-
-                    ) {
-                        Spacer(modifier = Modifier.height(3.dp))
-
-                        for (index in 0 until items.size) {
-                            Text(items[index], modifier = Modifier
-                                .clickable {
-                                    currentIndex = indicies[index]
-                                    action(currentIndex)
-                                    isExpanded = false
-                                }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(3.dp))
-                    }
-                }
-            }
-        }
-    }
-}
 @Composable
 fun setsBar (){
 
@@ -886,13 +801,13 @@ fun twoPortItem(twoPortValueData: TwoPortValueData, valueFocusRequester: FocusRe
 
                     ) {
 
-                        dropDownSelectionBox(operationStrings, operationsIndex) {
+                        dropDownSelectionBox(items = operationStrings, startIndex = operationsIndex) {
                             bondGraph.valuesSetHasChanged = true
                             operationsIndex = it
                             twoPortValueData.operation = Operation.toEnum(operationStrings[it])
                         }
 
-                        dropDownSelectionBox(powerVars, powerVarsIndex) {
+                        dropDownSelectionBox(items = powerVars, startIndex = powerVarsIndex) {
                             bondGraph.valuesSetHasChanged = true
                             powerVarsIndex = it
                             if (it == 0 || it == 2){
