@@ -371,6 +371,7 @@ fun mainWindow() {
     fun myMenuBar() {
 
         //val currentState = LocalStateInfo.current
+        val options = arrayListOf("option 1", "option 2" , "option 3")
 
         Row(
             Modifier
@@ -386,7 +387,7 @@ fun mainWindow() {
                 , verticalArrangement = Arrangement.Center
 
             ) {
-                dropDownSelectionBox(items = fileOptions, title = "Files", fontSize = MyConstants.menuBarFontSize, titleBackgroundColor = Color.LightGray, spacing = 6.dp) {
+                dropDownSelectionBox(items = fileOptions, title = "Files", fontSize = MyConstants.menuBarFontSize, titleBackgroundColor = Color.LightGray, width = 60.dp, spacing = 6.dp) {
                     when (it) {
                         0 -> open = true
                         1 -> save = true
@@ -405,9 +406,26 @@ fun mainWindow() {
                         currentState.valuesWindowOnTop = true
                         currentState.valuesWindowOnTop = false
                         println("Values clicked") }
-                    .padding(horizontal = 12.dp)
+                    //.padding(horizontal = 12.dp)
                     .align(Alignment.CenterVertically)
             )
+
+            Column (modifier = Modifier
+                .fillMaxHeight()
+                , verticalArrangement = Arrangement.Center
+
+            ) {
+                dropDownCheckboxGroup(
+                    labels = options,
+                    title = "Options",
+                    fontSize = MyConstants.menuBarFontSize,
+                    titleBackgroundColor = Color.LightGray,
+                    //dropDownBackgroundColor = Color.LightGray
+                ) { id, state ->
+                    println("option ${options[id]} state = $state")
+
+                }
+            }
 
             Text(text = pathToBondGraphFile?.toString() ?: ""
                 , textAlign = TextAlign.Center
