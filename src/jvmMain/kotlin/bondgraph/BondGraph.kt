@@ -17,7 +17,7 @@ import kotlinx.serialization.encodeToHexString
 import userInterface.MyConstants
 import java.util.LinkedList
 
-val displayIntermediateResults = true
+var displayIntermediateResults = true
 
 class BadGraphException (message: String) : Exception(message)
 class AlgebraException (message: String) : Exception(message)

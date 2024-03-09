@@ -24,6 +24,7 @@ import androidx.compose.ui.window.WindowState
 import bondgraph.BondGraph
 import bondgraph.ElementTypes
 import bondgraph.ElementDisplayData
+import bondgraph.displayIntermediateResults
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.exists
@@ -371,7 +372,8 @@ fun mainWindow() {
     fun myMenuBar() {
 
         //val currentState = LocalStateInfo.current
-        val options = arrayListOf("option 1", "option 2" , "option 3")
+        val options = arrayListOf("Intermediate results")
+        val startStates = arrayListOf(displayIntermediateResults)
 
         Row(
             Modifier
@@ -417,13 +419,14 @@ fun mainWindow() {
             ) {
                 dropDownCheckboxGroup(
                     labels = options,
+                    startStates = startStates,
                     title = "Options",
                     fontSize = MyConstants.menuBarFontSize,
                     titleBackgroundColor = Color.LightGray,
                     //dropDownBackgroundColor = Color.LightGray
                 ) { id, state ->
                     println("option ${options[id]} state = $state")
-
+                    displayIntermediateResults = state
                 }
             }
 

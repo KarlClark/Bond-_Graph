@@ -153,19 +153,19 @@ fun checkboxGroup(labels: ArrayList<String> = arrayListOf(), startStates: ArrayL
 }
 
 @Composable
-fun dropDownCheckboxGroup (labels: ArrayList<String> = arrayListOf(), title: String = "", startIndex: Int = 0, width: Dp = 85.dp
+fun dropDownCheckboxGroup (labels: ArrayList<String> = arrayListOf(), startStates: ArrayList<Boolean> = arrayListOf(), title: String = "", startIndex: Int = 0, width: Dp = 85.dp
                            , fontSize:TextUnit = 14.sp, titleBackgroundColor: Color = Color.White, itemHeight: Dp = 30.dp, spacing:Dp = 3.dp, dropDownBackgroundColor: Color = Color.White, action: (id: Int, state: Boolean) -> Unit){
 
     var isExpanded by remember { mutableStateOf(false) }
     var currentIndex by remember { mutableStateOf(startIndex) }
     val downArrow = painterResource("arrow-down.png")
     val upArrow = painterResource("arrow-up.png")
-    val indicies = arrayListOf<Int>()
     val expandIconSize = 10.dp
+    remember {startStates}
 
-    var states = remember { arrayListOf<Boolean>() }
+    //var states = remember { arrayListOf<Boolean>() }
 
-    labels.forEach { states.add(false) }
+    //labels.forEach { states.add(false) }
     /*for (index in 0 until labels.size) {
         indicies.add(index)
     }*/
@@ -215,8 +215,8 @@ fun dropDownCheckboxGroup (labels: ArrayList<String> = arrayListOf(), title: Str
 
             ){
                 Popup {
-                    checkboxGroup(labels, states, fontSize, backgroundColor = dropDownBackgroundColor, itemHeight = itemHeight, spacing = spacing){id, state ->
-                        states[id] = state
+                    checkboxGroup(labels, startStates, fontSize, backgroundColor = dropDownBackgroundColor, itemHeight = itemHeight, spacing = spacing){id, state ->
+                        startStates[id] = state
                         action(id, state)}
                 }
             }
