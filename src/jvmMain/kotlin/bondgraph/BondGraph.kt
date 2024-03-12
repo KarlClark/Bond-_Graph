@@ -704,11 +704,11 @@ class BondGraph(var name: String) {
             it.element1.displayData.color = MyConstants.defaultElementColor
             it.element2.displayData.color = MyConstants.defaultElementColor
             if (it.element1 is Resistor){
-                it.element1.substituteExprssion = null
+                it.element1.substituteExpression = null
                 it.element1.isCausalityArbitrarilyAssigned = false
             }
             if (it.element2 is Resistor) {
-                it.element2.substituteExprssion = null
+                it.element2.substituteExpression = null
                 it.element2.isCausalityArbitrarilyAssigned = false
             }
         }
@@ -922,7 +922,7 @@ class BondGraph(var name: String) {
 
             if (arbitrarilyAssignedResistors.size > 0){
                 arbitrarilyAssignedResistors.forEach {
-                    (it as Resistor).substituteExprssion = null
+                    (it as Resistor).substituteExpression = null
                     println("calling deriveEquation on ${it.displayId}")
                     simultaneousEquationsMap[it] = ((it).deriveEquation())
                     if (displayIntermediateResults) results.add(simultaneousEquationsMap[it]?.toAnnotatedString())
@@ -945,7 +945,9 @@ class BondGraph(var name: String) {
             solvedEquationsMap = solveSimultaneousEquations(simultaneousEquationsMap)
             if (displayIntermediateResults) solvedEquationsMap.values.forEach {results.add(it.toAnnotatedString())  }
 
-            solvedEquationsMap.forEach { (key, value) -> (key as OnePort).substituteExprssion = value.rightSide}
+            solvedEquationsMap.forEach { (key, value) ->
+                println("assigning ${(key.displayId)} the substitute expression ${value.rightSide.toAnnotatedString()}")
+                (key as OnePort).substituteExpression = value.rightSide}
 
             val elementsList = getIndependentStorageElements()
             if (elementsList.isEmpty()) throw BadGraphException("Error: There are no independent capacitors or resistors.")

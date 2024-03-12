@@ -82,6 +82,8 @@ interface Expr{
     fun toAnnotatedString(exp: Int = 0): AnnotatedString
 
     fun equals(expr: Expr): Boolean
+
+    fun clone(): Expr
 }
 
 class Number(val value: Double = 0.0): Expr {
@@ -222,6 +224,10 @@ class Number(val value: Double = 0.0): Expr {
         }
         return false
     }
+
+    override fun clone(): Expr {
+        return Number(value)
+    }
 }
 
 /*
@@ -303,6 +309,10 @@ class Token(
                 append(exp.toString())
             }
         }
+    }
+
+    override fun clone(): Expr {
+        return this  // do not copy tokens. They need to be unique.
     }
 }
 var count = 0
@@ -510,6 +520,14 @@ class Term():Expr {
         }
 
         return false
+    }
+
+    override fun clone(): Expr {
+
+        val term = Term()
+        term.numerators.addAll(numerators)
+        term.denominators.addAll(denominators)
+        return term
     }
 
     fun getNumeratorTokens(): List<Token> {
@@ -743,12 +761,21 @@ class Sum(): Expr {
         return false
     }
 
+    override fun clone(): Expr {
+        val sum = Sum()
+        sum.plusTerms.addAll(plusTerms)
+        sum.minusTerms.addAll(minusTerms)
+        return sum
+    }
+
     fun getAllExpressions(): List<Expr> {
         val l: ArrayList<Expr> = arrayListOf()
         l.addAll(plusTerms)
         l.addAll(minusTerms)
         return l
     }
+
+
 }
 
 /*
@@ -768,6 +795,10 @@ class Equation(var leftSide: Expr, var rightSide: Expr) {
             append(" = ")
             append (rightSide.toAnnotatedString())
         }
+    }
+
+    fun clone(): Equation {
+        return Equation(leftSide.clone(), rightSide.clone())
     }
 
 }

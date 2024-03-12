@@ -1120,9 +1120,8 @@ fun gatherLikeTerms(sum: Sum):Expr {
  */
 fun solve (token: Token, equation: Equation): Equation {
 
-    var leftSide = equation.leftSide
-    var rightSide = equation.rightSide
-
+    var leftSide = equation.leftSide.clone()
+    var rightSide = equation.rightSide.clone()
 
     if (equation.rightSide is Term){
         if ((equation.rightSide as Term).numerators.contains(token) || (equation.rightSide as Term).denominators.contains(token)) {

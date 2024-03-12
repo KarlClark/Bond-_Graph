@@ -660,7 +660,7 @@ abstract class OnePort (bondGraph: BondGraph, id: Int, elementType: ElementTypes
 
     // Expression to use in place of constitutive law in the case of resistors with arbitrarily assigned
     // causality or dependent inertias or capacitors with derivative causality.
-    var substituteExprssion: Expr? = null
+    var substituteExpression: Expr? = null
 
     //var elementValue: Double? = null
 
@@ -868,7 +868,10 @@ class ZeroJunction (bondGraph: BondGraph, id: Int, elementType: ElementTypes, di
     override fun getEffort(bond: Bond): Expr {
         val bondsList = getBondList()
         val effortBond = bondsList.filter{it.effortElement === this}[0]
-        return getOtherElement(this, effortBond).getEffort(effortBond)
+
+        val effort = getOtherElement(this, effortBond).getEffort(effortBond)
+        println("$displayId returning effort = ${effort.toAnnotatedString()}")
+        return effort
 
     }
 
@@ -931,8 +934,8 @@ class Capacitor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displ
 
     override fun getFlow(bond: Bond): Expr {
 
-        if (substituteExprssion == null) throw BadGraphException("Error: no substitute expression for Capacitor in derivative causality = $displayId")
-        return substituteExprssion as Expr
+        if (substituteExpression == null) throw BadGraphException("Error: no substitute expression for Capacitor in derivative causality = $displayId")
+        return (substituteExpression as Expr).clone()
     }
 
     override fun getEffort(bond: Bond): Expr {
@@ -995,8 +998,9 @@ class Inertia (bondGraph: BondGraph, id: Int, element: ElementTypes, displayData
     }
 
     override fun getEffort(bond: Bond): Expr {
-        if (substituteExprssion == null) throw BadGraphException("Error: no substitute expression for Inertia in derivative causality = $displayId")
-        return substituteExprssion as Expr
+        if (substituteExpression == null) throw BadGraphException("Error: no substitute expression for Inertia in derivative causality = $displayId")
+        println("$displayId returning effort = ${(substituteExpression as Expr).toAnnotatedString()}")
+        return (substituteExpression as Expr).clone()
     }
 
     override fun getFlow(bond: Bond): Expr {
@@ -1084,10 +1088,10 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
 
     override fun getEffort(bond: Bond): Expr {
         if (isCausalityArbitrarilyAssigned) {
-            if (substituteExprssion == null){
+            if (substituteExpression == null){
                 return efToken
             } else {
-                return substituteExprssion as Expr
+                return (substituteExpression as Expr).clone()
             }
         } else {
             val sFlow = getOtherElement(this, bond).getFlow(bond)
@@ -1097,10 +1101,10 @@ class Resistor (bondGraph: BondGraph, id: Int, elementType: ElementTypes, displa
 
     override fun getFlow(bond: Bond): Expr {
         if (isCausalityArbitrarilyAssigned){
-            if (substituteExprssion == null) {
+            if (substituteExpression == null) {
                 return fToken
             } else {
-                return substituteExprssion as Expr
+                return (substituteExpression as Expr).clone()
             }
         } else {
             val sEffort = getOtherElement(this, bond).getEffort(bond)
