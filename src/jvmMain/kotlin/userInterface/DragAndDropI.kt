@@ -597,7 +597,7 @@ internal class StateInfo {
     var workPaneToWindowOffset by mutableStateOf(Offset.Zero)
     var centerOffset by mutableStateOf(Offset.Zero)
     var mode  by mutableStateOf(Mode.ELEMENT_MODE)    //var dataToDrop by mutableStateOf<Any?>(null)
-    var showResults by mutableStateOf(false)
+    var showResultsWindow by mutableStateOf(false)
     var augment by mutableStateOf(false)
     var derive by mutableStateOf(false)
     var clearGraph by mutableStateOf(false)
@@ -616,7 +616,9 @@ internal class StateInfo {
     var setDescription by mutableStateOf("")
     var valuesSetCopy by mutableStateOf(bondGraph.valuesSetWorkingCopy)
     var valuesWindowState by mutableStateOf(WindowState())
+    var resultsWindowState by mutableStateOf(WindowState())
     //var valueWindowIsVisible by mutableStateOf(true)
     var valuesWindowOnTop by mutableStateOf(false)
+    var resultsWindowOnTop by mutableStateOf(false)
     val xmap by mutableStateMapOf(1 to 'b', 2 to 'c' )
 }

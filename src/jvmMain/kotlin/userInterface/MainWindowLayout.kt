@@ -1,7 +1,6 @@
 package userInterface
 
 import algebra.testCases
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -9,14 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Window
@@ -92,6 +88,7 @@ enum class SaveOptions {
     DONT_SAVE,
     CANCEL
 }
+
 
 // This composable builds the sidebar for the window.
 @Composable
@@ -227,6 +224,7 @@ fun sideBar() {
 fun bottomBar() {
 
     val currentState = LocalStateInfo.current
+    var triggerResults by remember{ mutableStateOf(false) }
 
     Row(Modifier
         .height(60.dp)
@@ -244,7 +242,11 @@ fun bottomBar() {
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {  // toggle showResults boolean with each click, raising and lowering the results screen.
-                            currentState.showResults = !currentState.showResults
+                            if (currentState.showResultsWindow){
+                                currentState.showResultsWindow = false
+                            } else {
+                                triggerResults = true
+                            }
                         }
                     )
                  }
@@ -263,6 +265,14 @@ fun bottomBar() {
                 }
         )
 
+        if (currentState.resultsWindowState.isMinimized) {
+            currentState.showResultsWindow = false
+        }
+    }
+
+    if (triggerResults){
+        showResults()
+        triggerResults = false
     }
 }
 
@@ -297,48 +307,6 @@ fun windowBox() {
                      modifier = Modifier.background(color = MyConstants.graphBackground)
                          .fillMaxSize()
                  )
-             }
-         }
-         if (state.showResults) {
-             Column(  // The results screen. Contains a row that acts as a top bar with a column below
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .requiredHeight(1000.dp)
-                     .background(MyConstants.resultsBackground)
-             ) {
-
-                 Row( // a top bar with a minimize icon on the right.
-                     modifier = Modifier
-                         .background(Color.Gray)
-                         .requiredHeight(30.dp)
-                         .fillMaxWidth()
-                         .weight(.1f, true)
-                 ) {
-                     Image(  // minimize icon
-                         painter = painterResource("baseline_minimize_white_48.png"),
-                         contentDescription = "",
-                         contentScale = ContentScale.Inside,
-                         alignment = CenterEnd,
-                         modifier = Modifier
-                             .fillMaxSize()
-                             .offset { IntOffset(0, -10) }
-                             .padding(horizontal = 10.dp)
-                             .clickable { state.showResults = false }
-
-                     )
-                 }
-                 Column( // for displaying a list of messages.
-                     modifier = Modifier
-                         .weight(3.5f, true)
-
-                 ) {
-                     bondGraph.results.forEachResult {
-                         Text(
-                             it, fontSize = MyConstants.resultsFontSize, modifier = Modifier
-                                 .padding(start = 10.dp, top = 5.dp)
-                         )
-                     }
-                 }
              }
          }
          bottomBar()
@@ -425,7 +393,6 @@ fun mainWindow() {
                     titleBackgroundColor = Color.LightGray,
                     //dropDownBackgroundColor = Color.LightGray
                 ) { id, state ->
-                    println("option ${options[id]} state = $state")
                     displayIntermediateResults = state
                 }
             }

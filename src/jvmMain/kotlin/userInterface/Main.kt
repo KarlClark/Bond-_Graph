@@ -87,9 +87,20 @@ fun main() = application {
         }
 
         runWindows()
+
         if (state.showValuesWindow) {
             println("displa values window")
             valuesWindow()
+        }
+
+        if(state.showResultsWindow){
+            println("show results window")
+            currentState.resultsWindowState.isMinimized = false
+
+
+            resultsWindow()
+            currentState.resultsWindowOnTop = true
+            currentState.resultsWindowOnTop = false
         }
 
         if (showDialog) {

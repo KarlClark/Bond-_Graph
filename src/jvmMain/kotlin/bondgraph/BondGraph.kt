@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
 import userInterface.MyConstants
+import userInterface.showResults
 import java.util.LinkedList
 
 var displayIntermediateResults = true
@@ -60,7 +61,7 @@ fun LinkedList<Pair<Element, Element>>.removePair(pair: Pair<Element, Element?>)
 
 
 class Results() {
-    val resultsList = mutableListOf<AnnotatedString>()
+    val resultsList = mutableStateListOf<AnnotatedString>()
 
     fun add(string: String?) {
 
@@ -360,7 +361,7 @@ class BondGraph(var name: String) {
         newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
         newValueSetId = valuesSetsMap.values.maxOf{it.id} + 1
         results.clear()
-        state.showResults = false
+        state.showResultsWindow = false
         state.needsElementUpdate = true
     }
 //old one
@@ -408,7 +409,7 @@ class BondGraph(var name: String) {
         newElementId = elementsMap.values.maxOf{it.id} + 1
         newBondId = if (bondsMap.size > 0) bondsMap.values.maxOf{it.id} + 1 else 0
         results.clear()
-        state.showResults = false
+        state.showResultsWindow = false
         state.needsElementUpdate = true
     }
 
@@ -872,7 +873,7 @@ class BondGraph(var name: String) {
        }catch(e: BadGraphException ) {
            results.clear()
            results.add(e.message.toString())
-           state.showResults = true
+           showResults()
        }
 
        }
@@ -884,9 +885,11 @@ class BondGraph(var name: String) {
         val simultaneousEquationsMap = linkedMapOf<Element, Equation>()
         var solvedEquationsMap = linkedMapOf<Element, Equation>()
         val eTokenToEDotTokenMap = linkedMapOf<Token, Token>()
+        //var triggerResults by remember { mutableStateOf(false) }
         val derivativeCausalityElements = elementsMap.values.filter{
             (it is Capacitor && it.getBondList()[0].effortElement === it) ||
             (it is Inertia && it.getBondList()[0].effortElement !== it)}
+
 
 
         try {
@@ -975,7 +978,7 @@ class BondGraph(var name: String) {
 
                 results.add(equation.toAnnotatedString())
             }
-            state.showResults = true
+            println("derive showResultsWindow = ${state.showResultsWindow}")
 
         }catch(e: BadGraphException ) {
 
@@ -983,7 +986,6 @@ class BondGraph(var name: String) {
             results.clear()
             println("BadGraphError $e")
             results.add(e.message.toString())
-            state.showResults = true
         }
         catch (e: AlgebraException){
 
@@ -993,8 +995,11 @@ class BondGraph(var name: String) {
             println("calling results.add")
             results.add(e.message.toString())
             println("done calling results.add")
-            state.showResults = true
         }
+
+        showResults()
     }
+
+
 }
 
