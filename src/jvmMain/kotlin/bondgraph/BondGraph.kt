@@ -925,7 +925,7 @@ class BondGraph(var name: String) {
                     (it as Resistor).substituteExpression = null
                     println("calling deriveEquation on ${it.displayId}")
                     simultaneousEquationsMap[it] = ((it).deriveEquation())
-                    if (displayIntermediateResults) results.add(simultaneousEquationsMap[it]?.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(AnnotatedString("1- ") + simultaneousEquationsMap[it]?.toAnnotatedString()!!)
                 }
             }
 
@@ -943,7 +943,7 @@ class BondGraph(var name: String) {
             }
 
             solvedEquationsMap = solveSimultaneousEquations(simultaneousEquationsMap)
-            if (displayIntermediateResults) solvedEquationsMap.values.forEach {results.add(it.toAnnotatedString())  }
+            if (displayIntermediateResults) solvedEquationsMap.values.forEach { results.add(AnnotatedString("2- ") + it.toAnnotatedString())  }
 
             solvedEquationsMap.forEach { (key, value) ->
                 println("assigning ${(key.displayId)} the substitute expression ${value.rightSide.toAnnotatedString()}")
@@ -955,27 +955,27 @@ class BondGraph(var name: String) {
             for (element in elementsList ) {
                 var equation = (element as OnePort).deriveEquation()
                 println("derived equation for element ${element.displayId}  -> ${equation.toAnnotatedString()}")
-                if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                if (displayIntermediateResults) results.add(AnnotatedString("3- ") + equation.toAnnotatedString())
 
 
 
                 if (derivativeCausalityElements.size > 0) {
                     equation = solve(equation.leftSide as Token, equation)
-                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(AnnotatedString("4- ") + equation.toAnnotatedString())
                     equation = simplifySums(equation)
-                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(AnnotatedString("5- ") + equation.toAnnotatedString())
                 }
 
 
                 if (arbitrarilyAssignedResistors.size > 0) {
                     val newRightSide = (gatherLikeTerms(equation.rightSide as Sum))
                     equation = Equation(equation.leftSide, newRightSide)
-                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(AnnotatedString("6- ") + equation.toAnnotatedString())
                     println("${newRightSide.toAnnotatedString()}")
                     equation = simplifySums(equation)
-                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(AnnotatedString("7- ") + equation.toAnnotatedString())
                     equation = cancel(equation)
-                    if (displayIntermediateResults) results.add(equation.toAnnotatedString())
+                    if (displayIntermediateResults) results.add(AnnotatedString("8- ") + equation.toAnnotatedString())
                 }
 
                 results.add(equation.toAnnotatedString())

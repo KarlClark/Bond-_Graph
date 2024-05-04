@@ -9,7 +9,7 @@
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraClasses.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraClasses.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraFunctions.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraFunctions.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/BondGraph.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/bondgraph/Elements.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/Main.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/Main.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

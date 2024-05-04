@@ -23,14 +23,26 @@ fun testCases(){
 
     var term1 = Term()
     var term2 = Term()
-    var sum1 = Sum()
-    var sum2 = Sum()
     var expr1: Expr
     var expr2: Expr
     var expr3: Expr
     var expr4: Expr
     var expr5: Expr
-    println("Test cases &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+    var sum1 = Sum().add(Number(4.0)).add(Number(6.0))
+    var sum2 = Sum().subtract(Number(5.0))
+    var expr = sum1.divide(sum2)
+    println("*************************************************************************")
+    println("expr = ${expr.toAnnotatedString()}: ${expr::class.simpleName}")
+    if (expr is Term) {
+        val coefficientAndTerm = stripCoefficient(expr)
+        println("stripCoefficiett = number = ${coefficientAndTerm.coefficient} expr = ${coefficientAndTerm.expr.toAnnotatedString()}")
+    }
+    expr = sum1.divide(sum2)
+
+    println("*************************************************************************")
+    println("expr = ${expr.toAnnotatedString()}: ${expr::class.simpleName}")
+
+    /*println("Test cases &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
     println(Term().multiply(xt).divide(yt).multiply(n10).toAnnotatedString())
     println("-------------------------------------------------------------")
     expr1 = sum1.add(at).add(bt).add(n10)
@@ -64,8 +76,47 @@ fun testCases(){
     expr3 = expr3.add(expr3)
     println(expr3.toAnnotatedString())
     println ("result ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    println("${expr2.toAnnotatedString()} x ${expr1.toAnnotatedString()} = ${expr3.toAnnotatedString()}  ${expr3::class.simpleName}")
+    println("${expr2.toAnnotatedString()} x ${expr1.toAnnotatedString()} = ${expr3.toAnnotatedString()}  ${expr3::class.simpleName}")*/
+
+    val sum = Sum().subtract(Number(5.0))
+    println ("sum = ${sum.toAnnotatedString()}: ${sum::class.simpleName}")
+
+    val builder = Matrix.Builder(3)
+    for (i in 1 .. 3){
+        for (j in 1 .. 3){
+            builder.add(Number(i.toDouble()).add(Number(j.toDouble())))
+        }
+    }
+    val m1 = builder.build()
+    m1.printOut()
+    val m2 = m1.cofactor(1,1)
+    m2.printOut()
+    println("det m2 = ${m2.det().toAnnotatedString()}")
+    var det = m1.det()
+    println("det m1 = ${det.toAnnotatedString()}: ${det::class.simpleName}")
+    //println("plusterms.size = ${(det as Sum).plusTerms.size}")
+    //println("minusterms.size = ${(det as Sum).minusTerms.size}")
+    //t as Sum).plusTerms.forEach { println("pluseterm ${it.toAnnotatedString()}: ${it::class.simpleName}" ) }
+    //(det as Sum).minusTerms.forEach { println("minusterm ${it.toAnnotatedString()}: ${it::class.simpleName}" ) }
+    val builder2 = Matrix.Builder(3)
+    builder2.add(Number(2.0)).add(Number(2.0)).add(Number(1.0))
+        .add(Sum().subtract(Number(1.0))).add(Number(0.0)).add(Sum().subtract(Number(1.0)))
+            .add(Number(3.0)).add(Sum().subtract(Number(1.0))).add(Number(3.0))
+    val m3 = builder2.build()
+    m3.printOut()
+    det = m3.det()
+    println("det = ${det.toAnnotatedString()}: ${det::class.simpleName}")
+    val builder3 = Matrix.Builder(3)
+    builder3.add(Number(1.0)).add(Number(3.0)).add(Sum().subtract(Number(2.0)))
+        .add(Number(2.0)).add(Sum().subtract(Number(1.0))).add (Number(1.0))
+        .add(Sum().subtract(Number(2.0))).add(Number(2.0)).add(Number(3.0))
+    val m4 = builder3.build()
+    m4.printOut()
+    det = m4.det()
+    println("det = ${det.toAnnotatedString()}: ${det::class.simpleName}")
 }
+
+class CoefficientAndExpr(val coefficient: Double, val expr: Expr)
 /*
 A Term may be made up of other Terms.  For example a Term could consist of a Token and a another Term.
 If the Token represents x and the other Term represents yz the whole Term represents xyz.  Most of
@@ -80,12 +131,17 @@ a Sum like (a + b -a). After simplifying we are left with a Sum with just one To
 function resolves these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
  */
 
-fun stripCoefficentFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
+fun stripCoefficientFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
     var num = startNum
     source.forEach {
         var expr = it
         if (it is Sum && it.plusTerms.size == 1 && it.minusTerms.size == 0){
             expr = it.plusTerms[0]
+        }
+
+        if (it is Sum && it.plusTerms.size == 0 && it.minusTerms.size == 1){
+            expr = it.minusTerms[0]
+            num *= -1.0
         }
         if (it is Term && it.numerators.size == 1 && it.denominators.size == 0) {
             expr = it.numerators[0]
@@ -95,9 +151,9 @@ fun stripCoefficentFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, star
             is Number -> num = operation(num, expr.value)
             is Term -> {
                 if (expr.numerators.size != 0 || expr.denominators.size != 0) {
-                    val p = stripCoefficient(expr)
-                    dest.add(p.second)
-                    num = operation(num, p.first)
+                    val coefficientAndTerm = stripCoefficient(expr)
+                    dest.add(coefficientAndTerm.expr)
+                    num = operation(num, coefficientAndTerm.coefficient)
                 }
             }
             is Sum -> dest.add(expr)
@@ -106,70 +162,216 @@ fun stripCoefficentFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, star
     return num
 }
 
-fun rationalizeCoefficient(term: Term): Term {
+fun getCoefficientAndExpr(term: Term): CoefficientAndExpr {
 
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
     var num = 1.0
 
-
-    num = stripCoefficentFromList(term.numerators, numerators, 1.0, Double::times)
-    num = stripCoefficentFromList(term.denominators, denominators, num, Double::div)
+    num = stripCoefficientFromList(term.numerators, numerators, 1.0, Double::times)
+    num = stripCoefficientFromList(term.denominators, denominators, num, Double::div)
 
 
     val newTerm = Term()
-    if (num != 1.0) {
+    /*if (num != 1.0) {
         newTerm.numerators.add(Number(num))
-    }
+    }*/
     newTerm.numerators.addAll(numerators)
     newTerm.denominators.addAll(denominators)
-    return newTerm
+    return CoefficientAndExpr(num, newTerm)
 }
 
 /*
-    Take a term and strip off the number coefficient and return a pair containing the value
+    Take a term and strip off the number coefficient and return a CoefficientAndTerm containing the value
     of the coefficient and the rest of the term.  If the rest of the program is working correctly,
     the coefficient should be the first item in the numerator.  But, this function searches all
     items in both the numerator and denominator just in case.  In addition, if more than one
     number is found we calculate a new number by multiplying/dividing the numbers together.
  */
-fun stripCoefficient(term: Term): Pair<Double, Expr>{
+fun stripCoefficient(term: Term): CoefficientAndExpr{
 
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
     var num = 1.0
 
 
-    num = stripCoefficentFromList(term.numerators, numerators, 1.0, Double::times)
-    num = stripCoefficentFromList(term.denominators, denominators, num, Double::div)
+    num = stripCoefficientFromList(term.numerators, numerators, 1.0, Double::times)
+    num = stripCoefficientFromList(term.denominators, denominators, num, Double::div)
 
     val term = Term()
     term.numerators.addAll(numerators)
     term.denominators.addAll(denominators)
     if (term.numerators.size == 1 && term.denominators.size == 0){
-        return Pair(num, term.numerators[0])
+        return CoefficientAndExpr(num, term.numerators[0])
     }
-    return Pair(num, term)
+    return CoefficientAndExpr(num, term)
 }
 
+/*fun getExprFromCoefficientAndExpr_save(coefficientAndTerm: CoefficientAndExpr): Expr{
+
+    val expr = coefficientAndTerm.expr
+    val num = coefficientAndTerm.coefficient
+
+
+    if ((expr is Term && expr.numerators.size + expr.denominators.size == 0) ||
+        (expr is Sum && expr.plusTerms.size + expr.minusTerms.size == 0)){
+        if (num >= 0){
+            return Number(num)
+        } else {
+            val sum = Sum()
+            sum.minusTerms.add(Number(-num))
+            return sum
+        }
+    }
+
+    val term = Term()
+    term.numerators.add(Number(num.absoluteValue))
+    term.numerators.add(expr)
+    if (num < 0){
+        val sum = Sum()
+        sum.minusTerms.add(term)
+        return sum
+    }
+
+    return term
+}*/
+
+fun getExprFromCoefficientAndExpr(coefficientAndExpr: CoefficientAndExpr): Expr {
+    val expr = coefficientAndExpr.expr
+    val num = coefficientAndExpr.coefficient
+
+    if (num == 0.0) return Number(0.0)
+
+    when (expr) {
+        is Number -> {return Term()} //won't be a Number
+
+        is Token -> {
+            if (num == 1.0) return expr
+            val term = Term()
+            term.numerators.add(Number(num.absoluteValue))
+            term.numerators.add(expr)
+            if (num < 0){
+                val sum = Sum()
+                sum.minusTerms.add(term)
+                return sum
+            }
+            return term
+        }
+
+        is Term -> {
+
+            if (expr.numerators.size + expr.denominators.size == 0){
+                if (num > 0.0) {
+                    return Number(num)
+                } else {
+                    val sum = Sum()
+                    sum.minusTerms.add(Number(num.absoluteValue))
+                    return sum
+                }
+            }
+            if (num == 1.0) return expr
+            expr.numerators.add(Number(num.absoluteValue))
+            if (num < 0){
+                val sum = Sum()
+                sum.minusTerms.add(expr)
+                return sum
+            }
+            return expr
+        }
+
+        is Sum -> {
+            if (expr.plusTerms.size + expr.minusTerms.size == 0){
+                if (num > 0.0) {
+                    return Number(num)
+                } else {
+                    val sum = Sum()
+                    sum.minusTerms.add(Number(num.absoluteValue))
+                    return sum
+                }
+            }
+            if (num == 1.0) return expr
+            val sum = Sum()
+            if (num >= 0) {
+                sum.plusTerms.addAll(expr.plusTerms)
+                sum.minusTerms.addAll(expr.minusTerms)
+            } else {
+                sum.plusTerms.addAll(expr.minusTerms)
+                sum.minusTerms.addAll(expr.plusTerms)
+            }
+            val term = Term()
+            term.numerators.add(Number(num.absoluteValue))
+            term.numerators.add(sum)
+            return term
+        }
+    }
+    return Term()
+}
+
+fun rationalizeTerm (term: Term): Expr {
+    val coefficientAndExpr = getCoefficientAndExpr(term)
+    return getExprFromCoefficientAndExpr(coefficientAndExpr)
+}
 fun combineTerms(sum: Sum): Expr {
 
+    val plusTerms = arrayListOf<Expr>()
+    val minusTerms = arrayListOf<Expr>()
     val termValueMap = hashMapOf<Expr, Double>()
     var number: Double
     var foundOne = false
 
-    fun processTerms(exprs: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double{
+    fun checkForNumbers(start: ArrayList<Expr>, dest: ArrayList<Expr>,  startNum: Double, operation: (Double, Double) -> Double): Double {
 
         var num = startNum
+        start.forEach {
+            when (it){
+                is Token -> dest.add(it)
+
+                is Number -> num = operation(num, it.value)
+
+                is Term -> {
+                    if (it.numerators.size == 1 && it.denominators.size == 0 && it.numerators[0] is Number) {
+                        num = operation(num, (it.numerators[0] as Number).value)
+                    } else {
+                        if (it.numerators.size == 0 && it.denominators.size == 1 && it.denominators[0] is Number) {
+                            num = operation (num, 1.0/((it.denominators[0] as Number).value))
+                        } else {
+                            if (it.numerators.size + it.denominators.size == 0){
+                                num = operation(num, 1.0)
+                            } else {
+                                dest.add(it)
+                            }
+                        }
+                    }
+                }
+
+                is Sum -> {
+                    if (it.plusTerms.size == 1 && it.minusTerms.size == 0 && it.plusTerms[0] is Number){
+                        num = operation(num, (it.plusTerms[0] as Number).value)
+                    } else {
+                        if (it.plusTerms.size == 0 && it.minusTerms.size == 1 && it.minusTerms[0] is Number) {
+                            num = operation(num, ( - (it.minusTerms[0] as Number).value))
+                        } else {
+                            dest.add(it)
+                        }
+                    }
+                }
+            }
+        }
+
+        return num
+    }
+
+    fun processTerms(exprs: ArrayList<Expr>,operation: (Double, Double) -> Double){
+
         var value1: Double
 
         for (expr in exprs) {
             var expr1 = expr
             value1 = 1.0
             if (expr is Term){
-                val pair = stripCoefficient(expr)
-                expr1 = pair.second
-                value1 = pair.first
+                val coefficientAndTerm = stripCoefficient(expr)
+                expr1 = coefficientAndTerm.expr
+                value1 = coefficientAndTerm.coefficient
             }
             foundOne = false
             for (expr2 in termValueMap.keys) {
@@ -188,28 +390,36 @@ fun combineTerms(sum: Sum): Expr {
 
             }
             if (!foundOne) {
-                /*when (expr1) {
-                    is Token -> termValueMap[expr1] = operation(0.0, 1.0)
-                    is Number -> num = operation(num, expr1.value)
-                    is Term -> {
-                        val pair = stripCoefficient(expr1)
-                        termValueMap[pair.second] = operation(0.0, pair.first)
-                    }
-
-                    is Sum -> termValueMap[expr1] = operation(0.0, 1.0)
-                }*/
-                if (expr1 is Number) {
-                    num = operation(num, value1)
-                } else {
-                    termValueMap[expr1] = operation(0.0, value1)
-                }
+                termValueMap[expr1] = operation(0.0, value1)
             }
         }
-
-        return num
     }
-    number = processTerms(sum.plusTerms, 0.0,  Double::plus)
-    number = processTerms(sum.minusTerms, number, Double::minus)
+
+
+    number = checkForNumbers(sum.plusTerms, plusTerms, 0.0, Double::plus)
+    number = checkForNumbers(sum.minusTerms, minusTerms, number, Double::minus)
+    if (plusTerms.size + minusTerms.size == 0){
+        if (number >= 0) {
+            return Number(number)
+        } else {
+            val sum = Sum()
+            sum.minusTerms.add(Number(-number))
+            return sum
+        }
+    }
+
+    if (plusTerms.size == 1 && minusTerms.size == 0 && number == 0.0){
+        return plusTerms[0]
+    }
+
+    if (plusTerms.size == 0 && minusTerms.size == 1 && number == 0.0){
+        val sum = Sum()
+        sum.minusTerms.add(minusTerms[0])
+        return sum
+    }
+
+    processTerms(sum.plusTerms, Double::plus)
+    processTerms(sum.minusTerms, Double::minus)
 
     val sum = Sum()
     termValueMap.forEach{(key, value) ->
@@ -227,13 +437,19 @@ fun combineTerms(sum: Sum): Expr {
         }
     }
 
-    if (number != 0.0) {
-        sum.plusTerms.add(Number(number))
+    when {
+        number == 0.0 -> {}
+        number > 0.0 -> sum.plusTerms.add(Number(number))
+        number < 0.0 -> sum.minusTerms.add(Number(-number))
     }
 
-   /* if (sum.plusTerms.size == 1 && sum.minusTerms.size == 0){
+    if (sum.plusTerms.size == 1 && sum.minusTerms.size == 0){
         return sum.plusTerms[0]
-    }*/
+    }
+
+    if (sum.plusTerms.size + sum.minusTerms.size == 0){
+        return Number(0.0)
+    }
     return sum
 }
 fun expandTerm(term: Term): ArrayList<Expr> {
@@ -491,7 +707,18 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     var term = Term()
     term.numerators.addAll(newNumerators)
     term.denominators.addAll(newDenominators)
-    term = rationalizeCoefficient(term)
+    val coefficientAndTerm = getCoefficientAndExpr(term)
+    if (coefficientAndTerm.coefficient < 0){
+        isPlusTerm = ! isPlusTerm
+    }
+
+    if (coefficientAndTerm.coefficient == 1.0){
+        if (term.numerators.size == 0){
+            term.numerators.add(Number(1.0))
+        }
+    } else {
+        term.numerators.add(Number(coefficientAndTerm.coefficient.absoluteValue))
+    }
     if (isPlusTerm) {
         newPlusTerms.add(term)
     } else {
