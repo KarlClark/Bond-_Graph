@@ -989,6 +989,31 @@ class Equation(var leftSide: Expr, var rightSide: Expr) {
 
 class Matrix private constructor(val data: ArrayList<ArrayList<Expr>>) {
 
+    companion object {
+        fun solveCramer(coeff: Matrix, variables: ArrayList<Token>, const: ArrayList<Expr>): ArrayList<Equation> {
+
+            val equations = arrayListOf<Equation>()
+
+            val coeffDet = coeff.det()
+            val size = coeff.data.size
+            for (matrixIndex in 0 until size){
+                val builder = Matrix.Builder(size)
+                for (row in 0 until size){
+                    for (col in 0 until size){
+                        if (matrixIndex == col){
+                            builder.add(const[row])
+                        } else {
+                            builder.add(coeff.data[row][col])
+                        }
+                    }
+                }
+                val matrix = builder.build()
+                equations.add(Equation(variables[matrixIndex], matrix.det().divide(coeffDet)))
+            }
+            return equations
+        }
+
+    }
     class Builder (val order: Int){
         val data = arrayListOf<ArrayList<Expr>>()
         var cnt = 0

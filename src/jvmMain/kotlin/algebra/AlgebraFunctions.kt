@@ -10,12 +10,12 @@ fun List<Expr>.containsExpr(expr: Expr): Boolean {
 }
 fun testCases(){
 
-    val at = Token("1", "", AnnotatedString("A"))
-    val bt = Token("1", "", AnnotatedString("B"))
-    val ct = Token("1", "", AnnotatedString("C"))
-    val xt = Token("1", "", AnnotatedString("X"))
-    val yt = Token("1", "", AnnotatedString("Y"))
-    val zt = Token("1", "", AnnotatedString("Z"))
+    val at = Token("k", "", AnnotatedString("A"))
+    val bt = Token("k", "", AnnotatedString("B"))
+    val ct = Token("k", "", AnnotatedString("C"))
+    val xt = Token("k", "", AnnotatedString("X"))
+    val yt = Token("k", "", AnnotatedString("Y"))
+    val zt = Token("k", "", AnnotatedString("Z"))
     val n10 = Number(10.0)
     val n2 = Number(2.0)
     val n6 = Number(6.0)
@@ -41,6 +41,11 @@ fun testCases(){
 
     println("*************************************************************************")
     println("expr = ${expr.toAnnotatedString()}: ${expr::class.simpleName}")
+
+    expr1 = Number(10.0).multiply(at)
+    expr2 = bt.multiply(Sum().subtract(Number(2.0)))
+    expr3 = expr1.multiply(expr2)
+    println("${expr1.toAnnotatedString()} divided by ${expr2.toAnnotatedString()} = ${expr3.toAnnotatedString()}")
 
     /*println("Test cases &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
     println(Term().multiply(xt).divide(yt).multiply(n10).toAnnotatedString())
@@ -114,6 +119,32 @@ fun testCases(){
     m4.printOut()
     det = m4.det()
     println("det = ${det.toAnnotatedString()}: ${det::class.simpleName}")
+
+    val builder4 = Matrix.Builder(3)
+    builder4.add(Token("1", "", AnnotatedString("a")))
+        .add(Token("1", "", AnnotatedString("b")))
+        .add(Token("1", "", AnnotatedString("c")))
+        .add(Token("2", "", AnnotatedString("a")))
+        .add(Token("2", "", AnnotatedString("b")))
+        .add(Token("2", "", AnnotatedString("c")))
+        .add(Token("3", "", AnnotatedString("a")))
+        .add(Token("3", "", AnnotatedString("b")))
+        .add(Token("3", "", AnnotatedString("c")))
+    val coeff = builder4.build()
+    val const = arrayListOf<Expr>(Token("1", "", AnnotatedString("d")), Token("2", "", AnnotatedString("d")),Token("3", "", AnnotatedString("d")))
+    val variables = arrayListOf<Token>(Token("", "", AnnotatedString("x")), Token("", "", AnnotatedString("y")), Token("", "", AnnotatedString("z")))
+    val equations = Matrix.solveCramer(coeff, variables, const)
+    println ("######################################################")
+    equations.forEach { println("${it.toAnnotatedString()}") }
+
+    val builder5 = Matrix.Builder(3)
+    builder5.add(Number(1.0)).add(Number(1.0)).add(Number(1.0))
+        .add(Number(0.0)).add(Number(1.0)).add(Number(3.0))
+            .add(Number(1.0)).add(Sum().subtract(Number(2.0))).add(Number(1.0))
+    val coeff2 = builder5.build()
+    val const2 = arrayListOf<Expr>(Number(6.0), Number(11.0), Number(0.0))
+    val equations2 = Matrix.solveCramer(coeff2, variables, const2)
+    equations2.forEach { println("${it.toAnnotatedString()}") }
 }
 
 class CoefficientAndExpr(val coefficient: Double, val expr: Expr)
