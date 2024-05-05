@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
 var pathToBondGraphFile: Path? = null
-val runTestCases = true
+val runTestCases = false
 
 /* TODO
     - grey out elements in sidebar when in bond mode

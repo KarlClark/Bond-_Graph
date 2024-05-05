@@ -145,6 +145,15 @@ fun testCases(){
     val const2 = arrayListOf<Expr>(Number(6.0), Number(11.0), Number(0.0))
     val equations2 = Matrix.solveCramer(coeff2, variables, const2)
     equations2.forEach { println("${it.toAnnotatedString()}") }
+
+    val builder6 = Matrix.Builder(2)
+    builder6.add(Number(1.0)).add(Sum().subtract(Token("2", "", AnnotatedString("R"))))
+        .add(Sum().subtract(Token("6", "", AnnotatedString(("R"))))).add(Number(1.0))
+    val coeff3 = builder6.build()
+    val const3 = arrayListOf<Expr>(Token("1", "", AnnotatedString("R")), Token("3", "", AnnotatedString("R")))
+    val variables3 = arrayListOf<Token>(Token("3", "", AnnotatedString("p"), differential = true), Token("5", "", AnnotatedString("p"), differential = true))
+    val equations3 = Matrix.solveCramer(coeff3, variables3, const3)
+    equations3.forEach { println("${it.toAnnotatedString()}") }
 }
 
 class CoefficientAndExpr(val coefficient: Double, val expr: Expr)
@@ -717,8 +726,15 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     val denominators = arrayListOf<Expr>()
     val newNumerators = arrayListOf<Expr>()
     val newDenominators = arrayListOf<Expr>()
-    var isPlusTerm: Boolean
+    var isPlusTerm = true
 
+    fun addIt(expr:Expr){
+        if (isPlusTerm) {
+            newPlusTerms.add(expr)
+        } else {
+            newMinusTerms.add(expr)
+        }
+    }
     //Build lists for the terms in the numerator and denominator.
     if (expr !is Term) {
         // no denominator, just one expression to add
@@ -738,23 +754,33 @@ fun resolveHangingSums(expr: Expr, newPlusTerms: ArrayList<Expr>, newMinusTerms:
     var term = Term()
     term.numerators.addAll(newNumerators)
     term.denominators.addAll(newDenominators)
-    val coefficientAndTerm = getCoefficientAndExpr(term)
-    if (coefficientAndTerm.coefficient < 0){
+    val coefficientAndExpr = getCoefficientAndExpr(term)
+    if (coefficientAndExpr.coefficient < 0){
         isPlusTerm = ! isPlusTerm
     }
+    val newExpr = coefficientAndExpr.expr
+    val num = coefficientAndExpr.coefficient
 
-    if (coefficientAndTerm.coefficient == 1.0){
-        if (term.numerators.size == 0){
-            term.numerators.add(Number(1.0))
+    if (newExpr is Term){
+        if (coefficientAndExpr.coefficient == 1.0){
+            if (newExpr.numerators.size == 0){
+                newExpr.numerators.add(Number(1.0))
+            }
+        } else {
+            newExpr.numerators.add(Number(coefficientAndExpr.coefficient.absoluteValue))
         }
+        addIt(newExpr)
     } else {
-        term.numerators.add(Number(coefficientAndTerm.coefficient.absoluteValue))
+        if (num == 1.0){
+            addIt(newExpr)
+        } else {
+            term = Term()
+            term.numerators.add(newExpr)
+            term.add(Number(num))
+            addIt(term)
+        }
     }
-    if (isPlusTerm) {
-        newPlusTerms.add(term)
-    } else {
-        newMinusTerms.add(term)
-    }
+
 }
 
 
@@ -1368,7 +1394,7 @@ fun gatherLikeTerms(sum: Sum):Expr {
     5. The token can't appear in the product of two sums i.e. (x + a)(x + b) which is of course the same
        as appearing in an exp function since there would ba an x squared.
     This function follows the brute force method of solving such an equation.
-    1. Add/subtract terms containing the token so that they eliminated on the right side of the equation
+    1. Add/subtract terms containing the token so that they are eliminated on the right side of the equation
        and appear on the left side.
     2. Calculate a common denominator for the terms on the left side.
     3. Calculate a sum based on the numerators of the left side and the common denominator creating a new fraction
@@ -1392,51 +1418,62 @@ fun solve (token: Token, equation: Equation): Equation {
 
     if (isTokenInDenominator(token, leftSide) || isTokenInDenominator(token, rightSide)) throw AlgebraException("Error: The token we are solving for occurs in the denominator of one of the terms.  " +
             "These algebra routines can't solve this")
-        if (rightSide is Sum) {
-            val plusTerms = rightSide.plusTerms
-            val minusTerms = rightSide.minusTerms
-            val matchingPlusTerms = plusTerms.filter { contains(token, it) }
-            val matchingMinusTerms = minusTerms.filter{ contains(token, it) }
 
-            if (matchingPlusTerms.size + matchingMinusTerms.size == 0){
-                return equation
-            }
+    if (rightSide is Sum) {
+        val plusTerms = rightSide.plusTerms
+        val minusTerms = rightSide.minusTerms
+        val matchingPlusTerms = plusTerms.filter { contains(token, it) }
+        val matchingMinusTerms = minusTerms.filter{ contains(token, it) }
 
-            // Subtract plus terms from both sides of equation.
-            matchingPlusTerms.forEach {
-                leftSide = leftSide.subtract(it)
-                plusTerms.remove(it)
-            }
+        if (matchingPlusTerms.size + matchingMinusTerms.size == 0){
+            return equation
+        }
 
-            // Add minus terms to both sides of equation
-            matchingMinusTerms.forEach {
-                leftSide = leftSide.add(it)
-                minusTerms.remove(it)
-            }
+        // Subtract plus terms from both sides of equation.
+        matchingPlusTerms.forEach {
+            leftSide = leftSide.subtract(it)
+            plusTerms.remove(it)
+        }
 
+        // Add minus terms to both sides of equation
+        matchingMinusTerms.forEach {
+            leftSide = leftSide.add(it)
+            minusTerms.remove(it)
+        }
 
-            var commonFraction: Expr
+        println("solve leftside = ${leftSide.toAnnotatedString()}: ${leftSide::class.simpleName}")
 
-            if (leftSide is Sum) {
+        if (leftSide is Term) {
+            val term = Term()
+            (leftSide as Term).numerators.forEach { if (it != token) term.numerators.add(it)}
+            term.denominators.addAll((leftSide as Term).denominators)
+            val expr = rationalizeTerm(term)
+            rightSide = rightSide.divide(expr)
+            return Equation(token, rightSide)
+        }
 
-                // Calculate common denominator for left side, and create
-                // single term on left side.  See comments in commonDenominator function.
-                commonFraction = commonDenominator(leftSide as Sum)
+        var commonFraction: Expr
 
-                // Factor token out of the numerator on the fraction
-                val factored = factor(token, commonFraction)
+        if (leftSide is Sum) {
 
-                // Divide the right side by the fraction.  We don't bother dividing the left side
-                // since we know only the token will be left.
-                rightSide = rightSide.divide(factored)
+            // Calculate common denominator for left side, and create
+            // single term on left side.  See comments in commonDenominator function.
+            commonFraction = commonDenominator(leftSide as Sum)
 
-                // Return new equation with token on the left side and the new right side.
-                return Equation(token, rightSide)
+            // Factor token out of the numerator on the fraction
+            val factored = factor(token, commonFraction)
 
-            }
+            // Divide the right side by the fraction.  We don't bother dividing the left side
+            // since we know only the token will be left.
+            rightSide = rightSide.divide(factored)
 
+            // Return new equation with token on the left side and the new right side.
+            return Equation(token, rightSide)
 
         }
+
+
+    }
 
 
     throw AlgebraException("Unknown error solving equation ${equation.toAnnotatedString()} for ${token.toAnnotatedString()}")
