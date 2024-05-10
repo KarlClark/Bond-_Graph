@@ -861,7 +861,7 @@ class Sum(): Expr {
         val sum = Sum()
         sum.plusTerms.addAll(newPlusTerms)
         sum.minusTerms.addAll(newMinusTerms)
-        return sum
+        return combineTerms(sum)
     }
 
     // We want to keep the sum expanded so divide each term in the sum by the expression.

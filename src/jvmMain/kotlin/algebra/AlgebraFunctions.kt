@@ -83,7 +83,9 @@ fun testCases(){
     println ("result ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     println("${expr2.toAnnotatedString()} x ${expr1.toAnnotatedString()} = ${expr3.toAnnotatedString()}  ${expr3::class.simpleName}")*/
 
-    val sum = Sum().subtract(Number(5.0))
+    val sum = Number(1.0).subtract(Number(6.0))
+    expr  = Number(10.0).divide(sum)
+    println("%%% expr=${expr.toAnnotatedString()}")
     println ("sum = ${sum.toAnnotatedString()}: ${sum::class.simpleName}")
 
     val builder = Matrix.Builder(3)
@@ -351,6 +353,10 @@ fun rationalizeTerm (term: Term): Expr {
     val coefficientAndExpr = getCoefficientAndExpr(term)
     return getExprFromCoefficientAndExpr(coefficientAndExpr)
 }
+
+/*
+    Go through the sum and combine like terms, including numbers.  So (a + b + a + 3 -2b -5 ) becomes (2a - b - 2)
+ */
 fun combineTerms(sum: Sum): Expr {
 
     val plusTerms = arrayListOf<Expr>()
@@ -359,6 +365,12 @@ fun combineTerms(sum: Sum): Expr {
     var number: Double
     var foundOne = false
 
+    /*
+    Check every expression in the start list.  If the expression is a Number, add/subtract it (depending on the operation
+    parameter) from a running total that starts with startNum.  Make sure to check Sums, and Terms to see if they might
+    actually be a single Number. If the expression is not a Number, add it to the dest list. The end result is a new
+    list of expressions and one number that is the total. I.e. change (x + 2 - R - 3) to (-1 + x -R)
+     */
     fun checkForNumbers(start: ArrayList<Expr>, dest: ArrayList<Expr>,  startNum: Double, operation: (Double, Double) -> Double): Double {
 
         var num = startNum
@@ -400,7 +412,14 @@ fun combineTerms(sum: Sum): Expr {
 
         return num
     }
-
+    /*
+    For every expression in the list, calculate a single coefficient for that expression, depending on
+    the operation parameter.  for list (a, c, b, 1.5a, c, -2b) and operation is plus we would get map
+    key  value
+    a     2.5
+    b     -1
+    c      2
+     */
     fun processTerms(exprs: ArrayList<Expr>,operation: (Double, Double) -> Double){
 
         var value1: Double
@@ -420,12 +439,6 @@ fun combineTerms(sum: Sum): Expr {
                     foundOne = true
                     val value2 = termValueMap[expr2]
                     termValueMap[expr2] = operation(value2!!, value1)
-                   /* when (expr1) {
-                        is Token -> termValueMap[expr2] = operation(value2!!, value1)
-                        //is Number -> num = operation(num, expr1.value)
-                        is Term -> termValueMap[expr2] = operation(termValueMap[expr2]!!, stripCoefficient(expr1).first)
-                        is Sum -> termValueMap[expr2] = operation(value2!!, 1.0)
-                    }*/
                 }
 
             }
@@ -435,10 +448,12 @@ fun combineTerms(sum: Sum): Expr {
         }
     }
 
+    
 
     number = checkForNumbers(sum.plusTerms, plusTerms, 0.0, Double::plus)
     number = checkForNumbers(sum.minusTerms, minusTerms, number, Double::minus)
     if (plusTerms.size + minusTerms.size == 0){
+        // Sum reduced to single number, so return that.
         if (number >= 0) {
             return Number(number)
         } else {
@@ -449,10 +464,12 @@ fun combineTerms(sum: Sum): Expr {
     }
 
     if (plusTerms.size == 1 && minusTerms.size == 0 && number == 0.0){
+        // Sum reduced to to single plusTerm so return that.
         return plusTerms[0]
     }
 
     if (plusTerms.size == 0 && minusTerms.size == 1 && number == 0.0){
+        // Sum reduced to to single minusTerm so return that.
         val sum = Sum()
         sum.minusTerms.add(minusTerms[0])
         return sum
@@ -461,6 +478,10 @@ fun combineTerms(sum: Sum): Expr {
     processTerms(sum.plusTerms, Double::plus)
     processTerms(sum.minusTerms, Double::minus)
 
+    /*
+    Go through the map and create terms based on the key value pair. Add the term to Sum. I.e.
+    key a and value 3 becomes Term 3a.
+     */
     val sum = Sum()
     termValueMap.forEach{(key, value) ->
         if (value != 0.0) {
@@ -477,6 +498,7 @@ fun combineTerms(sum: Sum): Expr {
         }
     }
 
+    // Add the number to the Sum.
     when {
         number == 0.0 -> {}
         number > 0.0 -> sum.plusTerms.add(Number(number))
