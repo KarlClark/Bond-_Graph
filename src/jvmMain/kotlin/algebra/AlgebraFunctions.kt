@@ -448,7 +448,17 @@ fun combineTerms(sum: Sum): Expr {
         }
     }
 
-    
+    if (sum.plusTerms.size + sum.minusTerms.size == 0){
+        return Number(0.0)
+    }
+
+    if (sum.plusTerms.size == 1 && sum.minusTerms.size == 0){
+        return sum.plusTerms[0]
+    }
+
+    if (sum.plusTerms.size == 0 && sum.minusTerms.size == 1){
+        return sum
+    }
 
     number = checkForNumbers(sum.plusTerms, plusTerms, 0.0, Double::plus)
     number = checkForNumbers(sum.minusTerms, minusTerms, number, Double::minus)
