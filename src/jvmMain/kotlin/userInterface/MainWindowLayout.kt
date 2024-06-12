@@ -1,6 +1,7 @@
 package userInterface
 
 import algebra.testCases
+import algebra.testCases2
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -334,6 +335,7 @@ fun mainWindow() {
 
     //var xx by remember{ mutableStateOf(() -> unit = {})}
     if (runTestCases) testCases()
+    if (runTestCases_2) testCases2()
 
 
     @Composable

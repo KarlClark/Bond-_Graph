@@ -8,6 +8,13 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraClasses.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraClasses.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraFunctions.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/AlgebraFunctions.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/add.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/add.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/divide.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/divide.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/multiply.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/multiply.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/reduce.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/reduce.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/subtract.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/algebra/operations/subtract.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/Main.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/Main.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/MainWindowLayout.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/jvmMain/kotlin/userInterface/MainWindowLayout.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

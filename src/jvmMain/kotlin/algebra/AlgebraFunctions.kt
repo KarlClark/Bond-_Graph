@@ -44,7 +44,8 @@ fun testCases(){
 
     expr1 = Number(10.0).multiply(at)
     expr2 = bt.multiply(Sum().subtract(Number(2.0)))
-    expr3 = expr1.multiply(expr2)
+    expr3 = expr1.divide(expr2)
+    println("*************************************************************************")
     println("${expr1.toAnnotatedString()} divided by ${expr2.toAnnotatedString()} = ${expr3.toAnnotatedString()}")
 
     /*println("Test cases &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
@@ -146,6 +147,8 @@ fun testCases(){
     val coeff2 = builder5.build()
     val const2 = arrayListOf<Expr>(Number(6.0), Number(11.0), Number(0.0))
     val equations2 = Matrix.solveCramer(coeff2, variables, const2)
+    println ("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+
     equations2.forEach { println("${it.toAnnotatedString()}") }
 
     val builder6 = Matrix.Builder(2)
@@ -155,7 +158,105 @@ fun testCases(){
     val const3 = arrayListOf<Expr>(Token("1", "", AnnotatedString("R")), Token("3", "", AnnotatedString("R")))
     val variables3 = arrayListOf<Token>(Token("3", "", AnnotatedString("p"), differential = true), Token("5", "", AnnotatedString("p"), differential = true))
     val equations3 = Matrix.solveCramer(coeff3, variables3, const3)
+    println ("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
     equations3.forEach { println("${it.toAnnotatedString()}") }
+}
+
+fun testCases2 (){
+    val tX = Token("X")
+    val tY = Token("Y")
+    val tZ = Token("Z")
+    var sum = tX.subtract(tY)
+    //printExpr(sum)
+    sum = tZ.subtract(sum)
+    //printExpr(sum)
+    sum = tX.subtract(sum)
+    //printExpr(sum)
+
+    var term = Term().multiply(tX).divide(tY)
+    println("term =")
+    printExpr(term)
+    sum = tZ.subtract(term)
+    //printExpr(sum)
+    sum = tZ.subtract(sum)
+    //printExpr(sum)
+    val number10 = Number(10.0)
+    val number5 = Number(5.0)
+    sum = number10.subtract(number5)
+    //printExpr(sum)
+    sum = number10.subtract(tX)
+    //printExpr(sum)
+    sum = number5.subtract(sum)
+    //printExpr(sum)
+
+    //printExpr(Number(20.0).add(tX))
+    sum = number10.subtract(term)
+    sum = number5.subtract(sum)
+    //printExpr(sum)
+    var term2 = Term().multiply(tY).divide(tX).divide(tZ)
+    sum = term.add(number5).add(term2)
+    println("1**")
+    printExpr(sum)
+    sum = term.add(sum)
+    println("2**")
+    printExpr(sum)
+    sum = term.subtract(sum)
+    println("3**")
+    printExpr(sum)
+    sum = sum.add(number5).subtract(term)
+    println("4**")
+    printExpr(sum)
+    sum = sum.add(tX)
+    println("5**")
+    printExpr(sum)
+    sum = sum.subtract(tX)
+    println("6**")
+    printExpr(sum)
+
+    term = tX.multiply(tY)
+    println("7**")
+    printExpr(term)
+    term = tZ.divide(sum)
+    println("8**")
+    printExpr(term)
+    term = tY.divide(term)
+    println("9**")
+    printExpr(term)
+   term = term.divide(term)
+    println("10**")
+    printExpr(term)
+    var sum1 = Sum().add(tX).add(tY)
+    var sum2 = Sum().subtract(tX).subtract(tY)
+    sum = sum1.add(sum1)
+    println("11**")
+    printExpr(sum)
+    var term1 = Term().multiply(Number(.5)).multiply(tX)
+    term2 = Term().multiply(Number(3.2)).multiply(tX)
+    sum1 = Sum().add(tY).add(term2)
+    sum = Sum().add(term1).add(sum1)
+    println("12**")
+    printExpr(sum)
+
+
+
+
+}
+
+fun printExpr(expr: Expr, printStars: Boolean = true){
+    if (printStars) {
+        println("*** expr = ${expr.toAnnotatedString()}: ${expr::class.simpleName}")
+    } else {
+        println("    expr = ${expr.toAnnotatedString()}: ${expr::class.simpleName}")
+    }
+    if (expr is Term){
+        expr.numerators.forEach { printExpr(it, false) }
+        expr.denominators.forEach { printExpr(it, false) }
+    }
+
+    if (expr is Sum){
+        expr.plusTerms.forEach { printExpr(it, false) }
+        expr.minusTerms.forEach { printExpr(it, false) }
+    }
 }
 
 class CoefficientAndExpr(val coefficient: Double, val expr: Expr)
@@ -173,7 +274,7 @@ a Sum like (a + b -a). After simplifying we are left with a Sum with just one To
 function resolves these to single Tokens.  But as this code evolves, such sums may crop up in other areas.
  */
 
-fun stripCoefficientFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
+/*fun stripCoefficientFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, startNum: Double, operation: (Double, Double) -> Double): Double {
     var num = startNum
     source.forEach {
         var expr = it
@@ -202,6 +303,40 @@ fun stripCoefficientFromList(source: ArrayList<Expr>, dest: ArrayList<Expr>, sta
         }
     }
     return num
+}*/
+
+fun stripCoefficientFromList(source: ArrayList<Expr>, dest1: ArrayList<Expr>, dest2: ArrayList<Expr>, startNum: Double,
+                             operation1: (Double, Double) -> Double, operation2: (Double, Double) -> Double): Double {
+    var num = startNum
+    source.forEach {
+        var expr = it
+        if (it is Sum && it.plusTerms.size == 1 && it.minusTerms.size == 0){
+            expr = it.plusTerms[0]
+        }
+
+        if (it is Sum && it.plusTerms.size == 0 && it.minusTerms.size == 1){
+            expr = it.minusTerms[0]
+            num *= -1.0
+        }
+        if (it is Term && it.numerators.size == 1 && it.denominators.size == 0) {
+            expr = it.numerators[0]
+        }
+        when (expr) {
+            is Token -> dest1.add(expr)
+            is Number -> num = operation1(num, expr.value)
+            is Term -> {
+                /*if (expr.numerators.size != 0 || expr.denominators.size != 0) {
+                    val coefficientAndTerm = stripCoefficient(expr)
+                    dest.add(coefficientAndTerm.expr)
+                    num = operation(num, coefficientAndTerm.coefficient)
+                }*/
+                num = stripCoefficientFromList(expr.numerators, dest1, dest2, num, operation1, operation2)
+                num = stripCoefficientFromList(expr.denominators, dest2, dest1, num, operation2, operation1)
+            }
+            is Sum -> dest1.add(expr)
+        }
+    }
+    return num
 }
 
 fun getCoefficientAndExpr(term: Term): CoefficientAndExpr {
@@ -209,9 +344,22 @@ fun getCoefficientAndExpr(term: Term): CoefficientAndExpr {
     val numerators = arrayListOf<Expr>()
     val denominators = arrayListOf<Expr>()
     var num = 1.0
+    println("getCoeefficientAndExpr term = ${term.toAnnotatedString()}")
 
-    num = stripCoefficientFromList(term.numerators, numerators, 1.0, Double::times)
-    num = stripCoefficientFromList(term.denominators, denominators, num, Double::div)
+    num = stripCoefficientFromList(term.numerators, numerators, denominators, num, Double::times, Double::div)
+    num = stripCoefficientFromList(term.denominators, denominators, numerators, num, Double::div, Double::times)
+    println("numeratrs")
+
+    numerators.forEach { println ("${it.toAnnotatedString()}: ${it::class.simpleName}") }
+    println("denominators")
+    denominators.forEach { println ("${it.toAnnotatedString()}: ${it::class.simpleName}") }
+
+    eliminateCommonTerms(numerators, denominators, num)
+
+    println("numeratrs")
+    numerators.forEach { println ("${it.toAnnotatedString()}: ${it::class.simpleName}") }
+    println("denominators")
+    denominators.forEach { println ("${it.toAnnotatedString()}: ${it::class.simpleName}") }
 
 
     val newTerm = Term()
@@ -220,6 +368,7 @@ fun getCoefficientAndExpr(term: Term): CoefficientAndExpr {
     }*/
     newTerm.numerators.addAll(numerators)
     newTerm.denominators.addAll(denominators)
+    println("num = $num,  newTerm= ${newTerm.toAnnotatedString()}: ${newTerm::class.simpleName}")
     return CoefficientAndExpr(num, newTerm)
 }
 
@@ -237,8 +386,9 @@ fun stripCoefficient(term: Term): CoefficientAndExpr{
     var num = 1.0
 
 
-    num = stripCoefficientFromList(term.numerators, numerators, 1.0, Double::times)
-    num = stripCoefficientFromList(term.denominators, denominators, num, Double::div)
+    num = stripCoefficientFromList(term.numerators, numerators, denominators, 1.0, Double::times, Double::div)
+    num = stripCoefficientFromList(term.denominators, denominators, numerators, num, Double::div, Double::times)
+    num = eliminateCommonTerms(numerators, denominators, num)
 
     val term = Term()
     term.numerators.addAll(numerators)
@@ -312,7 +462,14 @@ fun getExprFromCoefficientAndExpr(coefficientAndExpr: CoefficientAndExpr): Expr 
                 }
             }
             if (num == 1.0) return expr
-            expr.numerators.add(Number(num.absoluteValue))
+            if (expr.numerators.size == 0){
+                expr.numerators.add(Number(num.absoluteValue))
+            } else {
+                if (num.absoluteValue != 1.0) {
+                    expr.numerators.add(Number(num.absoluteValue))
+                }
+            }
+
             if (num < 0){
                 val sum = Sum()
                 sum.minusTerms.add(expr)
@@ -349,9 +506,61 @@ fun getExprFromCoefficientAndExpr(coefficientAndExpr: CoefficientAndExpr): Expr 
     return Term()
 }
 
-fun rationalizeTerm (term: Term): Expr {
+fun negate(sum: Sum): Sum {
+    val newSum = Sum()
+    newSum.plusTerms.addAll(sum.minusTerms)
+    newSum.minusTerms.addAll(sum.plusTerms)
+    return newSum
+}
+
+fun checkForNegativeTerm(term: Term): Expr {
+
+    val newTerm = Term()
+    val sum = Sum()
+
+    if ( term.numerators.size == 1 && term.numerators[0] is Sum) {
+        if ((term.numerators[0] as Sum).plusTerms.size == 0){
+            if (term.denominators.size ==1 && term.denominators[0] is Sum) {
+                if ((term.denominators[0] as Sum).plusTerms.size ==0) {
+                    newTerm.numerators.add(negate(term.numerators[0] as Sum))
+                    newTerm.denominators.add(negate(term.denominators[0] as Sum))
+                    return newTerm
+                }
+            } else {
+                newTerm.numerators.add(negate(term.numerators[0] as Sum))
+                newTerm.denominators.addAll(term.denominators)
+                sum.minusTerms.add(newTerm)
+                return sum
+            }
+        }
+    }
+
+    if (term.denominators.size ==1 && term.denominators[0] is Sum) {
+        if ((term.denominators[0] as Sum).plusTerms.size == 0) {
+            newTerm.numerators.addAll(term.numerators)
+            newTerm.denominators.add(negate(term.denominators[0] as Sum))
+            sum.minusTerms.add(newTerm)
+            return sum
+        }
+    }
+
+    newTerm.numerators.addAll(term.numerators)
+    newTerm.denominators.addAll(term.denominators)
+    return newTerm
+}
+
+fun rationalizeTerm (term: Expr): Expr {
+    if (term !is Term) {
+        return term
+    }
     val coefficientAndExpr = getCoefficientAndExpr(term)
-    return getExprFromCoefficientAndExpr(coefficientAndExpr)
+    val expr = getExprFromCoefficientAndExpr(coefficientAndExpr)
+
+    if (expr is Term) {
+        return checkForNegativeTerm(expr)
+    }
+
+    return expr
 }
 
 /*
@@ -485,8 +694,8 @@ fun combineTerms(sum: Sum): Expr {
         return sum
     }
 
-    processTerms(sum.plusTerms, Double::plus)
-    processTerms(sum.minusTerms, Double::minus)
+    processTerms(plusTerms, Double::plus)
+    processTerms(minusTerms, Double::minus)
 
     /*
     Go through the map and create terms based on the key value pair. Add the term to Sum. I.e.
@@ -494,12 +703,22 @@ fun combineTerms(sum: Sum): Expr {
      */
     val sum = Sum()
     termValueMap.forEach{(key, value) ->
+        //println("key = ${key.toAnnotatedString()}  value = $value")
         if (value != 0.0) {
-            var expr: Expr = Term()
-            if (value != 1.0) {
-                expr = expr.multiply(Number(value.absoluteValue))
+            var expr: Expr
+            if (value == 1.0 || value == -1.0) {
+                expr = key
+            } else {
+                expr = Term()
+                expr.numerators.add(Number(value.absoluteValue))
+                if (key is Term){
+                    (expr as Term).numerators.addAll(key.numerators)
+                    (expr as Term).denominators.addAll(key.denominators)
+                } else {
+                    expr.numerators.add(key)
+                }
             }
-            expr = expr.multiply(key)
+            //println("expr = ${expr.toAnnotatedString()}: ${expr::class.simpleName}")
             if (value < 0) {
                 sum.minusTerms.add(expr)
             } else {
@@ -543,6 +762,33 @@ fun expandTerm(term: Term): ArrayList<Expr> {
     }
     return newTerms
 }
+
+fun eliminateCommonTerms(list1: ArrayList<Expr>, list2: ArrayList<Expr>, startNum: Double ): Double{
+
+    val copy = arrayListOf<Expr>()
+    var num = startNum
+
+    copy.addAll(list1)
+
+    copy.forEach { expr ->
+        var term = list2.find { t -> expr.equals(t) }
+        if (term != null) {
+            list1.remove(expr)
+            list2.remove(term)
+        } else {
+            if (expr is Sum) {
+                val negExpr = negate(expr)
+                term = list2.find{ t -> negExpr.equals(t)}
+                if (term != null) {
+                    list1.remove(expr)
+                    list2.remove(term)
+                    num *= -1.0
+                }
+            }
+        }
+    }
+    return num
+}
 /*
 This function cancels like factors in the numerator and denominator of a fraction. Basically, create
 lists of all the Tokens and Sums in the numerator and denominator and then get rid of any that occur
@@ -553,11 +799,14 @@ fun cancel(term: Term): Expr{
     val denominators = arrayListOf<Expr>()
     val copyOfNumerators = arrayListOf<Expr>()
 
+    println("cancel on ${term.toAnnotatedString()}")
+
 /*
  Go through items in the numerator and denominators of the Term. Store all the Tokens and Sums
  in separate lists.  Expand any Terms that are found and add their Tokens and Sums to the lists.
  */
     term.numerators.forEach {
+        println("n* ${it.toAnnotatedString()}: ${it::class.simpleName}")
         if (it is Term) {
             numerators.addAll(expandTerm(it))
         } else {
@@ -566,34 +815,46 @@ fun cancel(term: Term): Expr{
     }
 
     term.denominators.forEach {
+        println("d* ${it.toAnnotatedString()}: ${it::class.simpleName}")
         if (it is Term) {
             denominators.addAll(expandTerm(it))
         } else {
             denominators.add(it)
         }
     }
+    println("numerators=")
+    numerators.forEach { println("${it.toAnnotatedString()}") }
+    println("denominators=")
+    denominators.forEach { println("${it.toAnnotatedString()}") }
 
     copyOfNumerators.addAll(numerators)
 
 
     /*
     Iterate over copyOfNumerators because you can't modify a list you are iterating over. For every
-    expression in numerators see if it exists in deonminators. If so delete it from both lists. Use
+    expression in numerators see if it exists in denominators. If so delete it from both lists. Use
     our own .equals() functions because different objects may be equal as far as we are concerned
     i.e. (a + b) would equal (b + a).  Make sure to delete the correct object from the appropriate list.
      */
-    copyOfNumerators.forEach {expr ->
+    /*copyOfNumerators.forEach {expr ->
         val denominator = denominators.find{d -> expr.equals(d)}
         if (denominator != null) {
             numerators.remove(expr)
             denominators.remove(denominator)
         }
-    }
+    }*/
 
+    val num = eliminateCommonTerms(numerators, denominators, 1.0)
     // Create a new Term from the left over numerators and denominators.
     val newTerm = Term()
     newTerm.numerators.addAll(numerators)
     newTerm.denominators.addAll(denominators)
+
+    if (num < 0){
+        val sum = Sum()
+        sum.minusTerms.add(newTerm)
+        return sum
+    }
     return newTerm
 }
 /*
@@ -895,7 +1156,7 @@ fun simplifySum(expr: Expr ): Expr {
     val copyOfMinusTerms = arrayListOf<Expr>()
     var sum: Sum
 
-    if (expr is Token) {
+    if (expr is Token || expr is Number) {
         // nothing to simplify
         return expr
     }
@@ -1066,7 +1327,7 @@ fun expandProductOfSumAndTerm(expr: Expr): Expr {
 
 /*
     Take the expression and convert it to a equivalent expression with a denominator
-    equal to the common denominator.  This os done by multiplying the numerator by all
+    equal to the common denominator.  This is done by multiplying the numerator by all
     the terms in the common denominator that are not in the expression's denominator.
     example expression ab/xy  common denominator xymn  new expression abmn/xymn. This
     function just calculates and returns the numerator part 
@@ -1107,7 +1368,7 @@ by an equivalent term whose denominator is the common denominator. The common
 denominator is made by multiplying the terms in the denominators together.  If a term
 appears in more than one denominator it only needs to appear once in the common denominator.
 But if it appears say twice in a particular denominator then it needs to appear twice in
-the common denominator. Exapmple  a/xy + b/xef + c/zeef  common denominator = xyefze x and f
+the common denominator. Example  a/xy + b/xef + c/zeef  common denominator = xyefze x and f
 only need to be included once, but e must be included twice.  The new term would be
 (aefze + byze + cxy)/xyefze
  */
@@ -1179,17 +1440,23 @@ fun factorSum(token: Token, sum: Sum): Expr  {
     // remove the token from the terms in the source list, and put the
     // new terms in the dest list.
     fun removeToken(source: ArrayList<Expr>, dest: ArrayList<Expr>) {
-        for (term in source){
-            if (term is Term){
-                if (term.numerators.contains(token)){
-                    dest.add(term.removeToken(token))
-
-                } else {
-                    throw AlgebraException("Attempt to factor token out to a term that doesn't contain the token." +
-                            "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}")
-                }
+        for (term in source) {
+            if (term is Token && token.equals(term)) {
+                dest.add(Number(1.0))
             } else {
-                throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
+                if (term is Term) {
+                    if (term.numerators.contains(token)) {
+                        dest.add(term.removeToken(token))
+
+                    } else {
+                        throw AlgebraException(
+                            "Attempt to factor token out of a term that doesn't contain the token." +
+                                    "  token = ${token.toAnnotatedString()}  term = ${sum.toAnnotatedString()}"
+                        )
+                    }
+                } else {
+                    throw AlgebraException("Attempt to factor token = ${token.toAnnotatedString()} out of a sum containing the term = ${term.toAnnotatedString()}")
+                }
             }
         }
     }
@@ -1201,7 +1468,7 @@ fun factorSum(token: Token, sum: Sum): Expr  {
     val newSum = Sum()
     newSum.plusTerms.addAll(newPlusTerms)
     newSum.minusTerms.addAll(newMinusTerms)
-    return newSum
+    return combineTerms(newSum)
 }
 
 fun factor  (token: Token, expr: Expr): Expr {
@@ -1239,13 +1506,23 @@ fun factor  (token: Token, expr: Expr): Expr {
     variable.  So this function looks at term and figures out
     which token is the state variablke.
  */
-fun getStateToken(term: Term): Token {
-    for (expr in term.numerators){
-        if (expr is Token && (expr.energyVar || expr.powerVar)) {
+fun getStateToken(expr: Expr): Token {
+
+    if (expr is Token){
+        if (expr.energyVar || expr.powerVar) {
             return expr
-            }
+        }
     }
-    throw AlgebraException("Error: getKeyToken called on term with no power or energy variable = ${term.toAnnotatedString()}")
+
+    if (expr is Term) {
+        for (e in expr.numerators) {
+            if (e is Token && (e.energyVar || e.powerVar)) {
+                return e
+            }
+        }
+    }
+
+    throw AlgebraException("Error: getKeyToken called on term with no power or energy variable = ${expr.toAnnotatedString()}")
 }
 
 fun replaceToken(token: Token, newToken: Token, expr: Expr): Expr{
@@ -1377,9 +1654,9 @@ fun gatherLikeTerms(sum: Sum):Expr {
     fun groupTerms(source: ArrayList<Expr>, isPlusTerm: Boolean) {
         //println("group terms terms= "); source.forEach { println(it.toAnnotatedString()) }
         for (term in source){
-            val token = getStateToken(term as Term)
+            val token = getStateToken(term)
             if (termsMap.containsKey(token)) {
-                //key already exist to add/subtract this term from the sum
+                //key already exist so add/subtract this term from the sum
                 var expr = termsMap[token]
                 if (expr != null) {
                     expr = if (isPlusTerm) expr.add(term) else expr.subtract(term)
@@ -1398,18 +1675,18 @@ fun gatherLikeTerms(sum: Sum):Expr {
     groupTerms(sum.minusTerms, false)
 
     // Create the new sum.
-    var localSum = Sum()
+    var localSum: Expr =  Sum()
     termsMap.values.forEach {
         if (it is Term) {
             // just one term for this state variable so just add it to the sum.
-            localSum = localSum.add(it) as Sum
+            localSum = localSum.add(it)
         } else {
             if (it is Sum && it.plusTerms.size + it.minusTerms.size > 1) {
                 // sum with several terms.  Must create a new term with a common denominator
-                localSum = localSum.add(commonDenominator(it)) as Sum
+                localSum = localSum.add(commonDenominator(it))
             } else {
                 // This is a sum with a single negative term.
-                localSum = localSum.add(it) as Sum
+                localSum = localSum.add(it)
             }
         }
     }

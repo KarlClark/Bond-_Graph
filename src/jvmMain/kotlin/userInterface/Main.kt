@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 
 var pathToBondGraphFile: Path? = null
 val runTestCases = true
+val runTestCases_2 = false
 
 /* TODO
     - grey out elements in sidebar when in bond mode

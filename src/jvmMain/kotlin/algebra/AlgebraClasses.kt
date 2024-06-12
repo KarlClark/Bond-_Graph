@@ -9,6 +9,7 @@ import java.lang.IllegalStateException
 import java.text.NumberFormat
 import java.util.LinkedList
 import kotlin.math.absoluteValue
+import algebra.operations.*
 
 /*
     This program can perform a limited amount of symbolic algebra, enough to generate and solve basic
@@ -190,126 +191,18 @@ class Number(val value: Double = 0.0): Expr {
         return term
     }
     override fun add(expr: Expr): Expr {
-        when (expr){
-            is Number -> {
-                return Number(value + expr.value)
-            }
-
-            is Token -> {
-                val sum = Sum()
-                sum.plusTerms.add(expr)
-                sum.plusTerms.add(this)
-                return(sum)
-            }
-
-            is Term -> {
-                if (expr.numerators.size == 1 && expr.denominators.size == 0 && expr.numerators[0] is Number){
-                    return Number(this.value + (expr.numerators[0] as Number).value)
-                } else {
-                    val sum = Sum()
-                    sum.plusTerms.add(expr)
-                    sum.plusTerms.add(this)
-                    return sum
-                }
-            }
-
-            is Sum -> {
-                return buildSum(expr.plusTerms, expr.minusTerms, this, Double::plus)
-
-            }
-        }
-
-        return Token("ERROR")
+       return add(this, expr)
     }
 
     override fun subtract(expr: Expr): Expr {
-        when (expr){
-
-            is Token -> {
-                val sum = Sum()
-                sum.minusTerms.add(expr)
-                sum.plusTerms.add(this)
-                return sum
-            }
-
-            is Number -> {
-                val num = this.value - expr.value
-                if (num >= 0) {
-                    return Number(num)
-                } else {
-                    val sum = Sum()
-                    sum.minusTerms.add(Number(-num))
-                    return sum
-                }
-            }
-
-            is Term -> {
-                if (expr.numerators.size == 1 && expr.denominators.size == 0 && expr.numerators[0] is Number){
-                    val num = this.value - (expr.numerators[0] as Number).value
-                    if (num >= 0) {
-                        return Number(num)
-                    } else {
-                        val sum = Sum()
-                        sum.minusTerms.add(Number(-num))
-                        return sum
-                    }
-                } else {
-                    val sum = Sum()
-                    sum.minusTerms.add(expr)
-                    sum.plusTerms.add(this)
-                    return sum
-                }
-            }
-
-            is Sum -> {
-                return buildSum(expr.minusTerms, expr.plusTerms, this, Double::plus) //negate the sum and add the number
-
-            }
-        }
-
-        return Token("ERROR")
+        return subtract(this, expr)
     }
 
     override fun multiply(expr: Expr): Expr {
-        when (expr){
-
-            is Token -> {
-                val term = Term()
-                term.numerators.add(this)
-                term.numerators.add(expr)
-                return term
-            }
-
-            is Number -> {
-                return Number(expr.value * value)
-            }
-
-            is Term -> {
-                return buildTerm(expr.numerators, expr.denominators, value)
-            }
-
-            is Sum -> {
-                val newPlusTerms = arrayListOf<Expr>()
-                val newMinusTerms = arrayListOf<Expr>()
-
-                expr.plusTerms.forEach {
-                    newPlusTerms.add(multiply(it))
-                }
-
-                expr.minusTerms.forEach {
-                    newMinusTerms.add(multiply(it))
-                }
-
-                val sum = Sum()
-                sum.plusTerms.addAll(newPlusTerms)
-                sum.minusTerms.addAll(newMinusTerms)
-                return sum
-            }
-        }
-        return Token("ERROR")
+        return multiply(this, expr)
     }
 
-    override fun divide(expr: Expr): Expr {
+   /* override fun divide(expr: Expr): Expr {
         when (expr){
 
             is Token -> {
@@ -331,13 +224,17 @@ class Number(val value: Double = 0.0): Expr {
                 val term = Term()
                 term.numerators.add(this)
                 term.denominators.add(expr)
-                /*val coefficientAndExpr = getCoefficientAndExpr(term)
-                return getExprFromCoefficientAndExpr(coefficientAndExpr)*/
+                *//*val coefficientAndExpr = getCoefficientAndExpr(term)
+                return getExprFromCoefficientAndExpr(coefficientAndExpr)*//*
                 return rationalizeTerm(term)
             }
         }
 
         return Token("ERROR")
+    }*/
+
+    override fun divide(expr: Expr): Expr {
+        return divide(this, expr)
     }
 
     override fun toAnnotatedString(exp: Int): AnnotatedString {
@@ -381,44 +278,19 @@ class Token(
     // The add, subtract, multiply and divide functions for this class are easy.  Just create the
     // appropriate type of expression and then use functions from the expression.
     override fun add(expr: Expr): Expr {
-        val sum = Sum()
-        sum.plusTerms.add(this)
-        if (expr is Sum) {
-            sum.plusTerms.addAll(expr.plusTerms)
-            sum.minusTerms.addAll(expr.minusTerms)
-        } else {
-            sum.plusTerms.add(expr)
-        }
-
-        return combineTerms(sum)
+        return add(this, expr)
     }
 
     override fun subtract(expr: Expr): Expr {
-        val sum = Sum()
-        sum.plusTerms.add(this)
-        if (expr is Sum){
-            sum.plusTerms.addAll(expr.minusTerms)
-            sum.minusTerms.addAll(expr.plusTerms)
-        } else {
-            sum.minusTerms.add(expr)
-        }
-        return combineTerms(sum)
+        return subtract(this, expr)
     }
 
     override fun multiply(expr: Expr): Expr {
-        val term = Term()
-        term.numerators.add(this)
-        if (expr is Term){
-            term.numerators.addAll(expr.numerators)
-            term.denominators.addAll(expr.denominators)
-        } else {
-            term.numerators.add(expr)
-        }
-        return Term().multiply(this).multiply(expr)
+       return multiply(this, expr)
     }
 
     override fun divide(expr: Expr): Expr {
-        return Term().multiply(this).divide(expr)
+        return divide(this, expr)
     }
 
     // An element object create only copy of each of its tokens so they can be compared at the object level.
@@ -585,17 +457,11 @@ class Term():Expr {
     }*/
 
     override fun add(expr: Expr): Expr {
-        val sum = Sum()
-        sum.plusTerms.add(this)
-        sum.plusTerms.add(expr)
-        return combineTerms(sum)
+        return add(this, expr)
     }
 
     override fun subtract(expr: Expr): Expr {
-        val sum = Sum()
-        sum.plusTerms.add(this)
-        sum.minusTerms.add(expr)
-        return combineTerms(sum)
+        return subtract(this, expr)
     }
 
 
@@ -612,7 +478,7 @@ class Term():Expr {
          return exprNew
      }*/
 
-    override fun multiply(expr: Expr): Expr {
+    /*override fun multiply(expr: Expr): Expr {
 
         val newNumerators = arrayListOf<Expr>()
         val newDenominators = arrayListOf<Expr>()
@@ -652,7 +518,7 @@ class Term():Expr {
         var term: Term = Term()
         term.numerators.addAll(newNumerators)
         term.denominators.addAll(newDenominators)
-        /*val coefficientAndTerm = getCoefficientAndExpr(term)
+        *//*val coefficientAndTerm = getCoefficientAndExpr(term)
 
         term.numerators.add(Number(coefficientAndTerm.coefficient.absoluteValue))
         val newExpr = cancel(term)
@@ -661,13 +527,17 @@ class Term():Expr {
             sum.minusTerms.add(expr)
             return sum
         }
-        return newExpr*/
+        return newExpr*//*
 
         cancel(term)
         return rationalizeTerm(term)
+    }*/
+
+    override fun multiply(expr: Expr): Expr {
+        return multiply(this, expr)
     }
 
-    override fun divide(expr: Expr): Expr {
+    /*override fun divide(expr: Expr): Expr {
 
         val newNumerators = arrayListOf<Expr>()
         val newDenominators = arrayListOf<Expr>()
@@ -706,7 +576,7 @@ class Term():Expr {
         var term = Term()
         term.numerators.addAll(newNumerators)
         term.denominators.addAll(newDenominators)
-       /* val coefficientAndTerm = getCoefficientAndExpr(term)
+       *//* val coefficientAndTerm = getCoefficientAndExpr(term)
         //term = coefficientAndTerm.term
         term.numerators.add(Number(coefficientAndTerm.coefficient.absoluteValue))
         val expr = cancel(term)
@@ -716,10 +586,14 @@ class Term():Expr {
             return sum
         }
 
-        return term*/
+        return term*//*
 
         cancel (term)
         return rationalizeTerm(term)
+    }*/
+
+    override fun divide(expr: Expr): Expr {
+        return divide (this, expr)
     }
 
     /*
@@ -823,88 +697,17 @@ class Sum(): Expr {
         is a sum add the sum's plus term to the plusTerms list and its minus terms to the minusTerms list.
      */
     override fun add(expr: Expr): Expr {
-
-        val newPlusTerms = arrayListOf<Expr>()
-        val newMinusTerms = arrayListOf<Expr>()
-
-
-        newPlusTerms.addAll(plusTerms)
-        newMinusTerms.addAll(minusTerms)
-
-
-        when (expr) {
-
-            is Token -> {
-                newPlusTerms.add(expr)
-            }
-
-            is Number -> {
-                return buildSum(plusTerms, minusTerms, expr, Double::plus)
-            }
-
-            is Term -> {
-                newPlusTerms.add(expr)
-            }
-
-            is Sum -> {
-                newPlusTerms.addAll(expr.plusTerms)
-                newMinusTerms.addAll(expr.minusTerms)
-            }
-        }
-
-        val sum = Sum()
-        sum.plusTerms.addAll(newPlusTerms)
-        sum.minusTerms.addAll(newMinusTerms)
-        //val expression =  combineTerms(sum)
-        /*if (sum.plusTerms.size + sum.minusTerms.size > 1) {
-            val expr = combineTerms(sum)
-            return expr
-            }*/
-        return combineTerms(sum)
+        return add (this, expr)
     }
 
 
     // Same as add above only add expression to minusTerms list
     override fun subtract(expr: Expr): Expr {
-
-        val newPlusTerms = arrayListOf<Expr>()
-        val newMinusTerms = arrayListOf<Expr>()
-
-        newPlusTerms.addAll(plusTerms)
-        newMinusTerms.addAll(minusTerms)
-        when (expr) {
-
-            is Token -> {
-                newMinusTerms.add(expr)
-            }
-
-            is Number -> {
-                    return buildSum(plusTerms, minusTerms, expr, Double::minus)
-            }
-
-            is Term -> {
-                newMinusTerms.add(expr)
-            }
-
-            is Sum -> {
-                newPlusTerms.addAll(expr.minusTerms)
-                newMinusTerms.addAll(expr.plusTerms)
-            }
-        }
-
-        var sum = Sum()
-        sum.plusTerms.addAll(newPlusTerms)
-        sum.minusTerms.addAll(newMinusTerms)
-        /*if (sum.plusTerms.size + sum.minusTerms.size > 1) {
-            val expr = combineTerms(sum)
-            return expr
-        }*/
-        println("Sum.subtract sum = ${sum.toAnnotatedString()}")
-        return combineTerms(sum)
+        return subtract(this, expr)
     }
 
     // We want to keep the sum expanded so multiply each term in the sum by the expression.
-    override fun multiply(expr: Expr): Expr {
+    /*override fun multiply(expr: Expr): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
         val newMinusTerms = arrayListOf<Expr>()
@@ -935,22 +738,26 @@ class Sum(): Expr {
                 newMinusTerms.add(newExpr)
             }
         }
-        /*for (index in 0 .. newPlusTerms.size -1){
+        *//*for (index in 0 .. newPlusTerms.size -1){
             newPlusTerms[index] = newPlusTerms[index].multiply(expr)
         }
 
         for (index in 0 .. newMinusTerms.size -1){
             newMinusTerms[index] = newMinusTerms[index].multiply(expr)
-        }*/
+        }*//*
 
         val sum = Sum()
         sum.plusTerms.addAll(newPlusTerms)
         sum.minusTerms.addAll(newMinusTerms)
         return combineTerms(sum)
+    }*/
+
+    override fun multiply(expr: Expr): Expr {
+        return multiply(this, expr)
     }
 
     // We want to keep the sum expanded so divide each term in the sum by the expression.
-    override fun divide(expr: Expr): Expr {
+    /*override fun divide(expr: Expr): Expr {
 
         val newPlusTerms = arrayListOf<Expr>()
         val newMinusTerms = arrayListOf<Expr>()
@@ -986,6 +793,10 @@ class Sum(): Expr {
         sum.minusTerms.addAll(newMinusTerms)
         val expr = combineTerms(sum)
         return expr
+    }*/
+
+    override fun divide(expr: Expr): Expr {
+        return divide(this, expr)
     }
 
     /*
